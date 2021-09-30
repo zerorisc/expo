@@ -21,6 +21,7 @@ from mako import exceptions
 from mako.template import Template
 
 import tlgen
+from autogen_banner import get_autogen_banner, get_license_banner
 from reggen import access, gen_rtl, window
 from reggen.inter_signal import InterSignal
 from reggen.ip_block import IpBlock
@@ -38,15 +39,8 @@ from topgen.clocks import Clocks
 from topgen.merge import extract_clocks, connect_clocks
 from topgen.resets import Resets
 
-# Common header for generated files
-warnhdr = '''//
-// ------------------- W A R N I N G: A U T O - G E N E R A T E D   C O D E !! -------------------//
-// PLEASE DO NOT HAND-EDIT THIS FILE. IT HAS BEEN AUTO-GENERATED WITH THE FOLLOWING COMMAND:
-'''
-genhdr = '''// Copyright lowRISC contributors.
-// Licensed under the Apache License, Version 2.0, see LICENSE for details.
-// SPDX-License-Identifier: Apache-2.0
-''' + warnhdr
+_GENCMD = ("util/topgen.py -t hw/top_{topname}/data/top_{topname}.hjson "
+           "-o hw/top_{topname}")
 
 GENCMD = ("// util/topgen.py -t hw/top_{topname}/data/top_{topname}.hjson\n"
           "// -o hw/top_{topname}")
@@ -80,9 +74,8 @@ def generate_top(top, name_to_block, tpl_filename, **kwargs):
 
 def generate_xbars(top, out_path):
     topname = top["name"]
-    gencmd = ("// util/topgen.py -t hw/top_{topname}/data/top_{topname}.hjson "
-              "-o hw/top_{topname}/\n\n".format(topname=topname))
-
+    banner = get_license_banner("//") + "//\n" + get_autogen_banner(
+        command=_GENCMD.format(topname=topname), comment="//")
     for obj in top["xbar"]:
         xbar_path = out_path / 'ip/xbar_{}/data/autogen'.format(obj["name"])
         xbar_path.mkdir(parents=True, exist_ok=True)
@@ -91,8 +84,7 @@ def generate_xbars(top, out_path):
 
         # Generate output of crossbar with complete fields
         xbar_hjson_path = xbar_path / "xbar_{}.gen.hjson".format(xbar.name)
-        xbar_hjson_path.write_text(genhdr + gencmd +
-                                   hjson.dumps(obj, for_json=True))
+        xbar_hjson_path.write_text(banner + hjson.dumps(obj, for_json=True))
 
         if not tlgen.elaborate(xbar):
             log.error("Elaboration failed." + repr(xbar))
@@ -180,6 +172,8 @@ def generate_alert_handler(top, out_path):
     # So, topgen reads template files from alert_handler directory directly.
     tpl_path = Path(__file__).resolve().parent / '../hw/ip/alert_handler/data'
     hjson_tpl_path = tpl_path / 'alert_handler.hjson.tpl'
+    gencmd = _GENCMD.format(topname=topname) + " --alert-handler-only"
+    banner = get_autogen_banner(command=gencmd, comment="//")
 
     # Generate Register Package and RTLs
     out = StringIO()
@@ -190,7 +184,8 @@ def generate_alert_handler(top, out_path):
                                    esc_cnt_dw=esc_cnt_dw,
                                    accu_cnt_dw=accu_cnt_dw,
                                    async_on=async_on,
-                                   n_classes=n_classes)
+                                   n_classes=n_classes,
+                                   autogen_banner=banner)
         except:  # noqa: E722
             log.error(exceptions.text_error_template().render())
         log.info("alert_handler hjson: %s" % out)
@@ -200,11 +195,8 @@ def generate_alert_handler(top, out_path):
         return
 
     hjson_gen_path = doc_path / "alert_handler.hjson"
-    gencmd = (
-        "// util/topgen.py -t hw/top_{topname}/data/top_{topname}.hjson --alert-handler-only "
-        "-o hw/top_{topname}/\n\n".format(topname=topname))
     with hjson_gen_path.open(mode='w', encoding='UTF-8') as fout:
-        fout.write(genhdr + gencmd + out)
+        fout.write(out)
 
     # Generate register RTLs (currently using shell execute)
     # TODO: More secure way to gneerate RTL
@@ -240,13 +232,16 @@ def generate_plic(top, out_path):
     tpl_path = Path(__file__).resolve().parent / '../hw/ip/rv_plic/data'
     hjson_tpl_path = tpl_path / 'rv_plic.hjson.tpl'
     rtl_tpl_path = tpl_path / 'rv_plic.sv.tpl'
+    gencmd = _GENCMD.format(topname=topname) + " --plic-only"
+    banner = get_autogen_banner(command=gencmd, comment="//")
 
     # Generate Register Package and RTLs
     out = StringIO()
     with hjson_tpl_path.open(mode='r', encoding='UTF-8') as fin:
         hjson_tpl = Template(fin.read())
         try:
-            out = hjson_tpl.render(src=src, target=target, prio=prio)
+            out = hjson_tpl.render(src=src, target=target, prio=prio,
+                                   autogen_banner=banner)
         except:  # noqa: E722
             log.error(exceptions.text_error_template().render())
         log.info("RV_PLIC hjson: %s" % out)
@@ -256,11 +251,8 @@ def generate_plic(top, out_path):
         return
 
     hjson_gen_path = hjson_path / "rv_plic.hjson"
-    gencmd = (
-        "// util/topgen.py -t hw/top_{topname}/data/top_{topname}.hjson --plic-only "
-        "-o hw/top_{topname}/\n\n".format(topname=topname))
     with hjson_gen_path.open(mode='w', encoding='UTF-8') as fout:
-        fout.write(genhdr + gencmd + out)
+        fout.write(out)
 
     # Generate register RTLs (currently using shell execute)
     # TODO: More secure way to generate RTL
@@ -271,7 +263,8 @@ def generate_plic(top, out_path):
     with rtl_tpl_path.open(mode='r', encoding='UTF-8') as fin:
         rtl_tpl = Template(fin.read())
         try:
-            out = rtl_tpl.render(src=src, target=target, prio=prio)
+            out = rtl_tpl.render(src=src, target=target, prio=prio,
+                                 autogen_banner=banner)
         except:  # noqa: E722
             log.error(exceptions.text_error_template().render())
         log.info("RV_PLIC RTL: %s" % out)
@@ -282,11 +275,10 @@ def generate_plic(top, out_path):
 
     rtl_gen_path = rtl_path / "rv_plic.sv"
     with rtl_gen_path.open(mode='w', encoding='UTF-8') as fout:
-        fout.write(genhdr + gencmd + out)
+        fout.write(out)
 
 
 def generate_pinmux(top, out_path):
-
     topname = top['name']
     pinmux = top['pinmux']
 
@@ -356,15 +348,14 @@ def generate_pinmux(top, out_path):
     rtl_path.mkdir(parents=True, exist_ok=True)
     data_path = out_path / 'ip/pinmux/data/autogen'
     data_path.mkdir(parents=True, exist_ok=True)
+    banner = get_autogen_banner(command=_GENCMD.format(topname=topname),
+                                comment="//")
 
     # Template path
     tpl_path = Path(
         __file__).resolve().parent / '../hw/ip/pinmux/data/pinmux.hjson.tpl'
 
     # Generate register package and RTLs
-    gencmd = ("// util/topgen.py -t hw/top_{topname}/data/top_{topname}.hjson "
-              "-o hw/top_{topname}/\n\n".format(topname=topname))
-
     hjson_gen_path = data_path / "pinmux.hjson"
 
     out = StringIO()
@@ -383,7 +374,8 @@ def generate_pinmux(top, out_path):
                 n_dio_pads=n_dio_pads,
                 attr_dw=attr_dw,
                 n_wkup_detect=num_wkup_detect,
-                wkup_cnt_width=wkup_cnt_width
+                wkup_cnt_width=wkup_cnt_width,
+                autogen_banner=banner
             )
         except:  # noqa: E722
             log.error(exceptions.text_error_template().render())
@@ -394,14 +386,13 @@ def generate_pinmux(top, out_path):
         return
 
     with hjson_gen_path.open(mode='w', encoding='UTF-8') as fout:
-        fout.write(genhdr + gencmd + out)
+        fout.write(out)
 
     gen_rtl.gen_rtl(IpBlock.from_text(out, [], str(hjson_gen_path)),
                     str(rtl_path))
 
 
 def generate_clkmgr(top, cfg_path, out_path):
-
     # Target paths
     rtl_path = out_path / 'ip/clkmgr/rtl/autogen'
     rtl_path.mkdir(parents=True, exist_ok=True)
@@ -426,6 +417,8 @@ def generate_clkmgr(top, cfg_path, out_path):
 
     typed_clocks = clocks.typed_clocks()
     hint_names = typed_clocks.hint_names()
+    banner = get_autogen_banner(command=_GENCMD.format(topname=top['name']),
+                                comment="//")
 
     for idx, tpl in enumerate(tpls):
         out = ""
@@ -435,7 +428,8 @@ def generate_clkmgr(top, cfg_path, out_path):
                 out = tpl.render(cfg=top,
                                  clocks=clocks,
                                  typed_clocks=typed_clocks,
-                                 hint_names=hint_names)
+                                 hint_names=hint_names,
+                                 autogen_banner=banner)
             except:  # noqa: E722
                 log.error(exceptions.text_error_template().render())
 
@@ -444,7 +438,7 @@ def generate_clkmgr(top, cfg_path, out_path):
             return
 
         with outputs[idx].open(mode='w', encoding='UTF-8') as fout:
-            fout.write(genhdr + out)
+            fout.write(out)
 
     # Generate reg files
     gen_rtl.gen_rtl(IpBlock.from_path(str(hjson_out), []), str(rtl_path))
@@ -482,6 +476,8 @@ def generate_pwrmgr(top, out_path):
     # So, read template files from ip directory.
     tpl_path = Path(__file__).resolve().parent / '../hw/ip/pwrmgr/data'
     hjson_tpl_path = tpl_path / 'pwrmgr.hjson.tpl'
+    banner = get_autogen_banner(command=_GENCMD.format(topname=top['name']),
+                                comment="//")
 
     # Render and write out hjson
     out = StringIO()
@@ -490,7 +486,8 @@ def generate_pwrmgr(top, out_path):
         try:
             out = hjson_tpl.render(NumWkups=n_wkups,
                                    Wkups=top["wakeups"],
-                                   NumRstReqs=n_rstreqs)
+                                   NumRstReqs=n_rstreqs,
+                                   autogen_banner=banner)
 
         except:  # noqa: E722
             log.error(exceptions.text_error_template().render())
@@ -502,7 +499,7 @@ def generate_pwrmgr(top, out_path):
 
     hjson_path = doc_path / "pwrmgr.hjson"
     with hjson_path.open(mode='w', encoding='UTF-8') as fout:
-        fout.write(genhdr + out)
+        fout.write(out)
 
     # Generate reg files
     gen_rtl.gen_rtl(IpBlock.from_path(str(hjson_path), []), str(rtl_path))
@@ -552,6 +549,9 @@ def generate_rstmgr(topcfg, out_path):
     # Number of reset requests
     n_rstreqs = len(topcfg["reset_requests"])
 
+    banner = get_autogen_banner(command=_GENCMD.format(topname=topcfg['name']),
+                                comment="//")
+
     # Generate templated files
     for idx, t in enumerate(tpls):
         out = StringIO()
@@ -565,7 +565,8 @@ def generate_rstmgr(topcfg, out_path):
                                  output_rsts=output_rsts,
                                  leaf_rsts=leaf_rsts,
                                  export_rsts=topcfg['exported_rsts'],
-                                 reset_obj=topcfg['resets'])
+                                 reset_obj=topcfg['resets'],
+                                 autogen_banner=banner)
 
             except:  # noqa: E722
                 log.error(exceptions.text_error_template().render())
@@ -575,7 +576,7 @@ def generate_rstmgr(topcfg, out_path):
             return
 
         with outputs[idx].open(mode='w', encoding='UTF-8') as fout:
-            fout.write(genhdr + out)
+            fout.write(out)
 
     # Generate reg files
     hjson_path = outputs[0]
@@ -612,6 +613,8 @@ def generate_flash(topcfg, out_path):
         return
 
     cfg = flash_mems[0]['memory']['mem']['config']
+    banner = get_autogen_banner(command=_GENCMD.format(topname=topcfg['name']),
+                                comment="//")
 
     # Generate templated files
     for idx, t in enumerate(tpls):
@@ -619,7 +622,7 @@ def generate_flash(topcfg, out_path):
         with t.open(mode='r', encoding='UTF-8') as fin:
             tpl = Template(fin.read())
             try:
-                out = tpl.render(cfg=cfg)
+                out = tpl.render(cfg=cfg, autogen_banner=banner)
 
             except:  # noqa: E722
                 log.error(exceptions.text_error_template().render())
@@ -629,7 +632,7 @@ def generate_flash(topcfg, out_path):
             return
 
         with outputs[idx].open(mode='w', encoding='UTF-8') as fout:
-            fout.write(genhdr + out)
+            fout.write(out)
 
     # Generate reg files
     hjson_path = outputs[0]
@@ -724,7 +727,8 @@ def generate_top_ral(top: Dict[str, object],
         if t not in inst_to_block.values():
             del name_to_block[t]
 
-    chip = Top(regwidth, name_to_block, inst_to_block, if_addrs, mems, attrs)
+    chip = Top(top['name'], regwidth, name_to_block, inst_to_block, if_addrs,
+               mems, attrs)
 
     # generate the top ral model with template
     return gen_dv(chip, dv_base_prefix, str(out_path))
@@ -1074,15 +1078,12 @@ def main():
     genhjson_path = genhjson_dir / ("top_%s.gen.hjson" % completecfg["name"])
 
     # Header for HJSON
-    gencmd = '''//
-// util/topgen.py -t hw/top_{topname}/data/top_{topname}.hjson \\
-//                -o hw/top_{topname}/ \\
-//                --hjson-only \\
-//                --rnd_cnst_seed {seed}
-'''.format(topname=topname, seed=completecfg['rnd_cnst_seed'])
+    gencmd = (f"{_GENCMD.format(topname=topname)} --hjson-only "
+              f"--rnd_cnst_seed {completecfg['rnd_cnst_seed']}")
+    banner = get_license_banner("//") + "//\n" + get_autogen_banner(
+        command=gencmd, comment="//")
 
-    genhjson_path.write_text(genhdr + gencmd +
-                             hjson.dumps(completecfg, for_json=True))
+    genhjson_path.write_text(banner + hjson.dumps(completecfg, for_json=True))
 
     if not args.no_top or args.top_only:
         def render_template(template_path: str, rendered_path: Path, **other_info):
@@ -1094,23 +1095,21 @@ def main():
                 fout.write(template_contents)
 
         # Header for SV files
-        gencmd = warnhdr + '''//
-// util/topgen.py -t hw/top_{topname}/data/top_{topname}.hjson \\
-//                -o hw/top_{topname}/ \\
-//                --rnd_cnst_seed {seed}
-'''.format(topname=topname, seed=topcfg['rnd_cnst_seed'])
+        gencmd = (f"{_GENCMD.format(topname=topname)} --rnd_cnst_seed "
+                  f"{topcfg['rnd_cnst_seed']}")
+        banner = get_autogen_banner(command=gencmd, comment="//")
 
         # SystemVerilog Top:
         # 'toplevel.sv.tpl' -> 'rtl/autogen/top_{topname}.sv'
         render_template(TOPGEN_TEMPLATE_PATH / "toplevel.sv.tpl",
                         out_path / f"rtl/autogen/top_{topname}.sv",
-                        gencmd=gencmd)
+                        autogen_banner=banner)
 
         # Multiple chip-levels (ASIC, FPGA, Verilator, etc)
         for target in topcfg['targets']:
             render_template(TOPGEN_TEMPLATE_PATH / "chiplevel.sv.tpl",
                             out_path / f"rtl/autogen/chip_{topname}_{target['name']}.sv",
-                            gencmd=gencmd,
+                            autogen_banner=banner,
                             target=target)
 
         # The C / SV file needs some complex information, so we initialize this
@@ -1121,14 +1120,16 @@ def main():
         render_template(TOPGEN_TEMPLATE_PATH / "toplevel_pkg.sv.tpl",
                         out_path / f"rtl/autogen/top_{topname}_pkg.sv",
                         helper=c_helper,
-                        gencmd=gencmd)
+                        autogen_banner=banner)
 
         # compile-time random netlist constants
         render_template(TOPGEN_TEMPLATE_PATH / "toplevel_rnd_cnst_pkg.sv.tpl",
                         out_path / f"rtl/autogen/top_{topname}_rnd_cnst_pkg.sv",
-                        gencmd=gencmd)
+                        autogen_banner=banner)
 
         # C Header + C File + Clang-format file
+        banner = get_autogen_banner(command=_GENCMD.format(topname=topname),
+                                    comment="//")
 
         # Since SW does not use FuseSoC and instead expects those files always
         # to be in hw/top_{topname}/sw/autogen, we currently create these files
@@ -1149,7 +1150,8 @@ def main():
             cheader_path = cformat_dir / f"top_{topname}.h"
             render_template(TOPGEN_TEMPLATE_PATH / "toplevel.h.tpl",
                             cheader_path,
-                            helper=c_helper)
+                            helper=c_helper,
+                            autogen_banner=banner)
 
             # Save the relative header path into `c_gen_info`
             rel_header_path = cheader_path.relative_to(path.parents[1])
@@ -1158,17 +1160,20 @@ def main():
             # 'toplevel.c.tpl' -> 'sw/autogen/top_{topname}.c'
             render_template(TOPGEN_TEMPLATE_PATH / "toplevel.c.tpl",
                             cformat_dir / f"top_{topname}.c",
-                            helper=c_helper)
+                            helper=c_helper,
+                            autogen_banner=banner)
 
             # 'toplevel_memory.ld.tpl' -> 'sw/autogen/top_{topname}_memory.ld'
             render_template(TOPGEN_TEMPLATE_PATH / "toplevel_memory.ld.tpl",
-                            cformat_dir / f"top_{topname}_memory.ld")
+                            cformat_dir / f"top_{topname}_memory.ld",
+                            autogen_banner=banner)
 
             # 'toplevel_memory.h.tpl' -> 'sw/autogen/top_{topname}_memory.h'
             memory_cheader_path = cformat_dir / f"top_{topname}_memory.h"
             render_template(TOPGEN_TEMPLATE_PATH / "toplevel_memory.h.tpl",
                             memory_cheader_path,
-                            helper=c_helper)
+                            helper=c_helper,
+                            autogen_banner=banner)
 
             try:
                 cheader_path.relative_to(SRCTREE_TOP)
@@ -1194,30 +1199,17 @@ def main():
             "tb__alert_handler_connect.sv", "xbar_tgl_excl.cfg"
         ]
         for fname in tb_files:
-            tpl_fname = "%s.tpl" % (fname)
-            xbar_chip_data_path = TOPGEN_TEMPLATE_PATH / tpl_fname
-            template_contents = generate_top(completecfg, name_to_block,
-                                             str(xbar_chip_data_path))
-
-            rendered_dir = out_path / 'dv/autogen'
-            rendered_dir.mkdir(parents=True, exist_ok=True)
-            rendered_path = rendered_dir / fname
-
-            with rendered_path.open(mode='w', encoding='UTF-8') as fout:
-                fout.write(template_contents)
+            render_template(TOPGEN_TEMPLATE_PATH / f"{fname}.tpl",
+                out_path / 'dv/autogen' / fname,
+                helper=c_helper,
+                autogen_banner=banner)
 
         # generate parameters for chip-level environment package
-        tpl_fname = 'chip_env_pkg__params.sv.tpl'
-        alert_handler_chip_data_path = TOPGEN_TEMPLATE_PATH / tpl_fname
-        template_contents = generate_top(completecfg, name_to_block,
-                                         str(alert_handler_chip_data_path))
-
-        rendered_dir = out_path / 'dv/env/autogen'
-        rendered_dir.mkdir(parents=True, exist_ok=True)
-        rendered_path = rendered_dir / 'chip_env_pkg__params.sv'
-
-        with rendered_path.open(mode='w', encoding='UTF-8') as fout:
-            fout.write(template_contents)
+        fname = "chip_env_pkg__params.sv"
+        render_template(TOPGEN_TEMPLATE_PATH / f"{fname}.tpl",
+                out_path / 'dv/env/autogen' / fname,
+                helper=c_helper,
+                autogen_banner=banner)
 
         # generate documentation for toplevel
         gen_top_docs(completecfg, c_helper, out_path)
