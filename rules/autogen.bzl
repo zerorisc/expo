@@ -80,6 +80,8 @@ autogen_chip_info = rule(
     },
 )
 
+OtpImageInfo = provider(fields = ["image"])
+
 def _otp_image(ctx):
     output = ctx.actions.declare_file(ctx.attr.name + ".vmem")
     ctx.actions.run(
@@ -103,7 +105,10 @@ def _otp_image(ctx):
         ],
         executable = ctx.executable._tool,
     )
-    return [DefaultInfo(files = depset([output]), data_runfiles = ctx.runfiles(files = [output]))]
+    return [
+        DefaultInfo(files = depset([output]), data_runfiles = ctx.runfiles(files = [output])),
+        OtpImageInfo(image = output),
+    ]
 
 otp_image = rule(
     implementation = _otp_image,
