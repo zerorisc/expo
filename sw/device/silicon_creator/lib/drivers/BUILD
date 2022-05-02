@@ -52,6 +52,10 @@ cc_test(
 opentitan_functest(
     name = "alert_functest",
     srcs = ["alert_functest.c"],
+    verilator = verilator_params(
+        timeout = "long",
+        tags = ["verilator_in_ci"],
+    ),
     deps = [
         ":alert",
         ":rstmgr",
@@ -158,6 +162,7 @@ cc_test(
 opentitan_functest(
     name = "hmac_functest",
     srcs = ["hmac_functest.c"],
+    verilator = verilator_params(tags = ["verilator_in_ci"]),
     deps = [
         ":hmac",
         "//hw/top_earlgrey/sw/autogen:top_earlgrey",
@@ -391,6 +396,7 @@ opentitan_functest(
     srcs = ["retention_sram_functest.c"],
     verilator = verilator_params(
         timeout = "long",
+        tags = ["verilator_in_ci"],
     ),
     deps = [
         ":retention_sram",
@@ -518,6 +524,7 @@ cc_test(
 opentitan_functest(
     name = "uart_functest",
     srcs = ["uart_functest.c"],
+    verilator = verilator_params(tags = ["verilator_in_ci"]),
     deps = [
         ":uart",
         "//hw/top_earlgrey/sw/autogen:top_earlgrey",
@@ -564,6 +571,7 @@ opentitan_functest(
     srcs = ["watchdog_functest.c"],
     verilator = verilator_params(
         timeout = "long",
+        tags = ["verilator_in_ci"],
     ),
     deps = [
         ":retention_sram",
