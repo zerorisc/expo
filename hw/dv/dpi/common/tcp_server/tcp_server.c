@@ -21,7 +21,7 @@
 /**
  * Simple buffer for passing data between TCP sockets and DPI modules
  */
-const int BUFSIZE_BYTE = 256;
+#define BUFSIZE_BYTE 1024
 
 struct tcp_buf {
   unsigned int rptr;
@@ -38,8 +38,8 @@ struct tcp_server_ctx {
   uint16_t listen_port;
   volatile bool socket_run;
   // Writeable by the server thread
-  tcp_buf *buf_in;
-  tcp_buf *buf_out;
+  struct tcp_buf *buf_in;
+  struct tcp_buf *buf_out;
   int sfd;  // socket fd
   int cfd;  // client fd
   pthread_t sock_thread;
@@ -178,7 +178,10 @@ static int client_tryaccept(struct tcp_server_ctx *ctx) {
   int rv;
 
   assert(ctx->sfd > 0);
-  assert(ctx->cfd == 0);
+
+  // assume a connection has been lost if ctx->cfd > 0
+  if (ctx->cfd > 0)
+    tcp_server_client_close(ctx);
 
   int cfd = accept(ctx->sfd, NULL, NULL);
 
@@ -378,7 +381,7 @@ err_cleanup_return:
 }
 
 // Abstract interface functions
-tcp_server_ctx *tcp_server_create(const char *display_name, int listen_port) {
+struct tcp_server_ctx *tcp_server_create(const char *display_name, int listen_port) {
   struct tcp_server_ctx *ctx =
       (struct tcp_server_ctx *)calloc(1, sizeof(struct tcp_server_ctx));
   assert(ctx);
