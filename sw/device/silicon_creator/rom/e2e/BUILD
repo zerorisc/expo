@@ -2375,6 +2375,8 @@ SRAM_JTAG_INJECTION_GDB_SCRIPT = """
         set $gp = __global_pointer$
         info registers
 
+        shell sleep 5
+
         # When testing SRAM execution, we want to be sure the code is running
         # out of SRAM and not the instruction cache.
         echo :::: Invalidate the icache.\\n
@@ -2400,6 +2402,7 @@ SRAM_JTAG_INJECTION_GDB_SCRIPT = """
         tags = [
             "cw310_rom",
             "vivado",
+            "flaky",
         ],
     )
     for lc_state, _ in get_lc_items(
@@ -2554,6 +2557,7 @@ test_suite(
         tags = [
             "cw310_rom",
             "vivado",
+            "flaky",
         ] + maybe_skip_in_ci(lc_state_val),
     )
     for lc_state, lc_state_val in get_lc_items(
@@ -2565,7 +2569,7 @@ test_suite(
 
 test_suite(
     name = "rom_e2e_asm_interrupt_handler",
-    tags = ["manual"],
+    tags = ["manual", "flaky"],
     tests = [
         "asm_interrupt_handler_fpga_cw310_test_otp_" + lc_state
         for lc_state, _ in get_lc_items(
@@ -3620,6 +3624,7 @@ test_suite(
             "cw310_rom",
             "exclusive",
             "vivado",
+            "flaky",
         ] + maybe_skip_in_ci(lc_state_val),
     )
     for lc_state, lc_state_val in get_lc_items(
@@ -3832,4 +3837,14 @@ test_suite(
     name = "rom_e2e_rom_ext_upgrade_interrupt",
     tags = ["manual"],
     tests = ["rom_ext_upgrade_interrupt_{}".format(lc_state) for lc_state, _ in get_lc_items()],
+)
+
+test_suite(
+    name = "amaury",
+    tests = [
+        #"rom_e2e_debug_test",
+        "rom_e2e_asm_interrupt_handler",
+        #"rom_e2e_jtag_inject_tests",
+        #"rom_e2e_asm_watchdog",
+    ],
 )
