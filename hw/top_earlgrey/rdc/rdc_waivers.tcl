@@ -149,3 +149,38 @@ set_rule_status -rule W_ASYNC_RST_FLOPS -status Waived \
   -expression {(DrivingSignal=~"*.u_rv_dm.u_pm_en_sync.*")} \
   -comment {LifeCycle HW Debug Enable signal is static and determined \
     at boot time.}
+
+# EN sync to EN Latch in CG
+# (io_div4|io_div2|io|usb)_root_ctrl
+create_view_criteria -name PorNRootCtrlCg -rule E_RST_METASTABILITY \
+  -criteria {(SourceReset=="POR_N") && \
+    (ResetFlop=~"*.u_clkmgr_aon.*root_ctrl*") && \
+    (MetaStableFlop=~"*.u_*_root_ctrl.u_cg*")}
+set_rule_status -rule E_RST_METASTABILITY -status Waived \
+  -expression {(SourceReset=="POR_N") && \
+    (ResetFlop=~"*.u_clkmgr_aon.u_main_root_ctrl.u_cg*") && \
+    (MetaStableFlop=~"*.u_clkmgr_aon.u_main_root_ctrl.u_cg*")}
+set_rule_status -rule E_RST_METASTABILITY -status Waived \
+  -expression {(SourceReset=="POR_N") && \
+    (ResetFlop=~"*.u_clkmgr_aon.u_io_div4_root_ctrl.u_cg*") && \
+    (MetaStableFlop=~"*.u_clkmgr_aon.u_io_div4_root_ctrl.u_cg*")}
+set_rule_status -rule E_RST_METASTABILITY -status Waived \
+  -expression {(SourceReset=="POR_N") && \
+    (ResetFlop=~"*.u_clkmgr_aon.u_io_div2_root_ctrl.u_cg*") && \
+    (MetaStableFlop=~"*.u_clkmgr_aon.u_io_div2_root_ctrl.u_cg*")}
+set_rule_status -rule E_RST_METASTABILITY -status Waived \
+  -expression {(SourceReset=="POR_N") && \
+    (ResetFlop=~"*.u_clkmgr_aon.u_io_root_ctrl.u_cg*") && \
+    (MetaStableFlop=~"*.u_clkmgr_aon.u_io_root_ctrl.u_cg*")}
+set_rule_status -rule E_RST_METASTABILITY -status Waived \
+  -expression {(SourceReset=="POR_N") && \
+    (ResetFlop=~"*.u_clkmgr_aon.u_usb_root_ctrl.u_cg*") && \
+    (MetaStableFlop=~"*.u_clkmgr_aon.u_usb_root_ctrl.u_cg*")}
+
+# Waiver: PowerDown to AST Regulator
+# No need of verifying AST behavioral model
+set_rule_status -rule E_RST_METASTABILITY -status Waived \
+  -expression {(SourceReset=="POR_N") && \
+    (ResetFlop=~"*.u_pwrmgr_aon.u_slow_fsm.pd_nq") && \
+    (MetaStableFlop=~"u_ast.u_rglts_pdm_3p3v.*")} \
+  -comment {AST is a behavioral model. No need to verify}
