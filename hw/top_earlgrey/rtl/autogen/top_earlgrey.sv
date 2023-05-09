@@ -42,7 +42,9 @@ module top_earlgrey #(
   parameter logic [31:0] LcCtrlIdcodeValue = jtag_id_pkg::LC_CTRL_JTAG_IDCODE,
   // parameters for alert_handler
   // parameters for spi_host0
+  parameter bit SpiHost0Stub = 0,
   // parameters for spi_host1
+  parameter bit SpiHost1Stub = 0,
   // parameters for usbdev
   parameter bit UsbdevStub = 0,
   parameter int UsbdevRcvrWakeTimeUs = 100,
@@ -1654,6 +1656,7 @@ module top_earlgrey #(
   );
   spi_host #(
     .AlertAsyncOn(alert_handler_reg_pkg::AsyncOn[19:19]),
+    .Stub(SpiHost0Stub),
     .NumCS(SpiHost0NumCS)
   ) u_spi_host0 (
 
@@ -1690,6 +1693,7 @@ module top_earlgrey #(
   );
   spi_host #(
     .AlertAsyncOn(alert_handler_reg_pkg::AsyncOn[20:20]),
+    .Stub(SpiHost1Stub),
     .NumCS(SpiHost1NumCS)
   ) u_spi_host1 (
 
