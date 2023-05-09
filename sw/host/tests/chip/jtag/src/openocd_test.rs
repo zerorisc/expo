@@ -7,6 +7,7 @@ use std::time::Duration;
 use anyhow::Result;
 use regex::Regex;
 use structopt::StructOpt;
+use std::thread;
 
 use opentitanlib::app::TransportWrapper;
 use opentitanlib::chip::boolean::MultiBitBool8;
@@ -37,6 +38,34 @@ fn reset(transport: &TransportWrapper, strappings: &[&str], reset_delay: Duratio
     Ok(())
 }
 
+fn stress_openocd(opts: &Opts, transport: &TransportWrapper) -> Result<()> {
+    // repeat the same test 50 times (stay below timeout)
+    log::info!("Reset chip");
+    reset(
+        transport,
+        &["PINMUX_TAP_RISCV"],
+        opts.init.bootstrap.options.reset_delay,
+    )?;
+    let jtag = transport.jtag(&opts.jtag)?;
+    log::info!("Connect to RISC-V");
+    jtag.connect(JtagTap::RiscvTap)?;
+    jtag.halt()?;
+    // write the whole SRAM
+    let base = top_earlgrey_memory::TOP_EARLGREY_SRAM_CTRL_MAIN_RAM_BASE_ADDR as u32;
+    let size = top_earlgrey_memory::TOP_EARLGREY_SRAM_CTRL_MAIN_RAM_SIZE_BYTES;
+    let data : Vec<u32> = (0..(size / 4)).map(|x| x as u32).collect();
+    log::info!("Write the whole SRAM");
+    jtag.write_memory32(base, &data)?;
+    // read it back
+    let mut data2 = vec![0u32; size / 4];
+    log::info!("Read back SRAM");
+    jtag.read_memory32(base, &mut data2)?;
+
+    jtag.disconnect()?;
+    Ok(())
+}
+
+
 fn test_openocd(opts: &Opts, transport: &TransportWrapper) -> Result<()> {
     // Reset the device
     let uart = transport.uart("console")?;
@@ -63,7 +92,7 @@ fn test_openocd(opts: &Opts, transport: &TransportWrapper) -> Result<()> {
 
     let jtag = transport.jtag(&opts.jtag)?;
     jtag.connect(JtagTap::RiscvTap)?;
-    jtag.halt()?;
+    jtag.reset(false)?;
     // Definitions for hardware registers
     let lc_ctrl_base_addr = top_earlgrey_memory::TOP_EARLGREY_LC_CTRL_BASE_ADDR as u32;
     let lc_ctrl_transition_if_addr = lc_ctrl_base_addr + LcCtrlReg::ClaimTransitionIf.byte_offset();
@@ -226,6 +255,7 @@ fn main() -> Result<()> {
     let transport = opts.init.init_target()?;
 
     execute_test!(test_openocd, &opts, &transport);
+    execute_test!(stress_openocd, &opts, &transport);
 
     Ok(())
 }
