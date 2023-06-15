@@ -167,6 +167,7 @@ pub fn update_firmware(
     progress: &dyn ProgressIndicator,
     force: bool,
 ) -> Result<Option<Box<dyn Annotate>>> {
+    log::info!("update firmware: cur={:?}", current_firmware_version);
     let firmware: &[u8] = if let Some(vec) = firmware.as_ref() {
         validate_firmware_image(vec)?;
         vec
@@ -220,7 +221,7 @@ pub fn update_firmware(
     // and disconnected from the USB bus.  Wait a little while, and then attempt to establish
     // connection with the DFU bootloader, which will appear with STM DID:VID (not Google's), but
     // same serial number as before.
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    std::thread::sleep(std::time::Duration::from_secs(10));
     log::info!("Connecting to DFU bootloader...");
     let mut dfu_device = UsbBackend::new(
         VID_ST_MICROELECTRONICS,
@@ -236,7 +237,7 @@ pub fn update_firmware(
     // At this point, the new firmware has been completely transferred, and the USB device is
     // resetting and booting the new firmware.  Wait a second, then verify that device can now be
     // found on the USB bus with the original DID:VID.
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    std::thread::sleep(std::time::Duration::from_secs(10));
     log::info!("Connecting to newly flashed firmware...");
     let _new_device = UsbBackend::new(
         usb_device.get_vendor_id(),
@@ -452,6 +453,7 @@ fn wait_for_idle(dfu_device: &UsbBackend, dfu_interface: u8) -> Result<u8> {
             || device_state == DFU_STATE_DFU_IDLE
             || device_state == DFU_STATE_DOWNLOAD_IDLE
         {
+            log::info!("Device in state {:?}", device_state);
             return Ok(device_state);
         } else if device_state == DFU_STATE_DOWNLOAD_BUSY {
             std::thread::sleep(std::time::Duration::from_millis(minimum_delay_ms));
