@@ -99,7 +99,7 @@
  * @param[in]  dmem[ed25519_hash_k]: precomputed hash k, 512 bits
  * @param[in]  dmem[ed25519_sig_R]: encoded signature point R_, 256 bits
  * @param[in]  dmem[ed25519_sig_S]: signature scalar S, 256 bits
- * @param[in]  dmem[ed25519_public_key]: encoded public key A_, 512 bits
+ * @param[in]  dmem[ed25519_public_key]: encoded public key A_, 256 bits
  * @param[out] dmem[ed25519_verify_result]: SUCCESS or FAILURE
  *
  * clobbered registers: x2 to x4, x20 to x23, w2 to w30
@@ -163,7 +163,8 @@ ed25519_verify_var:
   /* Set up for field arithmetic in preparation for scalar multiplication and
      point addition.
        MOD <= p
-       w19 <= 19 */
+       w19 <= 19
+       w30 <= 38 */
   jal      x1, fe_init
 
   /* Initialize curve parameter d.
@@ -317,7 +318,7 @@ ed25519_verify_var:
  *
  * @param[in]  w31: all-zero
  * @param[in]  dmem[ed25519_msg]: M, message (maybe pre-hashed).
- * @param[in]  dmem[ed25519_msg_len]: Message length in bytes. 
+ * @param[in]  dmem[ed25519_msg_len]: Message length in bytes.
  * @param[in]  dmem[ed25519_sk]: sk, secret key.
  * @param[in]  dmem[ed25519_sk]: sk, secret key.
  * @param[out] dmem[ed25519_sig_R]: encoded signature point R_, 256 bits
@@ -851,13 +852,10 @@ affine_decode_var:
      instead of x to avoid confusion):
 
        Again, there are three cases:
-
        1.  If v r^2 = u (mod p), r is a square root.
-
        2.  If v r^2 = -u (mod p), set r <-- r * 2^((p-1)/4), which is a
            square root.
-
-       3.  Otherwise, no square root exists for modulo p, and decoding
+       3.  Otherwise, no square root exists for (u/v) modulo p, and decoding
            fails.
 
      Again the RFC doesn't really explain the mathematics here. Recall from the
