@@ -1,0 +1,2 @@
+# Expected result: "SUCCESS" magic number in x2.
+x2 = 0xf77fe650
