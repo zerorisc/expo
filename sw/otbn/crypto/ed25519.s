@@ -215,7 +215,7 @@ ed25519_verify_var:
   bn.mov   w28, w3
 
   /* [w13:w10] <= w28 * [w9:w6] = [8][k]A */
-  jal      x1, ext_scmul
+  jal      x1, ext_scmul_var
 
   /* Convert R to extended coordinates.
        [w9:w6] <= extended(R) = (R.X, R.Y, R.Z, R.T) */
@@ -275,7 +275,7 @@ ed25519_verify_var:
   /* Compute the left-hand side of the curve equation.
        [w13:w10] <= w1 * [w9:w6] = [8][S]B */
   bn.mov   w28, w1
-  jal      x1, ext_scmul
+  jal      x1, ext_scmul_var
 
   /* Compare both sides of the equation for equality.
        dmem[ed25519_verify_result] <= SUCCESS if [w5:w2] == [w13:w10],
@@ -985,19 +985,14 @@ affine_decode_var:
  * double-and-add cases for each, then selects one based on the next scalar
  * bit.
  *
- * Note: To speed up verification, where no secret scalars are involved, it
- * would be possible to do this in variable time and skip the double-add when
- * the scalar bit is 0. This would speed up scalar multiplication by
- * approximately 25% (because 50% of the time you skip 50% of the work).
- *
  * Note: To speed up both signing and verification (signing especially), many
  * implementations use a specialized implementation of multiplication by the
  * base point that looks up precomputed values from a table as described in the
  * original Ed25519 paper. However, this raises side-channel concerns because
- * the table lookups would be based on slices of the secret scalar. Additionally, each
- * point is 512 bits (even if stored in affine coordinates) so given limited
- * DMEM space we would only be able to use a maximum of 8 lookup values, even
- * assuming we consume all of DMEM.
+ * the table lookups would be based on slices of the secret scalar.
+ * Additionally, each point is 512 bits (even if stored in affine coordinates)
+ * so given limited DMEM space we would only be able to use a maximum of 8
+ * lookup values, even assuming we consume all of DMEM.
  *
  * This routine runs in constant time.
  *
@@ -1093,6 +1088,91 @@ ext_scmul:
 
   /* End loop. From the loop invariants, we know
        [w13:w10] = P = a * (X1, Y1, Z1, T1) */
+  ret
+
+/**
+ * Multiply a point by a scalar in extended twisted Edwards coordinates.
+ *
+ * Returns (X2, Y2, Z2, T2) = a * (X1, Y1, Z1, T1)
+ *
+ * Note: To save code size at the cost of verification performance, we could
+ * use the constant-time variant instead.
+ *
+ * This routine runs in variable time.
+ *
+ * Flags: Flags have no meaning beyond the scope of this subroutine.
+ *
+ * @param[in]   w6: input X1 (X1 < p)
+ * @param[in]   w7: input Y1 (Y1 < p)
+ * @param[in]   w8: input Z1 (Z1 < p)
+ * @param[in]   w9: input T1 (T1 < p)
+ * @param[in]  w19: constant, w19 = 19
+ * @param[in]  w28: a, scalar input, a < L
+ * @param[in]  w29: constant, (2*d) mod p, d = (-121665/121666) mod p
+ * @param[in]  w30: constant, 38
+ * @param[in]  w31: all-zero
+ * @param[in]  MOD: p, modulus = 2^255 - 19
+ * @param[out] w10: output X2
+ * @param[out] w11: output Y2
+ * @param[out] w12: output Z2
+ * @param[out] w13: output T2
+ *
+ * clobbered registers: w10 to w18, w20 to w28
+ * clobbered flag groups: FG0
+ */
+.globl ext_scmul_var
+ext_scmul_var:
+  /* Initialize the intermediate result P to the origin point.
+       [w13:w10] <= (0, 1, 1, 0) */
+  bn.mov   w10, w31
+  bn.addi  w11, w31, 1
+  bn.addi  w12, w31, 1
+  bn.mov   w13, w31
+
+  /* Shift the 253-bit scalar value so the MSB is in position 255.
+       w28 <= w28 << 3 = a << 3 */
+  bn.rshi  w28, w28, w31 >> 253
+
+  /* Loop over the 253 bits of the scalar a.
+
+     Loop intermediate values:
+       P (intermediate result, starts at P = origin)
+
+     Loop invariants (at start of loop iteration i):
+       w28 = a << (i + 3)
+       [w9:w6] = (X1, Y1, Z1, T1)
+       [w13:w10] = P = (a[252:253-i]) * (X1, Y1, Z1, T1)
+    */
+  loopi  253, 11
+    /* Compute 2P = (P + P).
+         [w13:w10] <= [w13:w10] + [w13:w10] = 2P  */
+    jal      x1, ext_double
+
+    /* Set the M flag to the current bit of the scalar.
+         FG0.M <= w28[255] = (a << (i + 3))[255] = a[252-i] */
+    bn.addi  w28, w28, 0
+
+    /* Extract the M flag.
+         x2 <= FG0[1] << 1 = FG0.M ? 2 : 0 */
+    csrrs    x2, CSR_FG0, x0
+    andi     x2, x2, 2
+
+    /* If the flag is unset (a[252-i] = 0), skip the addition step. */
+    beq      x2, x0, _ext_scmul_var_loop_end
+
+    /* Add the original point to 2P.
+         [w13:w10] <= [w13:w10] + [w9:w6] = 2P + (X1, Y1, Z1, T1) */
+    bn.mov   w14, w6
+    bn.mov   w15, w7
+    bn.mov   w16, w8
+    bn.mov   w17, w9
+    jal      x1, ext_add
+
+   _ext_scmul_var_loop_end:
+    /* Shift the scalar value to prepare for the next loop iteration.
+         w28 <= w28 >> 1 = a << ((i + 1) + 3) */
+    bn.rshi  w28, w28, w31 >> 255
+
   ret
 
 /**
