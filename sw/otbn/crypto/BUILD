@@ -2,7 +2,7 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
-load("//rules:otbn.bzl", "otbn_binary", "otbn_library")
+load("//rules:otbn.bzl", "otbn_binary", "otbn_library", )
 
 package(default_visibility = ["//visibility:public"])
 
@@ -26,30 +26,6 @@ otbn_library(
     ],
 )
 
-otbn_sim_test(
-    name = "ed25519_encode_decode_test",
-    srcs = [
-        "ed25519_encode_decode_test.s",
-    ],
-    deps = [
-        ":ed25519",
-        ":ed25519_scalar",
-        ":field25519",
-    ],
-)
-
-otbn_sim_test(
-    name = "ed25519_ext_add_test",
-    srcs = [
-        "ed25519_ext_add_test.s",
-    ],
-    deps = [
-        ":ed25519",
-        ":ed25519_scalar",
-        ":field25519",
-    ],
-)
-
 otbn_library(
     name = "ed25519_scalar",
     srcs = [
@@ -61,30 +37,6 @@ otbn_library(
     name = "div",
     srcs = [
         "div.s",
-    ],
-)
-
-otbn_sim_test(
-    name = "ed25519_sign_test",
-    srcs = [
-        "ed25519_sign_test.s",
-    ],
-    deps = [
-        ":ed25519",
-        ":ed25519_scalar",
-        ":field25519",
-    ],
-)
-
-otbn_sim_test(
-    name = "ed25519_verify_test",
-    srcs = [
-        "ed25519_verify_test.s",
-    ],
-    deps = [
-        ":ed25519",
-        ":ed25519_scalar",
-        ":field25519",
     ],
 )
 

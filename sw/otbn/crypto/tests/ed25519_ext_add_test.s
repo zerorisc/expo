@@ -22,9 +22,6 @@ main:
   /* Setup for coordinate field arithmetic. */
   jal     x1, fe_init
 
-  /* w30 <= 38 */
-  bn.addi w30, w31, 38
-
   /* Initialize failure counter to 0. */
   bn.mov  w0, w31
 

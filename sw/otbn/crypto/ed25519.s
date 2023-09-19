@@ -168,8 +168,8 @@ ed25519_verify_var:
   jal      x1, fe_init
 
   /* Initialize curve parameter d.
-       w30 <= dmem[d] = (-121665/121666) mod p */
-  li      x2, 30
+       w29 <= dmem[d] = (-121665/121666) mod p */
+  li      x2, 29
   la      x3, ed25519_d
   bn.lid  x2, 0(x3)
 
@@ -202,8 +202,8 @@ ed25519_verify_var:
   bne      x20, x21, verify_fail
 
   /* Precompute (2*d) mod p in preparation for scalar multiplication.
-       w30 <= (w30 + w30) mod p = (2 * d) mod p */
-  bn.addm  w30, w30, w30
+       w29 <= (w29 + w29) mod p = (2 * d) mod p */
+  bn.addm  w29, w29, w29
 
   /* Convert A to extended coordinates.
       [w9:w6] <= extended(A) = (A.X, A.Y, A.Z, A.T) */
@@ -379,14 +379,14 @@ ed25519_sign:
   jal      x1, fe_init
 
   /* Initialize curve parameter d.
-       w30 <= dmem[d] = (-121665/121666) mod p */
-  li      x2, 30
+       w29 <= dmem[d] = (-121665/121666) mod p */
+  li      x2, 29
   la      x3, ed25519_d
   bn.lid  x2, 0(x3)
 
   /* Precompute (2*d) mod p in preparation for scalar multiplication.
-       w30 <= (w30 + w30) mod p = (2 * d) mod p */
-  bn.addm  w30, w30, w30
+       29 <= (w29 + w29) mod p = (2 * d) mod p */
+  bn.addm  w29, w29, w29
 
   /* Load the base point B (in affine coordinates).
        w6 <= dmem[ed25519_Bx] = B.x
@@ -744,7 +744,8 @@ affine_encode:
  *
  * @param[in]  w11: encoded point: y | (lsb(x) << 255)
  * @param[in]  w19: constant, w19 = 19
- * @param[in]  w30: constant, w30 = d = (-121665/121666) mod p
+ * @param[in]  w29: constant, d = (-121665/121666) mod p
+ * @param[in]  w30: constant, 38
  * @param[in]  w31: all-zero
  * @param[in]  MOD: p, modulus = 2^255 - 19
  * @param[out] x20: SUCCESS or FAILURE code
@@ -812,8 +813,8 @@ affine_decode_var:
    jal      x1, fe_square
    /* w26 <= (w22 - w25) mod p <= (y^2 - 1) mod p = u */
    bn.subm  w26, w22, w25
-   /* w22 <= (w22 * w30) mod p = (y^2 * d) mod p */
-   bn.mov   w23, w30
+   /* w22 <= (w22 * w29) mod p = (y^2 * d) mod p */
+   bn.mov   w23, w29
    jal      x1, fe_mul
    /* w25 <= (w22 + w25) mod p = (y^2 * d + 1) mod p = v */
    bn.addm  w25, w22, w25
@@ -1010,7 +1011,8 @@ affine_decode_var:
  * @param[in]   w9: input T1 (T1 < p)
  * @param[in]  w19: constant, w19 = 19
  * @param[in]  w28: a, scalar input, a < L
- * @param[in]  w30: constant, w30 = (2*d) mod p, d = (-121665/121666) mod p
+ * @param[in]  w29: constant, (2*d) mod p, d = (-121665/121666) mod p
+ * @param[in]  w30: constant, 38
  * @param[in]  w31: all-zero
  * @param[in]  MOD: p, modulus = 2^255 - 19
  * @param[out] w10: output X2
@@ -1111,7 +1113,8 @@ ext_scmul:
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
  * @param[in]  w19: constant, w19 = 19
- * @param[in]  w30: constant, w30 = (2*d) mod p, d = (-121665/121666) mod p
+ * @param[in]  w29: constant, (2*d) mod p, d = (-121665/121666) mod p
+ * @param[in]  w30: constant, 38
  * @param[in]  w31: all-zero
  * @param[in]  MOD: p, modulus = 2^255 - 19
  * @param[in,out] w10: input X1 (X1 < p), output X3

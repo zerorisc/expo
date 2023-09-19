@@ -18,20 +18,14 @@ main:
   /* Prepare all-zero register. */
   bn.xor w31, w31, w31
 
-  /* MOD <= dmem[modulus] = p */
-  li      x2, 2
-  la      x3, modulus
-  bn.lid  x2, 0(x3)
-  bn.wsrw 0x0, w2
-
-  /* w19 <= 19 */
-  bn.addi w19, w31, 19
+  /* Setup for coordinate field arithmetic. */
+  jal     x1, fe_init
 
   /* Initialize failure counter to 0. */
   bn.mov  w0, w31
 
-  /* w30 <= dmem[ed25519_d] = d (curve parameter) */
-  li      x2, 30
+  /* w29 <= dmem[ed25519_d] = d (curve parameter) */
+  li      x2, 29
   la      x3, ed25519_d
   bn.lid  x2, 0(x3)
 
@@ -48,7 +42,8 @@ main:
  *
  * @param[in]     w19: constant, w19 = 19
  * @param[in]     MOD: p, modulus = 2^255 - 19
- * @param[in]     w30: constant, w30 = (2*d) mod p, d = (-121665/121666) mod p
+ * @param[in]     w29: constant, (2*d) mod p, d = (-121665/121666) mod p
+ * @param[in]     w30: constant, 38
  * @param[in]     w31: all-zero
  * @param[in,out] w0:  test failure counter
  *
@@ -111,7 +106,8 @@ run_encode_decode_test:
  *
  * @param[in]     w19: constant, w19 = 19
  * @param[in]     MOD: p, modulus = 2^255 - 19
- * @param[in]     w30: constant, w30 = (2*d) mod p, d = (-121665/121666) mod p
+ * @param[in]     w29: constant, (2*d) mod p, d = (-121665/121666) mod p
+ * @param[in]     w30: constant, 38
  * @param[in]     w31: all-zero
  * @param[in,out] w0:  test failure counter
  *
