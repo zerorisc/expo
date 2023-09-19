@@ -102,7 +102,7 @@
  * @param[in]  dmem[ed25519_public_key]: encoded public key A_, 256 bits
  * @param[out] dmem[ed25519_verify_result]: SUCCESS or FAILURE
  *
- * clobbered registers: x2 to x4, x20 to x23, w2 to w30
+ * clobbered registers: x2 to x4, x20 to x23, w1 to w30
  * clobbered flag groups: FG0
  */
 .globl ed25519_verify_var
@@ -130,22 +130,16 @@ ed25519_verify_var:
   bn.addm  w3, w3, w3
   bn.addm  w3, w3, w3
 
-  /* Load the 512-bit signature (R_ || S).
-       w11 <= R_
-       w29 <= S */
-  li       x2, 11
-  la       x3, ed25519_sig_R
-  bn.lid   x2, 0(x3)
-  li       x2, 29
+  /* Load the scalar S (second half of the signature).
+      w1 <= dmem[ed25519_sig_S] = S*/
+  li       x2, 1
   la       x3, ed25519_sig_S
   bn.lid   x2, 0(x3)
 
-  /* Check that S is in range (0 <= S < L). */
-
   /* w27 <= MOD = L */
   bn.wsrr  w27, 0x0
-  /* FG0.C <= (w29 - w27) <? 0 = S <? L */
-  bn.cmp   w29, w27
+  /* FG0.C <= (w1 - w27) <? 0 = S <? L */
+  bn.cmp   w1, w27
   /* x2 <= FG0[0] = FG0.C */
   csrrs    x2, CSR_FG0, x0
   andi     x2, x2, 1
@@ -155,10 +149,10 @@ ed25519_verify_var:
   bne      x2, x3, verify_fail
 
   /* Compute (8 * S) mod L.
-       w29 <= (2 * (2 * (2 * w29) mod L) mod L) mod L = (8 * S) mod L */
-  bn.addm  w29, w29, w29
-  bn.addm  w29, w29, w29
-  bn.addm  w29, w29, w29
+       w1 <= (2 * (2 * (2 * w1) mod L) mod L) mod L = (8 * S) mod L */
+  bn.addm  w1, w1, w1
+  bn.addm  w1, w1, w1
+  bn.addm  w1, w1, w1
 
   /* Set up for field arithmetic in preparation for scalar multiplication and
      point addition.
@@ -172,6 +166,12 @@ ed25519_verify_var:
   li      x2, 29
   la      x3, ed25519_d
   bn.lid  x2, 0(x3)
+
+  /* Load the encoded point R_ (first half of the signature).
+       w11 <= R_ */
+  li       x2, 11
+  la       x3, ed25519_sig_R
+  bn.lid   x2, 0(x3)
 
   /* Decode the signature point R.
        x20 <= SUCCESS or FAILURE
@@ -272,11 +272,9 @@ ed25519_verify_var:
        [w9:w6] <= extended(B) = (B.X, B.Y, B.Z, B.T) */
   jal      x1, affine_to_ext
 
-  /* w28 <= w29 = (8 * S) mod L */
-  bn.mov   w28, w29
-
   /* Compute the left-hand side of the curve equation.
-       [w13:w10] <= w28 * [w9:w6] = [8][S]B */
+       [w13:w10] <= w1 * [w9:w6] = [8][S]B */
+  bn.mov   w28, w1
   jal      x1, ext_scmul
 
   /* Compare both sides of the equation for equality.
