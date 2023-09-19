@@ -326,7 +326,7 @@ ed25519_verify_var:
  * clobbered flag groups: FG0
  */
 .globl ed25519_sign_stage1
-ed25519_sign:
+ed25519_sign_stage1:
   /* Set up for scalar arithmetic.
        [w15:w14] <= mu
        MOD <= L */
