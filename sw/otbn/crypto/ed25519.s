@@ -121,14 +121,9 @@ ed25519_verify_var:
   bn.lid   x2, 0(x3)
 
   /* Reduce k modulo L.
-       w18 <= [w17:w16] mod L = k mod L */
+       w3 <= [w17:w16] mod L = k mod L */
   jal      x1, sc_reduce
-
-  /* Compute (8 * k) mod L.
-       w3 <= (2 * (2 * (2 * w18) mod L) mod L) mod L = (8 * k) mod L */
-  bn.addm  w3, w18, w18
-  bn.addm  w3, w3, w3
-  bn.addm  w3, w3, w3
+  bn.mov   w3, w18
 
   /* Load the scalar S (second half of the signature).
       w1 <= dmem[ed25519_sig_S] = S*/
@@ -207,10 +202,8 @@ ed25519_verify_var:
   bn.mov   w7, w11
   jal      x1, affine_to_ext
 
-  /* w28 <= w3 = (8 * k) mod L */
+  /* [w13:w10] <= w3 * [w9:w6] = [k]A */
   bn.mov   w28, w3
-
-  /* [w13:w10] <= w28 * [w9:w6] = [8][k]A */
   jal      x1, ext_scmul_var
 
   /* Convert R to extended coordinates.
@@ -219,34 +212,21 @@ ed25519_verify_var:
   bn.mov   w7, w5
   jal      x1, affine_to_ext
 
-  /* Store the intermediate result [8][k]A for later.
-       [w5:w2] <= [w13:w10] = [8][k]A */
-  bn.mov   w2, w10
-  bn.mov   w3, w11
-  bn.mov   w4, w12
-  bn.mov   w5, w13
-
-  /* Compute [8]R with three doublings. */
-
-  /* [w13:w10] <= [w9:w6] = R */
-  bn.mov   w10, w6
-  bn.mov   w11, w7
-  bn.mov   w12, w8
-  bn.mov   w13, w9
-  /* [w13:w10] <= [w13:w10] + [w13:w10] = [2]R */
-  jal      x1, ext_double
-  /* [w13:w10] <= [w13:w10] + [w13:w10] = [4]R */
-  jal      x1, ext_double
-  /* [w13:w10] <= [w13:w10] + [w13:w10] = [8]R */
-  jal      x1, ext_double
-
-  /* Compute the right-hand side of the curve equation.
-       [w13:w10] <= [w13:w10] + [w5:w2] = [8]R + [8][k]A */
-  bn.mov   w14, w2
-  bn.mov   w15, w3
-  bn.mov   w16, w4
-  bn.mov   w17, w5
+  /* [w13:w10] <= [w13:w10] + [w9:w6] =  [k]A + R */
+  bn.mov   w14, w6
+  bn.mov   w15, w7
+  bn.mov   w16, w8
+  bn.mov   w17, w9
   jal      x1, ext_add
+
+  /* Compute the right-hand side of the curve equation with three doublings.
+       [w13:w10] <= ([k]A + R) * 2^3 = [8]R + [8][k]A */
+  /* [w13:w10] <= [w13:w10] + [w13:w10] = [2]([k]A + R) */
+  jal      x1, ext_double
+  /* [w13:w10] <= [w13:w10] + [w13:w10] = [4]([k]A + R) */
+  jal      x1, ext_double
+  /* [w13:w10] <= [w13:w10] + [w13:w10] = [8]([k]A + R)*/
+  jal      x1, ext_double
 
   /* Store the right-hand side for later.
        [w5:w2] <= [w13:w10] = [8]R + [8][k]A */
@@ -291,30 +271,41 @@ ed25519_verify_var:
 /**
  * Top-level Ed25519 signature generation operation.
  *
- * Returns the signature scalars R and S.
+ * Returns R_ (encoded signature point) and A_ (encoded public key point).
  *
- * The full signature-generation process looks like:
- *   Inputs: message M, secret key sk
- *   Outputs: R, S
- *   Procedure:
- *     1. Compute h = SHA-512(sk).
- *     2. Compute r = SHA-512(h[511:256] || M).
- *     3. Interpret s = h[256:0] as a scalar.
- *     4. Compute public key A = [s]B. Encode A as A_.
- *     5. Compute the signature point R = [r]B. Encode R as R_.
- *     6. Compute k = SHA-512(R_ || A_ || M)
- *     7. Compute the signature scalar S = (r + k * s) mod L.
- *     8. Output (R_ || S) as the signature. 
+ * The signature generation is split into two stages, because this program does
+ * not have direct access to a SHA-512 implementation and therefore must pass
+ * data to Ibex when a hash is needed. Ibex may then compute the hash, most
+ * likely using a separate OTBN program, but the details of how are irrelevant
+ * to this program. The full process looks like this:
+ *   Ibex:
+ *    - Inputs: secretkey, M
+ *    - Compute h = SHA-512(secretkey). Denote the second half of h as prefix.
+ *    - Compute r = SHA-512(dom2(F, C) || prefix || PH(M))
+ *    - Outputs: h, r, PH(M)
+ *   Stage 1:
+ *    - Inputs: h (first half only), r
+ *    - Construct the secret scalar s from the first half of h.
+ *    - Compute the public key A = [s]B. Encode A as A_.
+ *    - Compute the signature point R = [r]B. Encode R as R_.
+ *    - Ouputs: R_, A_
+ *  Ibex:
+ *    - Inputs: R_, A_, PH(M)
+ *    - Compute k = SHA-512(dom2(F, C) || R_ || A_ || PH(M))
+ *    - Outputs: k
+ *   Stage 2:
+ *    - Inputs: h (first half only), r, k
+ *    - Construct the secret scalar s from the first half of h.
+ *    - Compute the signature scalar S = (r + k * s) mod L.
+ *    - Ouputs: S
  *
  * This routine runs in constant time.
  *
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
  * @param[in]  w31: all-zero
- * @param[in]  dmem[ed25519_msg]: M, message (maybe pre-hashed).
- * @param[in]  dmem[ed25519_msg_len]: Message length in bytes.
- * @param[in]  dmem[ed25519_sk]: sk, secret key.
- * @param[in]  dmem[ed25519_sk]: sk, secret key.
+ * @param[in]  dmem[ed25519_hash_r]: precomputed hash r, 512 bits
+ * @param[in]  dmem[ed25519_hash_h_low]: lower half of precomputed hash h, 256 bits
  * @param[out] dmem[ed25519_sig_R]: encoded signature point R_, 256 bits
  * @param[out] dmem[ed25519_public_key]: encoded public key A_, 256 bits
  *
