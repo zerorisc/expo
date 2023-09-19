@@ -201,10 +201,6 @@ ed25519_verify_var:
   /* If A was not a valid point (x20 != SUCCESS), fail. */
   bne      x20, x21, verify_fail
 
-  /* Precompute (2*d) mod p in preparation for scalar multiplication.
-       w29 <= (w29 + w29) mod p = (2 * d) mod p */
-  bn.addm  w29, w29, w29
-
   /* Convert A to extended coordinates.
       [w9:w6] <= extended(A) = (A.X, A.Y, A.Z, A.T) */
   bn.mov   w6, w10
@@ -381,10 +377,6 @@ ed25519_sign_stage1:
   li      x2, 29
   la      x3, ed25519_d
   bn.lid  x2, 0(x3)
-
-  /* Precompute (2*d) mod p in preparation for scalar multiplication.
-       29 <= (w29 + w29) mod p = (2 * d) mod p */
-  bn.addm  w29, w29, w29
 
   /* Load the base point B (in affine coordinates).
        w6 <= dmem[ed25519_Bx] = B.x
@@ -1004,7 +996,7 @@ affine_decode_var:
  * @param[in]   w9: input T1 (T1 < p)
  * @param[in]  w19: constant, w19 = 19
  * @param[in]  w28: a, scalar input, a < L
- * @param[in]  w29: constant, (2*d) mod p, d = (-121665/121666) mod p
+ * @param[in]  w29: constant, d = (-121665/121666) mod p
  * @param[in]  w30: constant, 38
  * @param[in]  w31: all-zero
  * @param[in]  MOD: p, modulus = 2^255 - 19
@@ -1108,7 +1100,7 @@ ext_scmul:
  * @param[in]   w9: input T1 (T1 < p)
  * @param[in]  w19: constant, w19 = 19
  * @param[in]  w28: a, scalar input, a < L
- * @param[in]  w29: constant, (2*d) mod p, d = (-121665/121666) mod p
+ * @param[in]  w29: constant, d = (-121665/121666) mod p
  * @param[in]  w30: constant, 38
  * @param[in]  w31: all-zero
  * @param[in]  MOD: p, modulus = 2^255 - 19
@@ -1180,18 +1172,30 @@ ext_scmul_var:
  *
  * Returns (X3, Y3, Z3, T3) = (X1, Y1, Z1, T1) + (X1, Y1, Z1, T1)
  *
- * This is a thin, convenient wrapper around ext_add.
+ * This implementation follows RFC 8032, section 5.1.4:
+ *   https://datatracker.ietf.org/doc/html/rfc8032#section-5.1.4
  *
- * Note: at the expense of code size, it is possible to speed up sign and
- * verify by optimizing the point addition formula for the special case of
- * doubling, but we do not currently do so.
+ * The formula is:
+ *  A = X1^2
+ *  B = Y1^2
+ *  C = 2*Z1^2
+ *  H = A+B
+ *  E = H-(X1+Y1)^2
+ *  G = A-B
+ *  F = C+G
+ *  X3 = E*F
+ *  Y3 = G*H
+ *  T3 = E*H
+ *  Z3 = F*G
+ *
+ * Note: to save code size at the cost of performance, we could use `ext_add`
+ * for everything instead.
  *
  * This routine runs in constant time.
  *
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
  * @param[in]  w19: constant, w19 = 19
- * @param[in]  w29: constant, (2*d) mod p, d = (-121665/121666) mod p
  * @param[in]  w30: constant, 38
  * @param[in]  w31: all-zero
  * @param[in]  MOD: p, modulus = 2^255 - 19
@@ -1200,19 +1204,57 @@ ext_scmul_var:
  * @param[in,out] w12: input Z1 (Z1 < p), output Z3
  * @param[in,out] w13: input T1 (T1 < p), output T3
  *
- * clobbered registers: w10 to w18, w20 to w23, w24 to w27
+ * clobbered registers: w10 to w18, w20 to w27
  * clobbered flag groups: FG0
  */
 .globl ext_double
 ext_double:
-  /* [w17:w14] <= [w13:w10] = (X1, Y1, Z1, T1) */
-  bn.mov  w14, w10
-  bn.mov  w15, w11
-  bn.mov  w16, w12
-  bn.mov  w17, w13
+  /* w24 = (X1^2) = A */
+  bn.mov    w22, w10
+  jal       x1, fe_square
+  bn.mov    w24, w22
 
-  /* [w13:w10] <= [w13:w10] + [w17:w14] = (X3, Y3, Z3, T3) */
-  jal     x1, ext_add
+  /* w22 <= Y1^2 = B */
+  bn.mov    w22, w11
+  jal       x1, fe_square
+
+  /* w25 <= A + B = H */
+  bn.addm   w25, w24, w22
+
+  /* w24 <= A - B = G */
+  bn.subm   w24, w24, w22
+
+  /* w27 <= 2 * (Z1^2) = C */
+  bn.mov    w22, w12
+  jal       x1, fe_square
+  bn.addm   w27, w22, w22
+
+  /* w23 <= H - (X1+Y1)^2 = E */
+  bn.addm   w22, w10, w11
+  jal       x1, fe_square
+  bn.subm   w23, w25, w22
+
+  /* w10 <= (C+G)*E = X3 */
+  bn.addm   w22, w27, w24
+  jal       x1, fe_mul
+  bn.mov    w10, w22
+
+  /* w13 <= H*E = T3 */
+  bn.mov    w22, w25
+  jal       x1, fe_mul
+  bn.mov    w13, w22
+
+  /* w11 <= H*G <= Y3 */
+  bn.mov    w22, w25
+  bn.mov    w23, w24
+  jal       x1, fe_mul
+  bn.mov    w11, w22
+
+  /* w12 <= (C+G)*G <= Z3 */
+  bn.addm   w22, w27, w24
+  jal       x1, fe_mul
+  bn.mov    w12, w22
+
   ret
 
 /**
@@ -1253,7 +1295,7 @@ ext_double:
  *
  * @param[in]  w19: constant, 19
  * @param[in]  MOD: p, modulus = 2^255 - 19
- * @param[in]  w29: constant, (2*d) mod p, d = (-121665/121666) mod p
+ * @param[in]  w29: constant, d = (-121665/121666) mod p
  * @param[in]  w30: constant, 38
  * @param[in]  w31: all-zero
  * @param[in,out] w10: input X1 (X1 < p), output X3
@@ -1296,8 +1338,8 @@ ext_add:
 
   /* w22 <= w13 = T1 */
   bn.mov   w22, w13
-  /* w23 <= w29 <= 2*d */
-  bn.mov   w23, w29
+  /* w23 <= w29 + w29 <= 2*d */
+  bn.addm  w23, w29, w29
   /* w22 <= w22 * w23 = T1*2*d */
   jal      x1, fe_mul
   /* w23 <= w17 = T2 */
