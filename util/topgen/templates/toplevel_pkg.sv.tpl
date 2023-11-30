@@ -45,7 +45,7 @@ package top_${top["name"]}_pkg;
 % for mod in top["alert_module"]:
     ${lib.Name.from_snake_case("top_" + top["name"] + "_alert_peripheral_" + mod).as_camel_case()} = ${loop.index},
 % endfor
-    TopEarlgreyAlertPeripheralCount
+    Top${top["name"].capitalize()}AlertPeripheralCount
   } alert_peripheral_e;
 
   // Enumeration of alerts
@@ -53,7 +53,7 @@ package top_${top["name"]}_pkg;
 % for alert in top["alert"]:
     ${lib.Name.from_snake_case("top_" + top["name"] + "_alert_id_" + alert["name"]).as_camel_case()} = ${loop.index},
 % endfor
-    TopEarlgreyAlertIdCount
+    Top${top["name"].capitalize()}AlertIdCount
   } alert_id_e;
 
   // Enumeration of IO power domains.

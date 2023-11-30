@@ -17,7 +17,7 @@ alert_peripheral_names = sorted({p.name for p in helper.alert_peripherals})
 #include "sw/device/lib/testing/test_framework/ottf_test_config.h"
 
 #include "alert_handler_regs.h"  // Generated.
-#include "hw/top_earlgrey/sw/autogen/top_earlgrey.h"
+#include "hw/top_${top["name"]}/sw/autogen/top_${top["name"]}.h"
 
 OTTF_DEFINE_TEST_CONFIG();
 
@@ -31,7 +31,7 @@ static dif_${p.name}_t ${p.inst_name};
  */
 static void init_peripherals(void) {
   mmio_region_t base_addr;
-  base_addr = mmio_region_from_addr(TOP_EARLGREY_ALERT_HANDLER_BASE_ADDR);
+  base_addr = mmio_region_from_addr(TOP_${top["name"].upper()}_ALERT_HANDLER_BASE_ADDR);
   CHECK_DIF_OK(dif_alert_handler_init(base_addr, &alert_handler));
 
   % for p in helper.alert_peripherals:

@@ -18,9 +18,9 @@ opentitan_test(
     name = "plic_all_irqs_test",
     srcs = ["plic_all_irqs_test.c"],
     exec_env = {
-        "//hw/top_earlgrey:fpga_cw310_test_rom": None,
-        "//hw/top_earlgrey:sim_dv": None,
-        "//hw/top_earlgrey:sim_verilator": None,
+        "//hw/top_${top["name"]}:fpga_cw310_test_rom": None,
+        "//hw/top_${top["name"]}:sim_dv": None,
+        "//hw/top_${top["name"]}:sim_verilator": None,
     },
     verilator = verilator_params(
         timeout = "eternal",
@@ -28,7 +28,7 @@ opentitan_test(
         # often times out in 3600s on 4 cores
     ),
     deps = [
-        "//hw/top_earlgrey/sw/autogen:top_earlgrey",
+        "//hw/top_${top["name"]}/sw/autogen:top_${top["name"]}",
         "//sw/device/lib/base:mmio",
 % for n in sorted(irq_peripheral_names + ["rv_plic"]):
         "//sw/device/lib/dif:${n}",
@@ -44,12 +44,12 @@ opentitan_test(
     name = "alert_test",
     srcs = ["alert_test.c"],
     exec_env = {
-        "//hw/top_earlgrey:fpga_cw310_test_rom": None,
-        "//hw/top_earlgrey:sim_dv": None,
-        "//hw/top_earlgrey:sim_verilator": None,
+        "//hw/top_${top["name"]}:fpga_cw310_test_rom": None,
+        "//hw/top_${top["name"]}:sim_dv": None,
+        "//hw/top_${top["name"]}:sim_verilator": None,
     },
     deps = [
-        "//hw/top_earlgrey/sw/autogen:top_earlgrey",
+        "//hw/top_${top["name"]}/sw/autogen:top_${top["name"]}",
         "//sw/device/lib/base:memory",
         "//sw/device/lib/base:mmio",
 % for n in sorted(alert_peripheral_names + ["alert_handler"]):
