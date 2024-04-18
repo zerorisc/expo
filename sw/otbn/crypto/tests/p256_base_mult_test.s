@@ -17,7 +17,7 @@
 p256_base_mult_test:
 
   /* call base point multiplication routine in P-256 lib */
-  jal      x1, p256_base_mult
+  jal      x1, p256_base_mult_fast
 
   /* load result to WDRs for comparison with reference */
   li        x2, 0
@@ -32,9 +32,9 @@ p256_base_mult_test:
 .data
 
 /* scalar d */
-.globl d0
+.globl d
 .balign 32
-d0:
+d:
   .word 0xc7df1a56
   .word 0xfbd94efe
   .word 0xaa847f52
@@ -43,18 +43,6 @@ d0:
   .word 0xe5f2cbee
   .word 0x9144233d
   .word 0xc0fbe256
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-.globl d1
-.balign 32
-d1:
-  .zero 64
 
 /* result buffer x-coordinate */
 .globl x

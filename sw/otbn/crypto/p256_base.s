@@ -12,6 +12,7 @@
 
 .globl p256_scalar_mult
 .globl p256_base_mult
+.globl p256_base_mult_fast
 .globl p256_generate_k
 .globl p256_generate_random_key
 .globl p256_key_from_seed
@@ -1358,6 +1359,157 @@ scalar_mult_int:
   bn.cmp    w10, w31
   jal       x0, trigger_fault_if_fg0_z
 
+/**
+ * Look up a value in a precomputed list of points.
+ *
+ * Returns the idx-th point in the table, in affine coordinates.
+ *
+ * If the index is zero, then the projective coordinate will have Z=0 instead
+ * of Z=1 to accomodate the point at infinity. See the docstring for
+ * `scalar_mult_fast` for more details on the table format.
+ *
+ * Like `scalar_mult_fast`, this routine makes no effort to defend against
+ * power or EM side channel attacks. This routine runs in constant time.
+ *
+ * @param[in]  x13: idx, index in the table
+ * @param[in]  x21: dptr_tbl, pointer to precomputed table in dmem
+ * @param[in]  w31: all-zero
+ * @param[out] w11: x, projective X-coordinate 
+ * @param[out] w12: y, projective Y-coordinate
+ * @param[out] w13: z, projective Z-coordinate
+ *
+ * Flags: Flags have no meaning beyond the scope of this subroutine.
+ *
+ * clobbered registers: x2, x22, w11 to w13
+ * clobbered flag groups: FG0
+ */
+scalar_mult_table_lookup:
+  slli      x22, x13, 6
+  add       x22, x22, x21
+  li        x2, 11
+  bn.lid    x2, 0(x22++)
+  addi      x2, x2, 1
+  bn.lid    x2, 0(x22)
+
+  /* If the index was zero, set Z=0; otherwise set it to 1. */
+  beq       x13, x0, _scalar_mult_table_lookup_zero
+  bn.addi   w13, w31, 1
+  ret
+   
+  _scalar_mult_table_lookup_zero:
+  bn.addi   w13, w31, 0
+  ret
+
+/**
+ * P-256 scalar point multiplication without SCA protection.
+ *
+ * returns R = k*P = k*(x_p, y_p)
+ *         with R, P being valid P-256 curve points in affine coordinates
+ *              k being a 256 bit scalar
+ *
+ * Unlike scalar_mult_int, this routine does not attempt to protect against
+ * power/EM side channels. It includes memory accesses that depend on the
+ * secret value k. Because power/EM SCA attacks are not in scope, it accepts k
+ * as a plaintext 256-bit value.
+ *
+ * Expects a precomputed table of multiples of the point in DMEM, such that the
+ * ith entry in the table is the affine (x, y) coordinates of i*P, for i=0..15.
+ * The 0th entry should be (0, 1), even though the point at infinity (0, 1, 0)
+ * is not actually representable in affine coordinates.
+ *
+ * This routine runs in constant time.
+ *
+ * @param[in]  x21: dptr_tbl, pointer to precomputed table in dmem
+ * @param[in]  w0: k, scalar
+ * @param[in]  w31: all-zero
+ * @param[out]  w8: x, x-coordinate of curve point (projective)
+ * @param[out]  w9: y, y-coordinate of curve point (projective)
+ * @param[out]  w10: z, z-coordinate of curve point (projective)
+ *
+ * Flags: Flags have no meaning beyond the scope of this subroutine.
+ *
+ * clobbered registers: x2, x3, x10, w0 to w30
+ * clobbered flag groups: FG0
+ */
+scalar_mult_fast:
+  /* Set up for coordinate arithmetic.
+       MOD <= p
+       w28 <= r256
+       w29 <= r448 */
+  jal       x1, setup_modp
+
+  /* Load domain parameter b from dmem.
+     w27 <= b = dmem[p256_b] */
+  li        x2, 27
+  la        x3, p256_b
+  bn.lid    x2, 0(x3)
+
+  /* Write the scalar to the DMEM scratchpad.
+       dmem[k_scratch] <= w0 */
+  la        x11, k_scratch
+  bn.sid    x0, 0(x11)
+
+  /* Initialize a pointer to the last 32b word of k. */
+  addi      x11, x11, 28
+
+  /* Initialize result to the point at infinity.
+     Q = (w8, w9, w10) <= (0, 1, 0) */
+  bn.mov    w8, w31
+  bn.addi   w9, w31, 1
+  bn.mov    w10, w31
+
+  /* Loop through the 32-bit words of the scalar.
+
+     Loop invariants (for i=7..0):
+       x11 = k_scratch + i*4
+       (w8, w9, w10) = (k >> (i*32)) * P
+   */
+  loopi     8, 14
+    /* Load the next 32 bits of k (higher bits come first).
+         x12 <= dmem[x11] = k[i] */
+    lw        x12, 0(x11)
+
+    /* Loop through the scalar bits in 4-bit windows.
+    
+       Loop invariants (for j=7..0):
+         x12 = k[i] << ((7 - j) * 4)
+         (w8, w9, w10) = (k >> (i*32 + j*4)) * P
+     */
+    loopi     8, 11
+      /* Repeatedly double Q.
+           (w8, w9, w10) <= Q * 16 */
+      jal       x1, proj_double
+      jal       x1, proj_double
+      jal       x1, proj_double
+      jal       x1, proj_double
+
+      /* Isolate the next 4 bits of the scalar.
+           x13 <= x12 >> 28 = k[i][j] */
+      srli      x13, x12, 28
+
+      /* Get the table entry based on the last 4 bits of k.
+           (w11, w12, w13) <=  x13 * P */
+      jal       x1, scalar_mult_table_lookup
+
+      /* Add the result to Q. */
+      jal       x1, proj_add
+      bn.mov    w8, w11
+      bn.mov    w9, w12
+      bn.mov    w10, w13
+
+      /* Shift the scalar word for the next iteration. */
+      slli      x12, x12, 4
+
+    /* End of outer loop; decrement the pointer. */
+    addi      x11, x11, -4
+
+  /* Check if the z-coordinate of Q is 0. If so, fail; this represents the
+     point at infinity and means the scalar was zero mod n, which likely
+     indicates a fault attack. Tail-call.
+
+     FG0.Z <= if (w10 == 0) then 1 else 0 */
+  bn.cmp    w10, w31
+  jal       x0, trigger_fault_if_fg0_z
 
 /**
  * P-256 scalar multiplication with base point G
@@ -1414,6 +1566,55 @@ p256_base_mult:
   la        x21, p256_gx
   la        x22, p256_gy
   jal       x1, scalar_mult_int
+
+  /* Convert masked result back to affine coordinates.
+     R = (x_a, y_a) = (w11, w12) */
+  jal       x1, proj_to_affine
+
+  /* store result (affine coordinates) in dmem
+     dmem[x] <= x_a = w11
+     dmem[y] <= y_a = w12 */
+  li        x2, 11
+  la        x21, x
+  bn.sid    x2++, 0(x21)
+  la        x22, y
+  bn.sid    x2, 0(x22)
+
+  ret
+
+/**
+ * P-256 scalar multiplication with base point G without SCA protection.
+ *
+ * returns R = d*G = d*(x_g, y_g)
+ *         with R and G being valid P-256 curve points in affine coordinates,
+ *              furthermore G being the curves base point,
+ *              d being a 256 bit scalar
+ *
+ * This routine runs in constant time.
+ *
+ * @param[in]   dmem[d]: scalar d (256 bits)
+ * @param[out]  dmem[x]: affine x-coordinate (256 bits)
+ * @param[out]  dmem[y]: affine y-coordinate (256 bits)
+ *
+ * Flags: Flags have no meaning beyond the scope of this subroutine.
+ *
+ * clobbered registers: x2, x3, x16, x17, x21, x22, w0 to w26
+ * clobbered flag groups: FG0
+ */
+p256_base_mult_fast:
+  /* Init all-zero register. */
+  bn.xor    w31, w31, w31
+
+  /* Load secret key d from dmem.
+       w0 = dmem[d] */
+  la        x16, d
+  li        x2, 0
+  bn.lid    x2, 0(x16)
+
+  /* Call internal fast scalar multiplication routine.
+     (w8, w9, w10) <= d*G = R */
+  la        x21, tblG
+  jal       x1, scalar_mult_fast
 
   /* Convert masked result back to affine coordinates.
      R = (x_a, y_a) = (w11, w12) */
@@ -1876,6 +2077,13 @@ p256_key_from_seed:
 
   ret
 
+.section .scratchpad
+
+/* Scalar value for fast multiplication. */
+.balign 32
+k_scratch:
+.zero 32
+
 .section .data
 
 /* P-256 domain parameter b */
@@ -1943,31 +2151,317 @@ p256_u_n:
   .word 0xffffffff
   .word 0x00000000
 
-/* P-256 basepoint G affine x-coordinate */
+/* Precomputed table for G. */
+tblG:
+/* 0*G: point at infinity (0, 1, 0). This point is not actually representable
+   in affine coordinates and requires special handling. */ 
+.word 0x00000000
+.word 0x00000000
+.word 0x00000000
+.word 0x00000000
+.word 0x00000000
+.word 0x00000000
+.word 0x00000000
+.word 0x00000000
+.word 0x00000001
+.word 0x00000000
+.word 0x00000000
+.word 0x00000000
+.word 0x00000000
+.word 0x00000000
+.word 0x00000000
+.word 0x00000000
+/* 1*G:
+    x = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296
+    y = 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5 */
 .globl p256_gx
 .balign 32
 p256_gx:
-  .word 0xd898c296
-  .word 0xf4a13945
-  .word 0x2deb33a0
-  .word 0x77037d81
-  .word 0x63a440f2
-  .word 0xf8bce6e5
-  .word 0xe12c4247
-  .word 0x6b17d1f2
-
-/* P-256 basepoint G affine y-coordinate */
+.word 0xd898c296
+.word 0xf4a13945
+.word 0x2deb33a0
+.word 0x77037d81
+.word 0x63a440f2
+.word 0xf8bce6e5
+.word 0xe12c4247
+.word 0x6b17d1f2
 .globl p256_gy
 .balign 32
 p256_gy:
-  .word 0x37bf51f5
-  .word 0xcbb64068
-  .word 0x6b315ece
-  .word 0x2bce3357
-  .word 0x7c0f9e16
-  .word 0x8ee7eb4a
-  .word 0xfe1a7f9b
-  .word 0x4fe342e2
+.word 0x37bf51f5
+.word 0xcbb64068
+.word 0x6b315ece
+.word 0x2bce3357
+.word 0x7c0f9e16
+.word 0x8ee7eb4a
+.word 0xfe1a7f9b
+.word 0x4fe342e2
+/* 2*G:
+    x = 0x7cf27b188d034f7e8a52380304b51ac3c08969e277f21b35a60b48fc47669978
+    y = 0x07775510db8ed040293d9ac69f7430dbba7dade63ce982299e04b79d227873d1 */
+.word 0x47669978
+.word 0xa60b48fc
+.word 0x77f21b35
+.word 0xc08969e2
+.word 0x04b51ac3
+.word 0x8a523803
+.word 0x8d034f7e
+.word 0x7cf27b18
+.word 0x227873d1
+.word 0x9e04b79d
+.word 0x3ce98229
+.word 0xba7dade6
+.word 0x9f7430db
+.word 0x293d9ac6
+.word 0xdb8ed040
+.word 0x07775510
+/* 3*G:
+    x = 0x5ecbe4d1a6330a44c8f7ef951d4bf165e6c6b721efada985fb41661bc6e7fd6c
+    y = 0x8734640c4998ff7e374b06ce1a64a2ecd82ab036384fb83d9a79b127a27d5032 */
+.word 0xc6e7fd6c
+.word 0xfb41661b
+.word 0xefada985
+.word 0xe6c6b721
+.word 0x1d4bf165
+.word 0xc8f7ef95
+.word 0xa6330a44
+.word 0x5ecbe4d1
+.word 0xa27d5032
+.word 0x9a79b127
+.word 0x384fb83d
+.word 0xd82ab036
+.word 0x1a64a2ec
+.word 0x374b06ce
+.word 0x4998ff7e
+.word 0x8734640c
+/* 4*G:
+    x = 0xe2534a3532d08fbba02dde659ee62bd0031fe2db785596ef509302446b030852
+    y = 0xe0f1575a4c633cc719dfee5fda862d764efc96c3f30ee0055c42c23f184ed8c6 */
+.word 0x6b030852
+.word 0x50930244
+.word 0x785596ef
+.word 0x031fe2db
+.word 0x9ee62bd0
+.word 0xa02dde65
+.word 0x32d08fbb
+.word 0xe2534a35
+.word 0x184ed8c6
+.word 0x5c42c23f
+.word 0xf30ee005
+.word 0x4efc96c3
+.word 0xda862d76
+.word 0x19dfee5f
+.word 0x4c633cc7
+.word 0xe0f1575a
+/* 5*G:
+    x = 0x51590b7a515140d2d784c85608668fdfef8c82fd1f5be52421554a0dc3d033ed
+    y = 0xe0c17da8904a727d8ae1bf36bf8a79260d012f00d4d80888d1d0bb44fda16da4 */
+.word 0xc3d033ed
+.word 0x21554a0d
+.word 0x1f5be524
+.word 0xef8c82fd
+.word 0x08668fdf
+.word 0xd784c856
+.word 0x515140d2
+.word 0x51590b7a
+.word 0xfda16da4
+.word 0xd1d0bb44
+.word 0xd4d80888
+.word 0x0d012f00
+.word 0xbf8a7926
+.word 0x8ae1bf36
+.word 0x904a727d
+.word 0xe0c17da8
+/* 6*G:
+    x = 0xb01a172a76a4602c92d3242cb897dde3024c740debb215b4c6b0aae93c2291a9
+    y = 0xe85c10743237dad56fec0e2dfba703791c00f7701c7e16bdfd7c48538fc77fe2 */
+.word 0x3c2291a9
+.word 0xc6b0aae9
+.word 0xebb215b4
+.word 0x024c740d
+.word 0xb897dde3
+.word 0x92d3242c
+.word 0x76a4602c
+.word 0xb01a172a
+.word 0x8fc77fe2
+.word 0xfd7c4853
+.word 0x1c7e16bd
+.word 0x1c00f770
+.word 0xfba70379
+.word 0x6fec0e2d
+.word 0x3237dad5
+.word 0xe85c1074
+/* 7*G:
+    x = 0x8e533b6fa0bf7b4625bb30667c01fb607ef9f8b8a80fef5b300628703187b2a3
+    y = 0x73eb1dbde03318366d069f83a6f5900053c73633cb041b21c55e1a86c1f400b4 */
+.word 0x3187b2a3
+.word 0x30062870
+.word 0xa80fef5b
+.word 0x7ef9f8b8
+.word 0x7c01fb60
+.word 0x25bb3066
+.word 0xa0bf7b46
+.word 0x8e533b6f
+.word 0xc1f400b4
+.word 0xc55e1a86
+.word 0xcb041b21
+.word 0x53c73633
+.word 0xa6f59000
+.word 0x6d069f83
+.word 0xe0331836
+.word 0x73eb1dbd
+/* 8*G:
+    x = 0x62d9779dbee9b0534042742d3ab54cadc1d238980fce97dbb4dd9dc1db6fb393
+    y = 0xad5accbd91e9d8244ff15d771167cee0a2ed51f6bbe76a78da540a6a0f09957e */
+.word 0xdb6fb393
+.word 0xb4dd9dc1
+.word 0x0fce97db
+.word 0xc1d23898
+.word 0x3ab54cad
+.word 0x4042742d
+.word 0xbee9b053
+.word 0x62d9779d
+.word 0x0f09957e
+.word 0xda540a6a
+.word 0xbbe76a78
+.word 0xa2ed51f6
+.word 0x1167cee0
+.word 0x4ff15d77
+.word 0x91e9d824
+.word 0xad5accbd
+/* 9*G:
+    x = 0xea68d7b6fedf0b71878938d51d71f8729e0acb8c2c6df8b3d79e8a4b90949ee0
+    y = 0x2a2744c972c9fce787014a964a8ea0c84d714feaa4de823fe85a224a4dd048fa */
+.word 0x90949ee0
+.word 0xd79e8a4b
+.word 0x2c6df8b3
+.word 0x9e0acb8c
+.word 0x1d71f872
+.word 0x878938d5
+.word 0xfedf0b71
+.word 0xea68d7b6
+.word 0x4dd048fa
+.word 0xe85a224a
+.word 0xa4de823f
+.word 0x4d714fea
+.word 0x4a8ea0c8
+.word 0x87014a96
+.word 0x72c9fce7
+.word 0x2a2744c9
+/* 10*G:
+    x = 0xcef66d6b2a3a993e591214d1ea223fb545ca6c471c48306e4c36069404c5723f
+    y = 0x878662a229aaae906e123cdd9d3b4c10590ded29fe751eeeca34bbaa44af0773 */
+.word 0x04c5723f
+.word 0x4c360694
+.word 0x1c48306e
+.word 0x45ca6c47
+.word 0xea223fb5
+.word 0x591214d1
+.word 0x2a3a993e
+.word 0xcef66d6b
+.word 0x44af0773
+.word 0xca34bbaa
+.word 0xfe751eee
+.word 0x590ded29
+.word 0x9d3b4c10
+.word 0x6e123cdd
+.word 0x29aaae90
+.word 0x878662a2
+/* 11*G:
+    x = 0x3ed113b7883b4c590638379db0c21cda16742ed0255048bf433391d374bc21d1
+    y = 0x9099209accc4c8a224c843afa4f4c68a090d04da5e9889dae2f8eefce82a3740 */
+.word 0x74bc21d1
+.word 0x433391d3
+.word 0x255048bf
+.word 0x16742ed0
+.word 0xb0c21cda
+.word 0x0638379d
+.word 0x883b4c59
+.word 0x3ed113b7
+.word 0xe82a3740
+.word 0xe2f8eefc
+.word 0x5e9889da
+.word 0x090d04da
+.word 0xa4f4c68a
+.word 0x24c843af
+.word 0xccc4c8a2
+.word 0x9099209a
+/* 12*G:
+    x = 0x741dd5bda817d95e4626537320e5d55179983028b2f82c99d500c5ee8624e3c4
+    y = 0x0770b46a9c385fdc567383554887b1548eeb912c35ba5ca71995ff22cd4481d3 */
+.word 0x8624e3c4
+.word 0xd500c5ee
+.word 0xb2f82c99
+.word 0x79983028
+.word 0x20e5d551
+.word 0x46265373
+.word 0xa817d95e
+.word 0x741dd5bd
+.word 0xcd4481d3
+.word 0x1995ff22
+.word 0x35ba5ca7
+.word 0x8eeb912c
+.word 0x4887b154
+.word 0x56738355
+.word 0x9c385fdc
+.word 0x0770b46a
+/* 13*G:
+    x = 0x177c837ae0ac495a61805df2d85ee2fc792e284b65ead58a98e15d9d46072c01
+    y = 0x63bb58cd4ebea558a24091adb40f4e7226ee14c3a1fb4df39c43bbe2efc7bfd8 */
+.word 0x46072c01
+.word 0x98e15d9d
+.word 0x65ead58a
+.word 0x792e284b
+.word 0xd85ee2fc
+.word 0x61805df2
+.word 0xe0ac495a
+.word 0x177c837a
+.word 0xefc7bfd8
+.word 0x9c43bbe2
+.word 0xa1fb4df3
+.word 0x26ee14c3
+.word 0xb40f4e72
+.word 0xa24091ad
+.word 0x4ebea558
+.word 0x63bb58cd
+/* 14*G:
+    x = 0x54e77a001c3862b97a76647f4336df3cf126acbe7a069c5e5709277324d2920b
+    y = 0xf599f1bb29f4317542121f8c05a2e7c37171ea77735090081ba7c82f60d0b375 */
+.word 0x24d2920b
+.word 0x57092773
+.word 0x7a069c5e
+.word 0xf126acbe
+.word 0x4336df3c
+.word 0x7a76647f
+.word 0x1c3862b9
+.word 0x54e77a00
+.word 0x60d0b375
+.word 0x1ba7c82f
+.word 0x73509008
+.word 0x7171ea77
+.word 0x05a2e7c3
+.word 0x42121f8c
+.word 0x29f43175
+.word 0xf599f1bb
+/* 15*G:
+    x = 0xf0454dc6971abae7adfb378999888265ae03af92de3a0ef163668c63e59b9d5f
+    y = 0xb5b93ee3592e2d1f4e6594e51f9643e62a3b21ce75b5fa3f47e59cde0d034f36 */
+.word 0xe59b9d5f
+.word 0x63668c63
+.word 0xde3a0ef1
+.word 0xae03af92
+.word 0x99888265
+.word 0xadfb3789
+.word 0x971abae7
+.word 0xf0454dc6
+.word 0x0d034f36
+.word 0x47e59cde
+.word 0x75b5fa3f
+.word 0x2a3b21ce
+.word 0x1f9643e6
+.word 0x4e6594e5
+.word 0x592e2d1f
+.word 0xb5b93ee3
 
 .section .bss
 
@@ -2020,6 +2514,12 @@ d0:
 .weak d1
 d1:
   .zero 64
+
+/* unmasked d for fast non-SCA-safe computation */
+.balign 32
+.weak d
+d:
+  .zero 32
 
 /* verification result x_r (aka x_1) */
 .balign 32
