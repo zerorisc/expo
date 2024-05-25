@@ -195,6 +195,9 @@ switch ${fpga_family} {
   kintexu {
     set bram_regex "BLOCKRAM.*.*"
   }
+  virtexuplus {
+    set bram_regex "BLOCKRAM.*.*"
+  }
   default {
     set bram_regex "BMEM.*.*"
   }

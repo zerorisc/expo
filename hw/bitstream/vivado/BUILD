@@ -159,6 +159,54 @@ filegroup(
     tags = ["manual"],
 )
 
+fusesoc_build(
+    name = "fpga_vcu118",
+    testonly = True,
+    srcs = [
+        "//hw:all_files",
+        _CW340_TESTROM,
+        _OTP_RMA,
+    ],
+    cores = ["//:cores"],
+    data = ["//hw/ip/otbn:all_files"],
+    flags = [
+        "--BootRomInitFile=" + _CW340_TESTROM_PATH,
+        "--OtpCtrlMemInitFile=" + _OTP_RMA_PATH,
+    ],
+    output_groups = {
+        "bitstream": ["synth-vivado/lowrisc_systems_chip_earlgrey_vcu118_0.1.bit"],
+        "rom_mmi": ["synth-vivado/rom.mmi"],
+        "otp_mmi": ["synth-vivado/otp.mmi"],
+    },
+    systems = ["lowrisc:systems:chip_earlgrey_vcu118"],
+    tags = ["manual"],
+    target = "synth",
+)
+
+filegroup(
+    name = "fpga_vcu118_test_rom",
+    testonly = True,
+    srcs = [":fpga_vcu118"],
+    output_group = "bitstream",
+    tags = ["manual"],
+)
+
+filegroup(
+    name = "fpga_vcu118_rom_mmi",
+    testonly = True,
+    srcs = [":fpga_vcu118"],
+    output_group = "rom_mmi",
+    tags = ["manual"],
+)
+
+filegroup(
+    name = "fpga_vcu118_otp_mmi",
+    testonly = True,
+    srcs = [":fpga_vcu118"],
+    output_group = "otp_mmi",
+    tags = ["manual"],
+)
+
 # Bitstream cache manifest fragment targets
 bitstream_manifest_fragment(
     name = "earlgrey_cw310_manifest",
@@ -247,6 +295,29 @@ pkg_tar(
     mode = "0444",
     package_dir = "build-bin/hw/top_earlgrey/chip_earlgrey_cw340",
     strip_prefix = "/hw/bitstream/vivado/earlgrey_cw340_manifest",
+    tags = ["manual"],
+)
+
+bitstream_manifest_fragment(
+    name = "earlgrey_vcu118_manifest",
+    testonly = True,
+    srcs = [":fpga_vcu118"],
+    bitstream = "bitstream",
+    design = "chip_earlgrey_vcu118",
+    memory_maps = {
+        "rom_mmi": "rom",
+        "otp_mmi": "otp",
+    },
+    tags = ["manual"],
+)
+
+pkg_tar(
+    name = "earlgrey_vcu118_archive",
+    testonly = True,
+    srcs = [":earlgrey_vcu118_manifest"],
+    mode = "0444",
+    package_dir = "build-bin/hw/top_earlgrey/chip_earlgrey_vcu118",
+    strip_prefix = "/hw/bitstream/vivado/earlgrey_vcu118_manifest",
     tags = ["manual"],
 )
 
