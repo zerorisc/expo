@@ -15,6 +15,7 @@
 `include "usbdev_dpi_config_host_vseq.sv"
 `include "usbdev_enable_vseq.sv"
 `include "usbdev_fifo_rst_vseq.sv"
+`include "usbdev_host_lost_vseq.sv"
 `include "usbdev_in_rand_trans_vseq.sv"
 `include "usbdev_in_stall_vseq.sv"
 `include "usbdev_in_trans_vseq.sv"
