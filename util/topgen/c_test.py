@@ -10,12 +10,14 @@ differently.
 
 import logging as log
 import sys
+from collections import defaultdict
 from typing import Dict
 
 from reggen.ip_block import IpBlock
 
 from .c import TopGenC
-from .lib import Name
+from .lib import Name, get_default_interrupt_domain, get_interrupt_domains, \
+                 get_module_address_space
 
 
 class TestPeripheral:
@@ -59,24 +61,30 @@ class AlertTestPeripheral(TestPeripheral):
 
 
 class TopGenCTest(TopGenC):
-    def __init__(self, top_info, name_to_block: Dict[str, IpBlock]):
-        super().__init__(top_info, name_to_block)
+    def __init__(self, top_info, name_to_block: Dict[str, IpBlock], addr_space: str):
+        super().__init__(top_info, name_to_block, addr_space)
 
         self.irq_peripherals = self._get_irq_peripherals()
         self.alert_peripherals = self._get_alert_peripherals()
 
     def _get_irq_peripherals(self):
-        irq_peripherals = []
+        irq_peripherals = defaultdict(list)
         self.devices()
-        for entry in self.top['module']:
-            inst_name = entry['name']
-            if inst_name not in self.top["interrupt_module"]:
-                continue
+        default_interrupt_domain = get_default_interrupt_domain(self.top)
+        interrupt_domains = get_interrupt_domains(self.top, self.addr_space,
+                                                  default_interrupt_domain)
 
-            name = entry['type']
-            plic_name = (self._top_name + Name(["plic", "peripheral"]) +
-                         Name.from_snake_case(inst_name))
-            plic_name = plic_name.as_c_enum()
+        for entry in self.top['module']:
+            # Only consider devices of the own address space
+            if get_module_address_space(entry) != self.addr_space:
+                continue
+            inst_name = entry['name']
+            # Only consider interrupts from the own interrupt domain
+            interrupt_domain = entry.get('interrupt_domain', default_interrupt_domain)
+            if interrupt_domain not in interrupt_domains:
+                continue
+            if inst_name not in self.top["interrupt_module"][interrupt_domain]:
+                continue
 
             # Device regions may have multiple TL interfaces. Pick the region
             # associated with the 'core' interface.
@@ -93,13 +101,17 @@ class TopGenCTest(TopGenC):
             base_addr_name = region.base_addr_name().as_c_define()
             is_templated = 'attr' in entry and entry['attr'] == 'templated'
 
-            plic_name = (self._top_name + Name(["plic", "peripheral"]) +
+            # Default interrupt domain is not named in definitions
+            irq_domain_name = (interrupt_domain,) if interrupt_domain != default_interrupt_domain else ()
+
+            name = entry['type']
+            plic_name = (self._top_name + Name(["plic", *irq_domain_name, "peripheral"]) +
                          Name.from_snake_case(inst_name))
             plic_name = plic_name.as_c_enum()
-
-            start_irq = self.device_irqs[inst_name][0]
-            end_irq = self.device_irqs[inst_name][-1]
-            plic_start_irq = (self._top_name + Name(["plic", "irq", "id"]) +
+            
+            start_irq = self.device_irqs[interrupt_domain][inst_name][0]
+            end_irq = self.device_irqs[interrupt_domain][inst_name][-1]
+            plic_start_irq = (self._top_name + Name(["plic", *irq_domain_name, "irq", "id"]) +
                               Name.from_snake_case(start_irq))
             plic_start_irq = plic_start_irq.as_c_enum()
 
@@ -112,14 +124,18 @@ class TopGenCTest(TopGenC):
             irq_peripheral = IrqTestPeripheral(name, inst_name, base_addr_name,
                                                is_templated, plic_name, start_irq,
                                                end_irq, plic_start_irq)
-            irq_peripherals.append(irq_peripheral)
+            irq_peripherals[interrupt_domain].append(irq_peripheral)
 
-        irq_peripherals.sort(key=lambda p: p.inst_name)
+        for key in irq_peripherals.keys():
+            irq_peripherals[key].sort(key=lambda p: p.inst_name)
         return irq_peripherals
 
     def _get_alert_peripherals(self):
+        if self.addr_space != self.default_addr_space:
+            return []
         alert_peripherals = []
-        self.devices()
+        device_regions = self.all_device_regions()
+
         for entry in self.top['module']:
             inst_name = entry['name']
             if inst_name not in self.top["alert_module"]:
@@ -131,8 +147,7 @@ class TopGenCTest(TopGenC):
             for item in self.top['module']:
                 if item['name'] == inst_name:
                     name = item['type']
-
-                    regions = self.device_regions[inst_name]
+                    regions = device_regions[inst_name]
                     if "core" in regions:
                         if_name = "core"
                     elif "regs" in regions:

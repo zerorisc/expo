@@ -41,7 +41,8 @@ top_required = {
     'type': ['s', 'type of hjson. Shall be "top" always'],
     'clocks': ['g', 'group of clock properties'],
     'resets': ['l', 'list of resets'],
-    'addr_spaces': ['ln', 'list of address spaces'],
+    'addr_spaces': ['l', 'list of address spaces'],
+    'interrupt_domains': ['l', 'list of interrupt domains'],
     'module': ['l', 'list of modules to instantiate'],
     'memory': ['l', 'list of memories. At least one memory '
                     'is needed to run the software'],
@@ -202,7 +203,8 @@ module_optional = {
                         ' (if the IP has multiple TL-UL interfaces)'],
     'memory': ['g', 'optional dict with memory region attributes'],
     'param_decl': ['g', 'optional dict that allows to override instantiation parameters'],
-    'generate_dif': ['pb', 'optional bool to indicate if a DIF should be generated for that module']
+    'generate_dif': ['pb', 'optional bool to indicate if a DIF should be generated for that module'],
+    'interrupt_domain': ['s', 'optional attribute indicating the interrupt domain of the device'],
 }
 
 module_added = {
