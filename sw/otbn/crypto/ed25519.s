@@ -65,11 +65,6 @@
 */
 
 /**
- * Constants for accessing flags.
- */
-.equ CSR_FG0,          0x7c0
-
-/**
  * Top-level Ed25519 signature verification operation.
  *
  * Returns SUCCESS or FAILURE.
@@ -136,7 +131,7 @@ ed25519_verify_var:
   /* FG0.C <= (w1 - w27) <? 0 = S <? L */
   bn.cmp   w1, w27
   /* x2 <= FG0[0] = FG0.C */
-  csrrs    x2, CSR_FG0, x0
+  csrrs    x2, FG0, x0
   andi     x2, x2, 1
 
   /* Fail if S >= L. */
@@ -880,7 +875,7 @@ affine_decode_var:
   /* FG0.Z <= (w22 - w26 == 0) = ((r^2 * v) mod p == u) */
   bn.cmp   w22, w26
   /* x2 <= FG0[3] = FG0.Z = ((r^2 * v) mod p == u) */
-  csrrs    x2, CSR_FG0, x0
+  csrrs    x2, FG0, x0
   and      x2, x2, x3
 
   /* Go to step 3, case 1 if we are in case 1. */
@@ -894,7 +889,7 @@ affine_decode_var:
   /* FG0.Z <= (w22 - w28 == 0) = ((r^2 * v) mod p == (-u) mod p) */
   bn.cmp   w22, w28
   /* x2 <= FG0[3] = FG0.Z = ((r^2 * v) mod p == (-u) mod p) */
-  csrrs    x2, CSR_FG0, x0
+  csrrs    x2, FG0, x0
   and      x2, x2, x3
 
   /* Go to step 3, case 2 if we are in case 2. */
@@ -1137,7 +1132,7 @@ ext_scmul_var:
 
     /* Extract the M flag.
          x2 <= FG0[1] << 1 = FG0.M ? 2 : 0 */
-    csrrs    x2, CSR_FG0, x0
+    csrrs    x2, FG0, x0
     andi     x2, x2, 2
 
     /* If the flag is unset (a[252-i] = 0), skip the addition step. */
@@ -1459,7 +1454,7 @@ ext_equal_var:
   /* w16 <= w16 - w22 <= (X1 * Z2) - (X2 * Z1) */
   bn.sub  w16, w16, w22
   /* x2 <= FG0[3] = FG0.Z << 3 = result of check 1 */
-  csrrs    x2, CSR_FG0, x0
+  csrrs    x2, FG0, x0
   andi     x2, x2, 8
 
   /* Fail if the FG0.Z flag was unset. */
@@ -1491,7 +1486,7 @@ ext_equal_var:
   /* w16 <= w16 - w22 <= (Y1 * Z2) - (Y2 * Z1) */
   bn.sub  w16, w16, w22
   /* x2 <= FG0[3] = FG0.Z << 3 = result of check 2 */
-  csrrs    x2, CSR_FG0, x0
+  csrrs    x2, FG0, x0
   andi     x2, x2, 8
 
   /* Fail if the FG0.Z flag was unset. */
