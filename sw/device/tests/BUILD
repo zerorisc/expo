@@ -7069,7 +7069,10 @@ opentitan_test(
         # does not respect the exec_disabled OTP config word.
         dicts.omit(
             EARLGREY_TEST_ENVS,
-            ["//hw/top_earlgrey:fpga_cw310_test_rom"],
+            [
+                "//hw/top_earlgrey:fpga_cw310_test_rom",
+                "//hw/top_earlgrey:fpga_vcu118_test_rom",
+            ],
         ),
         {
             "//hw/top_earlgrey:fpga_cw310_sival": None,
@@ -7158,7 +7161,10 @@ opentitan_test(
         # does not respect the exec_disabled OTP config word.
         dicts.omit(
             EARLGREY_TEST_ENVS,
-            ["//hw/top_earlgrey:fpga_cw310_test_rom"],
+            [
+                "//hw/top_earlgrey:fpga_cw310_test_rom",
+                "//hw/top_earlgrey:fpga_vcu118_test_rom",
+            ],
         ),
         {
             "//hw/top_earlgrey:fpga_cw310_sival": None,
@@ -7286,7 +7292,10 @@ opentitan_test(
         # does not respect the exec_disabled OTP config word.
         dicts.omit(
             EARLGREY_TEST_ENVS,
-            ["//hw/top_earlgrey:fpga_cw310_test_rom"],
+            [
+                "//hw/top_earlgrey:fpga_cw310_test_rom",
+                "//hw/top_earlgrey:fpga_vcu118_test_rom",
+            ],
         ),
         {
             "//hw/top_earlgrey:silicon_creator": None,

@@ -14,6 +14,7 @@ load(
     "fpga_cw305",
     "fpga_cw310",
     "fpga_cw340",
+    "fpga_vcu118",
     "silicon",
     "sim_dv",
     "sim_qemu",
@@ -361,6 +362,28 @@ fpga_cw340(
     otp = "//hw/top_earlgrey/data/otp/emulation:otp_img_prod_manuf_personalized",
     rom_ext = "//sw/device/silicon_creator/rom_ext:rom_ext_dice_x509_slot_a",
     tags = ["cw340_sival_rom_ext"],
+)
+
+###########################################################################
+# FPGA VCU118 Environments
+###########################################################################
+# Derived from the CW340 targets
+fpga_vcu118(
+    name = "fpga_vcu118_test_rom",
+    testonly = True,
+    base = ":fpga_cw340",
+    base_bitstream = "//hw/bitstream/cw340:bitstream",
+    exec_env = "fpga_vcu118_test_rom",
+    otp = "//hw/ip/otp_ctrl/data:img_rma",
+    otp_mmi = "//hw/bitstream/cw340:otp_mmi",
+    rom = "//sw/device/lib/testing/test_rom:test_rom",
+    rom_mmi = "//hw/bitstream/cw340:rom_mmi",
+    test_cmd = """
+        --exec="transport init"
+        --exec="bootstrap --clear-uart=true {firmware}"
+        --exec="console --non-interactive --exit-success='{exit_success}' --exit-failure='{exit_failure}'"
+        no-op
+    """,
 )
 
 ###########################################################################

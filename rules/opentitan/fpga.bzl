@@ -218,6 +218,23 @@ fpga_cw340 = rule(
     toolchains = [LOCALTOOLS_TOOLCHAIN],
 )
 
+# The VCU118 environment is largely copy-pasted from CW340,
+# so it still uses Cw340BinaryInfo.
+def _fpga_vcu118(ctx):
+    fields = exec_env_as_dict(ctx)
+    return ExecEnvInfo(
+        provider = Cw340BinaryInfo,
+        test_dispatch = _test_dispatch,
+        transform = _transform,
+        **fields
+    )
+
+fpga_vcu118 = rule(
+    implementation = _fpga_vcu118,
+    attrs = exec_env_common_attrs(),
+    toolchains = [LOCALTOOLS_TOOLCHAIN],
+)
+
 def fpga_params(
         tags = [],
         timeout = "short",

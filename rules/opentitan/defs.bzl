@@ -25,6 +25,7 @@ load(
     _fpga_cw305 = "fpga_cw305",
     _fpga_cw310 = "fpga_cw310",
     _fpga_cw340 = "fpga_cw340",
+    _fpga_vcu118 = "fpga_vcu118",
     _fpga_params = "fpga_params",
 )
 load(
@@ -87,6 +88,7 @@ opentitan_transition = _opentitan_transition
 fpga_cw305 = _fpga_cw305
 fpga_cw310 = _fpga_cw310
 fpga_cw340 = _fpga_cw340
+fpga_vcu118 = _fpga_vcu118
 fpga_params = _fpga_params
 
 # Temporary export of the old name to prevent merge skew breakage.
@@ -119,6 +121,7 @@ opentitan_manual_test = _opentitan_manual_test
 EARLGREY_TEST_ENVS = {
     "//hw/top_earlgrey:fpga_cw310_sival_rom_ext": None,
     "//hw/top_earlgrey:fpga_cw310_rom_with_fake_keys": None,
+    "//hw/top_earlgrey:fpga_vcu118_test_rom": None,
     "//hw/top_earlgrey:sim_dv": None,
     "//hw/top_earlgrey:sim_verilator": None,
     "//hw/top_earlgrey:sim_qemu_rom_with_fake_keys": None,
