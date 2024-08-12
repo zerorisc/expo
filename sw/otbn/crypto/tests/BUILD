@@ -1150,6 +1150,17 @@ otbn_sim_test(
 )
 
 otbn_sim_test(
+    name = "sha512_padding_test",
+    srcs = [
+        "sha512_padding_test.s",
+    ],
+    exp = "sha512_padding_test.exp",
+    deps = [
+        "//sw/otbn/crypto:sha512_padding",
+    ],
+)
+
+otbn_sim_test(
     name = "sha384_test",
     srcs = [
         "sha384_test.s",
