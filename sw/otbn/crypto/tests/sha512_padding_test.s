@@ -21,7 +21,6 @@ main:
   /* Load wide-register pointers. */
   li       x6, 0
   li       x30, 30
-  li       x31, 31
 
   /* Test with an empty message.
        x21 <= dptr_end, end of padding
@@ -39,10 +38,10 @@ main:
   bn.lid    x6++, 96(x10)
  
   /* Reset destination buffer. */
-  bn.sid    x31, 0(x10)
-  bn.sid    x31, 32(x10)
-  bn.sid    x31, 64(x10)
-  bn.sid    x31, 96(x10)
+  bn.sid    x30, 0(x10)
+  bn.sid    x30, 32(x10)
+  bn.sid    x30, 64(x10)
+  bn.sid    x30, 96(x10)
 
   /* Test with a 15-byte message.
        x21 <= dptr_end, end of padding
@@ -64,10 +63,10 @@ main:
   bn.lid    x6++, 96(x2)
 
   /* Reset destination buffer. */
-  bn.sid    x31, 0(x2)
-  bn.sid    x31, 32(x2)
-  bn.sid    x31, 64(x2)
-  bn.sid    x31, 96(x2)
+  bn.sid    x30, 0(x2)
+  bn.sid    x30, 32(x2)
+  bn.sid    x30, 64(x2)
+  bn.sid    x30, 96(x2)
 
   /* Test with a 127-byte message.
        x21 <= dptr_end, end of padding
@@ -93,14 +92,14 @@ main:
   bn.lid    x6++, 224(x2)
 
   /* Reset destination buffer. */
-  bn.sid    x31, 0(x2)
-  bn.sid    x31, 32(x2)
-  bn.sid    x31, 64(x2)
-  bn.sid    x31, 96(x2)
-  bn.sid    x31, 128(x2)
-  bn.sid    x31, 160(x2)
-  bn.sid    x31, 192(x2)
-  bn.sid    x31, 224(x2)
+  bn.sid    x30, 0(x2)
+  bn.sid    x30, 32(x2)
+  bn.sid    x30, 64(x2)
+  bn.sid    x30, 96(x2)
+  bn.sid    x30, 128(x2)
+  bn.sid    x30, 160(x2)
+  bn.sid    x30, 192(x2)
+  bn.sid    x30, 224(x2)
 
   /* Test with a 128-byte message.
        x21 <= dptr_end, end of padding
@@ -121,10 +120,10 @@ main:
   bn.lid    x6++, 96(x2)
 
   /* Reset destination buffer. */
-  bn.sid    x31, 0(x2)
-  bn.sid    x31, 32(x2)
-  bn.sid    x31, 64(x2)
-  bn.sid    x31, 96(x2)
+  bn.sid    x30, 0(x2)
+  bn.sid    x30, 32(x2)
+  bn.sid    x30, 64(x2)
+  bn.sid    x30, 96(x2)
 
   /* Test with a (2^125 - 1)-byte message (max possible length).
        x21 <= dptr_end, end of padding

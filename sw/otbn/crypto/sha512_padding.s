@@ -48,15 +48,18 @@ sha512_pad_message:
   xor     x21, x10, x20
 
   /* Load the first word past the padding. Skip if the offset is zero, because
-     the word might not be initialized.
+     the word might not be initialized and we don't need the data anyway.
        x2 <= if x20 == 0 then 0 else dmem[x21] */
   li      x2, 0
   beq     x0, x20, _sha512_pad_message_skip_load
   lw      x2, 0(x21)
 
-  /* Clear the remaining bytes of the loaded word.
-       x2 <= x2 >> (8 * x22) << (8 * x22) */
-  slli    x3, x22, 3
+  /* Clear the remaining (high) bytes of the loaded word.
+       x2 <= (x2 << (8 * (4 - x20))) >> 8 * (4 - x20)
+       x2 <= x2 & (2^(8 * x20) - 1) */
+  li      x3, 4
+  sub     x3, x3, x20
+  slli    x3, x3, 3
   sll     x2, x2, x3
   srl     x2, x2, x3
   _sha512_pad_message_skip_load:
