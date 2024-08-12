@@ -15,10 +15,11 @@ main:
   /* Load pointers. */
   la        x11, len
 
-  /* Load wide-register pointer. */
+  /* Load wide-register pointers. */
   li       x6, 0
+  li       x31, 31
 
-  /* First test: empty message.
+  /* Test with an empty message.
        x21 <= dptr_end, end of padding
        dmem[dst..dptr_end] = message padding */
   la        x10, dst
@@ -26,25 +27,40 @@ main:
 
   /* Store the results (padding byte-length and value).
        x12 <= dptr_end - dst
-       [w0..w1] <= dst */
+       [w0..w3] <= dst */
   sub       x12, x21, x10
   bn.lid    x6++, 0(x10)
   bn.lid    x6++, 32(x10)
+  bn.lid    x6++, 64(x10)
+  bn.lid    x6++, 96(x10)
 
-  /* Second test: 15-byte message.
+  /* Clear destination buffer. */
+  bn.sid    x31, 0(x10)
+  bn.sid    x31, 32(x10)
+
+  /* Test with a 15-byte message.
        x21 <= dptr_end, end of padding
        dmem[dst+15..dptr_end] = message padding */
+  li        x2, 15
+  sw        x2, 0(x11)
   la        x10, dst
   addi      x10, x10, 15
   jal       x1, sha512_pad_message
 
   /* Store the results (padding byte-length and value).
        x13 <= dptr_end - (dst+15)
-       [w0..w1] <= dst */
+       [w4..w7] <= dst */
   sub       x13, x21, x10
   la        x2, dst
   bn.lid    x6++, 0(x2)
   bn.lid    x6++, 32(x2)
+  bn.lid    x6++, 64(x2)
+  bn.lid    x6++, 96(x2)
+
+  /* Clear destination buffer. */
+  bn.sid    x31, 0(x2)
+  bn.sid    x31, 32(x2)
+
   /* Third test: 127-byte message. */
   /* Fourth test: 128-byte message. */
   /* Fifth test: (1 << 120)-byte message. */
@@ -61,4 +77,4 @@ len:
 /* Destination buffer in memory for padding. */
 .balign 32
 dst:
-.zero 64
+.zero 256

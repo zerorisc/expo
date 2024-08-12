@@ -36,7 +36,7 @@
  * @param[out] x21: dptr_end, pointer to the end of the padding
  * @param[out] dmem[dptr_pad..dptr_end]: message padding
  *
- * clobbered registers: TODO
+ * clobbered registers: x2 to x5, x20 to x23, w27
  * clobbered flag groups: FG0
  */
 .globl sha512_pad_message
@@ -102,18 +102,18 @@ sha512_pad_message:
 
   /* Convert the message byte-length to bit-length in-place.
        dmem[dptr_len] <= dmem[dptr_len] << 3 */
-  li      x4, 4 
+  li      x4, 27 
   bn.lid  x4, 0(x11)
-  bn.rshi w4, w4, w31 >> 253
+  bn.rshi w27, w27, w31 >> 253
   bn.sid  x4, 0(x11)
 
   /* Write the bit-length in reverse byte-order (big-endian). This forms the
      final 128 bits of the message block.
        dmem[x21..x21+16] <= byteswap(dmem[dptr_len][127:0]) */
-  addi    x2, x11, 12
+  addi    x4, x11, 12
   loopi   4, 5
-    lw      x23, 0(x2)
-    addi    x2, x2, -4
+    lw      x23, 0(x4)
+    addi    x4, x4, -4
     jal     x1, bswap32
     sw      x23, 0(x21)
     addi    x21, x21, 4
