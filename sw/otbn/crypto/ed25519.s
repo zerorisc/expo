@@ -697,12 +697,13 @@ affine_encode:
  *   - Solving the curve equation to get two candidates for x.
  *   - Use lsb(x) to select the correct candidate.
  *
- * This implementation, in accordance with ZIP215 validation criteria, will
- * accept non-canonical values of y in the range [p,2^255). However, the output
- * y value will be fully reduced modulo p.
+ * Some implementations of Ed25519 disagree about how to decode points, in
+ * particular whether non-canonical values of y in the range [p,2^255) should
+ * be accepted. Following FIPS 186-5, this implementation rejects non-canonical
+ * values of y.
  *
- * Since the inputs to this routine are all public values, there's no need to
- * make it constant-time.
+ * Since no points in Ed25519 are secret, the inputs to this routine are all
+ * public values and constant-time code is not a concern here.
  *
  * This routine runs in variable time.
  *
@@ -732,9 +733,24 @@ affine_decode_var:
   bn.rshi  w11, w11, w31 >> 255
   bn.rshi  w11, w31, w11 >> 1
 
-  /* Defensively reduce y modulo p in case y is non-canonical.
-       w11 <= (w11 + 0) mod p = w11 mod p */
-  bn.addm  w11, w11, w31
+  /* Reduce y modulo p and check if the value changed.
+       FG0.Z <= (y == y mod p) */
+  bn.addm  w14, w11, w31
+  bn.cmp   w11, w14
+
+  /* Branch depending on the FG0.Z flag.*/
+  li       x3, 8
+  csrrs    x2, FG0, x0
+  andi     x2, x2, x3
+  beq      x2, x3, decode_y_ok
+
+  /* If we get here, then y >= p; reject the point. */
+  li       x20, 0xeda2bfaf
+  bn.mov   w10, w31
+  bn.mov   w11, w31
+  ret
+  
+  decode_y_ok:
 
   /* Solve the curve equation to get a candidate root. From RFC 8032,
      section 5.1.3, step 2:
