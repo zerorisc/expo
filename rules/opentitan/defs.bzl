@@ -25,8 +25,8 @@ load(
     _fpga_cw305 = "fpga_cw305",
     _fpga_cw310 = "fpga_cw310",
     _fpga_cw340 = "fpga_cw340",
-    _fpga_vcu118 = "fpga_vcu118",
     _fpga_params = "fpga_params",
+    _fpga_vcu118 = "fpga_vcu118",
 )
 load(
     "@lowrisc_opentitan//rules/opentitan:hw.bzl",
