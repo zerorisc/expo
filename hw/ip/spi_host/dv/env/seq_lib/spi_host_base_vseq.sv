@@ -68,8 +68,9 @@ class spi_host_base_vseq extends cip_base_vseq #(
   // Separate constraint to allow easy override in child sequences
   constraint spi_config_regs_clkdiv_c {
     spi_config_regs.clkdiv dist {
-      [cfg.seq_cfg.host_spi_min_clkdiv : cfg.seq_cfg.host_spi_lower_middle_clkdiv]      :/80,
-      [cfg.seq_cfg.host_spi_lower_middle_clkdiv+1 : cfg.seq_cfg.host_spi_middle_clkdiv] :/20
+      [cfg.seq_cfg.host_spi_min_clkdiv : cfg.seq_cfg.host_spi_lower_middle_clkdiv]      :/90,
+      [cfg.seq_cfg.host_spi_lower_middle_clkdiv+1 : cfg.seq_cfg.host_spi_middle_clkdiv] :/7,
+      [cfg.seq_cfg.host_spi_middle_clkdiv+1 : cfg.seq_cfg.host_spi_upper_middle_clkdiv] :/3
     };
   }
 
@@ -118,26 +119,135 @@ class spi_host_base_vseq extends cip_base_vseq #(
     super.pre_start();
   endtask : pre_start
 
-  // csr_spinwait wrapper to allow finer control of task fields
-  // Any VSEQ extending from these spi_host VSEQs which call csr_spinwait will have a custom timeout
-  virtual task automatic csr_spinwait(input  uvm_object        ptr,
-                                      input  uvm_reg_data_t    exp_data,
-                                      input  uvm_check_e       check = default_csr_check,
-                                      input  uvm_path_e        path = UVM_DEFAULT_PATH,
-                                      input  uvm_reg_map       map = null,
-                                      input  uvm_reg_frontdoor user_ftdr =
-                                                                 default_user_frontdoor,
-                                      input  uint              spinwait_delay_ns = 0,
-                                      input  uint              timeout_ns =
-                                                                 cfg.csr_spinwait_timeout_ns,
-                                      input  compare_op_e      compare_op = CompareOpEq,
-                                      input  bit               backdoor = 0,
-                                      input  uvm_verbosity     verbosity = UVM_HIGH);
-    csr_utils_pkg::csr_spinwait( .ptr(ptr), .exp_data(exp_data), .check(check), .path(path),
-                                 .map(map), .user_ftdr(user_ftdr),
-                                 .spinwait_delay_ns(spinwait_delay_ns),
-                                 .timeout_ns(timeout_ns), .compare_op(compare_op),
-                                 .backdoor(backdoor), .verbosity(verbosity));
+  // Like csr_spinwait, only the timeout can be stop by using an event.
+  // In addition, one needs to pass the clock cycle period.
+  // This can be used instead of csr_spinwait for moments in which the timeout needs to be
+  // controlled due to RTL conditions such as SW_rest or the module being disabled.
+  task automatic csr_spinwait_stoppable(input   uvm_object ptr,
+    input   uvm_reg_data_t exp_data,
+    input   uvm_check_e check = default_csr_check,
+    input   uvm_path_e path = UVM_DEFAULT_PATH,
+    input   uvm_reg_map map = null,
+    input   uvm_reg_frontdoor user_ftdr =
+                                default_user_frontdoor,
+    input   uint spinwait_delay_ns = 0,
+    input   uint timeout_ns = default_spinwait_timeout_ns,
+    input   compare_op_e compare_op = CompareOpEq,
+    input   bit backdoor = 0,
+    input   uvm_verbosity verbosity = UVM_HIGH,
+    input   uint clk_cycle_period_ns,
+    input   string start_stop_ev_name =
+                                "start_stop_spinwait_ev"
+    );
+    static int     count;
+    count++;
+    `uvm_info($sformatf("%m()"), $sformatf(
+                                           "- (call_count=%0d, backdoor=%0d, exp_data=%0d, ptr=%s)",
+                                           count,backdoor,exp_data, ptr.get_name()), verbosity)
+    fork
+      begin : isolation_fork
+        csr_field_t     csr_or_fld;
+        uvm_reg_data_t  read_data;
+        string          msg_id = {csr_utils_pkg::msg_id, "::csr_spinwait"};
+        automatic int lcount = count;
+
+        csr_or_fld = decode_csr_or_field(ptr);
+        if (backdoor && spinwait_delay_ns == 0) spinwait_delay_ns = 1;
+        fork
+          while (!under_reset) begin
+            if (spinwait_delay_ns) #(spinwait_delay_ns * 1ns);
+            `uvm_info("csr_utils_pkg", $sformatf("In csr_spinwait - call_count = %0d",lcount),
+              verbosity)
+            csr_rd(.ptr(ptr), .value(read_data), .check(check), .path(path),
+              .blocking(1), .map(map), .user_ftdr(user_ftdr), .backdoor(backdoor));
+            `uvm_info(msg_id, $sformatf("ptr %0s == 0x%0h",
+                                        ptr.get_full_name(), read_data), verbosity)
+            case (compare_op)
+              CompareOpEq:     if (read_data ==  exp_data) break;
+              CompareOpCaseEq: if (read_data === exp_data) break;
+              CompareOpNe:     if (read_data !=  exp_data) break;
+              CompareOpCaseNe: if (read_data !== exp_data) break;
+              CompareOpGt:     if (read_data >   exp_data) break;
+              CompareOpGe:     if (read_data >=  exp_data) break;
+              CompareOpLt:     if (read_data <   exp_data) break;
+              CompareOpLe:     if (read_data <=  exp_data) break;
+              default: begin
+                `uvm_fatal(ptr.get_full_name(), $sformatf("invalid operator:%0s", compare_op))
+              end
+            endcase
+          end
+          begin: timeout_block
+            automatic int lcount = count;
+            automatic int unsigned clk_cycles = 0;
+            automatic csr_spinwait_ctrl_object obj;
+            automatic uvm_event start_stop_spinwait_ev;
+            start_stop_spinwait_ev = uvm_event_pool::get_global(start_stop_ev_name);
+
+            while ( (clk_cycles * clk_cycle_period_ns) <= timeout_ns) begin
+              clk_cycles++;
+              #(clk_cycle_period_ns * 1ns);
+              if (start_stop_spinwait_ev.is_on()) begin
+                uvm_object ev_obj;
+                // Event triggerred
+                ev_obj = start_stop_spinwait_ev.get_trigger_data();
+                if (!$cast(obj, ev_obj))
+                  `uvm_fatal($sformatf("%m()"), "CAST FAILED")
+
+                if (obj.stop) begin
+                  start_stop_spinwait_ev.wait_ptrigger_data(ev_obj);
+                  $display("EVENT TRIGGERED AND STOP");
+                  `uvm_info($sformatf("%m"), "Event triggered to halt the timeout", UVM_DEBUG)
+                  if (!$cast(obj, ev_obj))
+                    `uvm_fatal($sformatf("%m()"), "CAST FAILED")
+                  if(obj.stop)
+                    `uvm_fatal($sformatf("%m"), "Event has already been triggered with stop=1")
+                end
+              end
+
+            end
+
+            `uvm_fatal($sformatf("%m()"),
+                       {$sformatf("timeout = %0dns  %0s (addr=0x%0h,",timeout_ns,
+                                  ptr.get_full_name(), csr_or_fld.csr.get_address()),
+                        $sformatf(" Comparison=%s, exp_data=0x%0h, call_count=%0d)",
+                                  compare_op.name, exp_data,lcount)}
+                       )
+
+          end
+        join_any
+        disable fork;
+      end : isolation_fork
+    join
+  endtask
+
+  // wrapping csr_spinwait over csr_utils_pkg::csr_spinwait_stoppable so we can stop the timeout
+  // count in circumstances like the RTL being disable spien or sw_rst.
+  virtual task automatic csr_spinwait( input  uvm_object        ptr,
+                                       input  uvm_reg_data_t    exp_data,
+                                       input  uvm_check_e       check = default_csr_check,
+                                       input  uvm_path_e        path = UVM_DEFAULT_PATH,
+                                       input  uvm_reg_map       map = null,
+                                       input  uvm_reg_frontdoor user_ftdr =
+                                                                default_user_frontdoor,
+                                       input  uint              spinwait_delay_ns = 0,
+                                       input  uint              timeout_ns =
+                                                                  cfg.csr_spinwait_timeout_ns,
+                                       input  compare_op_e      compare_op = CompareOpEq,
+                                       input  bit               backdoor = 0,
+                                       input  uvm_verbosity     verbosity = UVM_HIGH,
+                                       input  uint              clk_cycle_period_ns =
+                                                                  (cfg.clk_rst_vif.clk_period_ps
+                                                                  / 1000),
+                                       input  string start_stop_ev_name = "start_stop_spinwait_ev"
+                                      );
+    csr_spinwait_stoppable( .ptr(ptr), .exp_data(exp_data), .check(check),
+                            .path(path), .map(map), .user_ftdr(user_ftdr),
+                            .spinwait_delay_ns(spinwait_delay_ns),
+                            .timeout_ns(timeout_ns), .compare_op(compare_op),
+                            .backdoor(backdoor), .verbosity(verbosity),
+                            .clk_cycle_period_ns(clk_cycle_period_ns),
+                            .start_stop_ev_name("start_stop_spinwait_ev")
+                            );
   endtask
 
   // Start sequences on the spi_agent (configured as a Device) that will respond to host bus activity.
