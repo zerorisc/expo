@@ -7,6 +7,7 @@ load(
     "Cw305BinaryInfo",
     "Cw310BinaryInfo",
     "Cw340BinaryInfo",
+    "Vcu118BinaryInfo",
 )
 load(
     "@lowrisc_opentitan//rules/opentitan:util.bzl",
@@ -218,12 +219,10 @@ fpga_cw340 = rule(
     toolchains = [LOCALTOOLS_TOOLCHAIN],
 )
 
-# The VCU118 environment is largely copy-pasted from CW340,
-# so it still uses Cw340BinaryInfo.
 def _fpga_vcu118(ctx):
     fields = exec_env_as_dict(ctx)
     return ExecEnvInfo(
-        provider = Cw340BinaryInfo,
+        provider = Vcu118BinaryInfo,
         test_dispatch = _test_dispatch,
         transform = _transform,
         **fields

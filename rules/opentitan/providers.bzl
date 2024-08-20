@@ -39,13 +39,31 @@ SimQemuBinaryInfo = provider(
     doc = "QEMU Binary Info",
 )
 
+Vcu118BinaryInfo = provider(
+    doc = "VCU118 Binary Info",
+)
+
 ALL_BINARY_PROVIDERS = [
     Cw310BinaryInfo,
     Cw340BinaryInfo,
+    Vcu118BinaryInfo,
     SiliconBinaryInfo,
     SimDvBinaryInfo,
     SimVerilatorBinaryInfo,
     SimQemuBinaryInfo,
+]
+
+PROVIDER_FIELDS = [
+    "elf",
+    "binary",
+    "default",
+    "rom",
+    "signed_bin",
+    "disassembly",
+    "logs",
+    "mapfile",
+    "vmem",
+>>>>>>> a8a2122e57 ([examples/hello_world] Add VCU118 build)
 ]
 
 def get_binary_files(attrs, field = "binary", providers = ALL_BINARY_PROVIDERS):
