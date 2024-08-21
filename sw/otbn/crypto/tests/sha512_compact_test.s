@@ -16,24 +16,24 @@ run_sha512_compact:
 
   /* set number of chunks to process */
   li      x2, 1
-  la      x3, n_chunks
+  la      x3, sha512_n_chunks
   sw      x2, 0(x3)
 
   /* set pointer to state variables */
   la      x2, init_state
-  la      x3, dptr_state
+  la      x3, sha512_dptr_state
   sw      x2, 0(x3)
 
   /* set pointer to message */
   la      x2, test_msg
-  la      x3, dptr_msg
+  la      x3, sha512_dptr_msg
   sw      x2, 0(x3)
 
   /* run SHA-512 hashing algorithm */
   jal     x1, sha512_compact
 
   /* copy back result to WDRs */
-  la      x3, dptr_state
+  la      x3, sha512_dptr_state
   lw      x3, 0(x3)
   li      x2, 0
   loopi   20, 2

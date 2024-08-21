@@ -4,7 +4,7 @@
 
 /**
  * This library contains an implementation of the Ed25519 signature scheme
- * based on RFC 8032:
+ * based on RFC 8032 and FIPS 186-5:
  *   https://datatracker.ietf.org/doc/html/rfc8032
  *
  * This implementation uses affine (x, y) coordinates at the interface but uses
@@ -12,35 +12,9 @@
  * that accept input in affine form are prefixed with affine_ and those that
  * accept input in extended form are prefixed with ext_.
  *
- * For verification, we slightly diverge from the RFC in terms of point
- * validation, because the RFC does not match most real-world code in certain
- * edge cases (and in fact, the RFC allows implementations to disagree with
- * each other on what constitutes a valid signature). A detailed walkthrough of
- * Ed25519 point validation issues and existing practice is here:
- *   https://hdevalence.ca/blog/2020-10-04-its-25519am
- *
- * Signatures constructed as requested by the RFC are unaffected by these
- * corner cases. However, maliciously constructed signatures can use these
- * small differences in validation criteria to cause problems for systems which
- * expect implementations to agree.
- *
- * In order to maximize compatibility and predictability, this implementation
- * adopts the ZIP215 set of validation criteria from Zcash, specified here:
- *   https://zips.z.cash/zip-0215
- *
- * Specifically, these rules are:
- *   - The scalar s in the signature must be canonical (< L). This matches the
- *     RFC but differs from some existing implementations such as the original
- *     "ref10".
- *   - The y coordinates of encoded points A and R are not required to be fully
- *     reduced modulo p (that is, it can be the case that y is in the
- *     range[2^255-19,2^255-1], which is not permitted by the RFC).
- *   - Encodings in which x=0 and the sign bit of x is 1 are permitted (the RFC
- *     disallows this).
- *   - Signatures must satisfy the "batched" equation [8][S]B = [8]R +
- *     [8][k]A', rather than the "unbatched" equation without the
- *     multiplications by 8 (the RFC allows implementers to check either, but
- *     they are not always equivalent for dishonestly constructed signatures).
+ * Where RFC 8032 and FIPS 186-5 disagree, such as for certain cases of
+ * non-canonical point encodings (e.g. y >= p), we follow FIPS. The terminology
+ * in the comments matches the RFC.
  */
 
 /**
@@ -81,10 +55,9 @@
  *   2. Decodes and checks the range of the scalar value S.
  *   3. Checks the group equation [8][S]B = [8]R + [8][k]A.
  *
- * This verification uses the ZIP15 point validation criteria, so it checks
- * that S < L and always uses the group equation with the cofactors of 8 rather
- * than the optional version without these also offered by the RFC. See the
- * comments about ZIP15 at the top of this file for details.
+ * This verification checks that S < L, and always uses the group equation with
+ * the cofactors of 8 rather than the optional version without these also
+ * offered by the RFC.
  *
  * This routine runs in variable time.
  *
@@ -697,10 +670,12 @@ affine_encode:
  *   - Solving the curve equation to get two candidates for x.
  *   - Use lsb(x) to select the correct candidate.
  *
- * Some implementations of Ed25519 disagree about how to decode points, in
- * particular whether non-canonical values of y in the range [p,2^255) should
- * be accepted. Following FIPS 186-5, this implementation rejects non-canonical
- * values of y.
+ * Some implementations of Ed25519 disagree about how to decode points in
+ * particular whether to accept the following:
+ *   (a) non-canonical values of y in the range [p,2^255)
+ *   (b) points with a recovered x value of 0 but a sign bit of 1 (i.e. "-0")
+ *
+ * Following FIPS 186-5, this implementation rejects both (a) and (b).
  *
  * Since no points in Ed25519 are secret, the inputs to this routine are all
  * public values and constant-time code is not a concern here.
@@ -733,15 +708,13 @@ affine_decode_var:
   bn.rshi  w11, w11, w31 >> 255
   bn.rshi  w11, w31, w11 >> 1
 
-  /* Reduce y modulo p and check if the value changed.
-       FG0.Z <= (y == y mod p) */
+  /* Reduce y modulo p and check if the value changed. If the values are equal,
+     the FG0 value will be exactly 8; FG0.Z (bit position 3) will be true and M,
+      L, and Z will be false. */
   bn.addm  w14, w11, w31
   bn.cmp   w11, w14
-
-  /* Branch depending on the FG0.Z flag.*/
   li       x3, 8
   csrrs    x2, FG0, x0
-  andi     x2, x2, x3
   beq      x2, x3, decode_y_ok
 
   /* If we get here, then y >= p; reject the point. */
@@ -749,7 +722,7 @@ affine_decode_var:
   bn.mov   w10, w31
   bn.mov   w11, w31
   ret
-  
+
   decode_y_ok:
 
   /* Solve the curve equation to get a candidate root. From RFC 8032,
@@ -929,11 +902,11 @@ affine_decode_var:
      point's x coordinate to r if lsb(x) from the encoded point matches lsb(r),
      and set x to (-r) mod p otherwise.
 
-     Because we are following the ZIP15 validation criteria instead of the RFC,
-     we allow the case where x=0 but the encoded lsb(x)=1, so that check is
-     skipped here. In this case, we will decode x as (-0) mod p = 0.
+     We also need to check for the special case in which x=0 and lsb(x)=1,
+     which we should reject in line with FIPS 186-5.
 
      Code here expects:
+       w24: lsb(x)
        w27: r such that r^2 = x^2 (mod p).
        w31: all-zero
   */
@@ -943,20 +916,34 @@ affine_decode_var:
   bn.subm  w10, w31, w27
 
   /* Set FG.L to be 1 iff the LSBs of r and x are mismatched.
-       FG0.L <= lsb(w24 ^ w27) = lsb(lsb(x) ^ r) = lsb(x) ^ lsb(r) = (lsb(x) != lsb(r)) */
-  bn.xor   w24, w27, w24
+       FG0.L <= lsb(w27 ^ w24) = lsb(r ^ lsb(x)) = (lsb(x) != lsb(r)) */
+  bn.xor   w14, w27, w24
 
   /* If the LSBs are mismatched, select (-r) mod p; otherwise select r.
        w10 <= FG0.L ? w10 : w27
                 = if (lsb(x) != lsb(r)) then (-r) mod p else r */
   bn.sel   w10, w10, w27, FG0.L
 
+  /* If the LSBs are still mismatched, then reject the point. This should only
+     be possible in the invalid x=0, lsb(x)=1 case. Note that rejecting this
+     case is not critical for security. */
+  bn.xor   w14, w10, w24
+  csrrs    x2, FG0, x0
+  andi     x2, x3, 4
+  beq      x2, x0, decode_success
+  
+  /* Exit with FAILURE. */
+  li       x20, 0xeda2bfaf
+  bn.mov   w10, w31
+  bn.mov   w11, w31
+  ret
+
+  decode_success:
   /* TODO: add an extra check that the curve equation is satisfied to protect
      against glitching? */
 
   /* Exit point decoding with SUCCESS. */
   li       x20, 0xf77fe650
-
   ret
 
 /**
