@@ -73,7 +73,7 @@
  *                                    formatted message chunks.
  *
  * clobbered registers: w0 to w7, w10, w11, w15 to w27, w31
- *                      x1, x2, x10, x11 to x17, x20
+ *                      x2, x10 to x17, x19, x20
  * clobbered flag groups: FG0
  */
 .globl sha512_compact

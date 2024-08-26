@@ -474,6 +474,13 @@ otbn_library(
 )
 
 otbn_library(
+    name = "sha512_interface",
+    srcs = [
+        "sha512_interface.s",
+    ],
+)
+
+otbn_library(
     name = "sha512_padding",
     srcs = [
         "sha512_padding.s",
