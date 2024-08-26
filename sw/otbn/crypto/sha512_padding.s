@@ -22,9 +22,9 @@
  * (even if that means dptr_pad is not) and that there is enough space in DMEM
  * at the end of the message for the padding.  Precisely, the padded length
  * will be the smallest multiple of 1024 bits (128 bytes) that will fit the
- * message plus 9 bytes.
+ * message plus 17 bytes.
  *
- * Note that 136 bytes after the message is always enough; this is the maximum
+ * Note that 144 bytes after the message is always enough; this is the maximum
  * padding length.
  *
  * This routine runs in constant time relative to message content but variable

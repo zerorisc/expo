@@ -12,8 +12,8 @@
  * One-shot interface for SHA-512.
  *
  * The input message needs to start at a 32-byte-aligned address and be
- * followed by enough DMEM space for the padding. The total padded length will
- * be the smallest multiple of 128 bytes that fits the message plus 9 bytes.
+ * followed by enough DMEM space for the padding (see `sha512_pad_message` for
+ * guidance on how much space is enough).
  *
  * This routine runs in constant time.
  *
@@ -258,4 +258,4 @@ state:
 /* Temporary buffer for message length. */
 .balign 32
 len:
-.zero 128
+.zero 32
