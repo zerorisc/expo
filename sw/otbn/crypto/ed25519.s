@@ -272,12 +272,26 @@ ed25519_sign_prehashed:
   /* Initialize all-zero register. */
   bn.xor   w31, w31, w31
 
+  /* Point the SHA-512 interface to the secret key.
+       dmem[sha512_dptr_msg] <= ed25519_d */
+   la      x2, ed25519_d
+   la      x3, sha512_dptr_msg
+   sw      x2, 0(x3)
+
+  /* Call the SHA-512 routine to hash d.
+       dmem[ed25519_hash_h] <= SHA-512(d) = h */
+  la       x18, ed25519_hash_h
+  li       x19, 32
+  jal      x1, sha512_oneshot
+
+  /* TODO: compute and hash r */
+
   /* Set up for scalar arithmetic.
        [w15:w14] <= mu
        MOD <= L */
   jal      x1, sc_init
 
-  /* Load the 256-bit lower half of the precomputed hash h.
+  /* Load the 256-bit lower half of the hash h.
        w16 <= h[255:0] */
   li       x2, 16
   la       x3, ed25519_hash_h_low
@@ -376,6 +390,19 @@ ed25519_sign_prehashed:
   li       x2, 11
   la       x3, ed25519_public_key
   bn.sid   x2, 0(x3)
+
+  /* TODO: instead of saving to DMEM here, */
+
+/*
+ * @param[in]     x18: dptr_result, pointer to the output buffer.
+ * @param[in]     x19: len, message length in bytes.
+ * @param[in]     w31: all-zero.
+ * @param[in]     dmem[sha512_dptr_msg]: pointer to the start of the message.
+ * @param[in,out] dmem[dptr_result..dptr_result+64]: SHA-512 digest.
+ *
+ * clobbered registers: x2 to x5, x10, x11, x14 to x17, x19 to x23,
+ *                      w0 to w7, w10, w15 to w29
+*/
 
   ret
 
@@ -1644,53 +1671,25 @@ fe_pow_2252m3:
 
   ret
 
-.bss
+.section .scratchpad
 
-/* Verification result code (32 bits). Output for verify.
-   If verification is successful, this will be SUCCESS = 0xf77fe650.
-   Otherwise, this will be FAILURE = 0xeda2bfaf. */
+/* Hash of the secret key (512 bits). Intermediate value for sign. */
 .balign 32
-.weak ed25519_verify_result
-ed25519_verify_result:
-  .zero 4
-
-/* Signature point R (256 bits). Input for verify and output for sign. */
-.balign 32
-.weak ed25519_sig_R
-ed25519_sig_R:
-  .zero 32
-
-/* Signature scalar S (253 bits). Input for verify and output for sign. */
-.balign 32
-.weak ed25519_sig_S
-ed25519_sig_S:
-  .zero 32
-
-/* Encoded public key A_ (256 bits). Input for verify. */
-.balign 32
-.weak ed25519_public_key
-ed25519_public_key:
-  .zero 32
-
-/* Precomputed hash k (512 bits). Input for verify and sign. */
-.balign 32
-.weak ed25519_hash_k
-ed25519_hash_k:
+.weak ed25519_hash_h
+ed25519_hash_h:
   .zero 64
 
-/* Lower half of precomputed hash h (256 bits). See RFC 8032, section
-   5.1.6, step 1 or the docstring of ed25519_sign. Input for sign. */
-.balign 32
-.weak ed25519_hash_h_low
-ed25519_hash_h_low:
-  .zero 32
-
-/* Precomputed hash r (512 bits). See RFC 8032, section 5.1.6, step 2 or the
-   docstring of ed25519_sign. Input for sign. */
+/* Hash value r (512 bits). Intermediate value for sign. */
 .balign 32
 .weak ed25519_hash_r
 ed25519_hash_r:
   .zero 64
+
+/* Temporary buffer for hash inputs. */
+.balign 32
+.weak tmp
+tmp:
+  .zero 416
 
 .data
 
@@ -1742,3 +1741,70 @@ ed25519_d:
   .word 0x8cc74079
   .word 0x2b6ffe73
   .word 0x52036cee
+
+/* Ed25519 pre-hash domain separator (256 bits) = 'SigEd25519 no Ed25519 collisions'. */
+ed25519_prehash_dom_sep:
+  .word 0x45676953
+  .word 0x35353264
+  .word 0x6e203931
+  .word 0x6445206f
+  .word 0x31353532
+  .word 0x6f632039
+  .word 0x73696c6c
+  .word 0x736e6f69
+
+.bss
+
+/* Context string length in bytes for pre-hashed EdDSA */
+.balign 4
+ed25519_ctx_len:
+  .zero 4
+
+/* Context string for pre-hashed EdDSA. The weird alignment here is to
+   accomodate two special bytes at the beginning of the context.
+
+   Note that the context is read in 32-bit increments, so if the end of the
+   context string would end on a non-aligned address then it should be followed
+   by some zeroes to prevent errors. */
+.balign 4
+.zero 2
+ed25519_ctx:
+  .zero 258
+
+/* Verification result code (32 bits). Output for verify.
+   If verification is successful, this will be SUCCESS = 0xf77fe650.
+   Otherwise, this will be FAILURE = 0xeda2bfaf. */
+.balign 32
+.weak ed25519_verify_result
+ed25519_verify_result:
+  .zero 4
+
+/* Signature point R (256 bits). Input for verify and output for sign. */
+.balign 32
+.weak ed25519_sig_R
+ed25519_sig_R:
+  .zero 32
+
+/* Signature scalar S (253 bits). Input for verify and output for sign. */
+.balign 32
+.weak ed25519_sig_S
+ed25519_sig_S:
+  .zero 32
+
+/* Encoded public key A_ (256 bits). Input for verify. */
+.balign 32
+.weak ed25519_public_key
+ed25519_public_key:
+  .zero 32
+
+/* Hash value k (512 bits). Input for verify, intermediate for sign. */
+.balign 32
+.weak ed25519_hash_k
+ed25519_hash_k:
+  .zero 64
+
+/* Message (pre-hashed, 64 bytes). */
+.balign 32
+.weak ed25519_message
+ed25519_message:
+  .zero 64
