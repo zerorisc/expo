@@ -7,6 +7,9 @@
  * a clean way to call SHA-512. It is not intended for use directly from Ibex.
  */
 .globl sha512_oneshot
+.globl sha512_init
+.globl sha512_update
+.globl sha512_final
 
 /**
  * Initialize a SHA-512 operation by setting the initial state. 
@@ -21,7 +24,7 @@
  * @param[out] dmem[state..state+256]: Working SHA-512 state.
  * @param[out] dmem[sha512_dptr_state]: state, pointer to working state.
  *
- * clobbered registers: x2, x3, w20
+ * clobbered registers: x2, x3, x20, w20
  * clobbered flag groups: FG0
  */
 sha512_init:
@@ -39,14 +42,29 @@ sha512_init:
   la       x3, state
   sw       x3, 0(x2)
 
+  /* dmem[sha512_dptr_msg] <= partial */
+  la       x2, sha512_dptr_msg
+  la       x3, partial
+  sw       x3, 0(x2)
+  
+  /* We only ever update one block at a time, so set the number of chunks to 1.
+       dmem[sha512_n_chunks] <= 1 */
+  la       x2, sha512_n_chunks
+  li       x3, 1
+  sw       x3, 0(x2)
+
   /* Zero the message-length buffer. */
   la       x2, len
   li       x3, 31
   bn.sid   x3, 0(x2)
 
+  /* Zero the temporary buffer. */
+  la       x2, tmp
+  bn.sid   x3, 0(x2)
+
   /* Zero the partial block. */
   la       x2, partial
-  loopi    4, 1
+  loopi    8, 1
     bn.sid   x3, 0(x2++)
 
   ret
@@ -60,49 +78,195 @@ sha512_init:
  * @param[in]     x18: msg_len, length of the new data in bytes. 
  * @param[in]     x19: dptr_msg, pointer to the new message data. 
  * @param[in]     w31: all-zero.
+ * @param[in,out] dmem[len]: len, total message length so far (256 bits).
+ * @param[in,out] dmem[partial]: Current partial message block ((len % 128) bytes).
+ * @param[in,out] dmem[state]: Working hash state.
  *
- * clobbered registers: TODO 
+ * clobbered registers: x2, x3, x10 to x22, x28
+ *                      w0 to w7, w10, w11, w15 to w29
  * clobbered flag groups: FG0
  */
 sha512_update:
-  /* Load the current message length.
-       w8 <= dmem[len] */
-  li       x2, 8
+  /* Load the least significant 32 bits of the current message byte-length.
+       x14 <= dmem[len][31:0] */
   la       x3, len
-  bn.lid   x2, 0(x3) 
+  lw       x14, 0(x3)
 
-  /* Calculate the length of the current partial data.
-       w9 <= len[6:0] = len mod 128 */
-  bn.rshi  w9, w9, w31 >> 7
-  bn.rshi  w9, w31, w9 >> 249
+  /* Calculate the byte-length of the current partial data.
+       x14 <= x14[6:0] = len mod 128 */
+  andi     x14, x14, 127
 
-  /* append the message data to partial until the end of the block or end of new data */
-  /* to make OK for byte-granularity, iterate through loading word (or zero) from partial,
-     then shift/or message data in */
-  /* if partial block is not full, simply exit*/
-  /* if it is, then process it and recurse */
+  /* Calculate how much of the new data we can copy into the partial block. We
+     can determine which number is smaller by subtracting and checking for
+     underflow; the MSB of (128 - x14 - x18) will be set if and only if
+     x18 > 128 - x14.
 
-  ret 
+       x22 <= min(128 - x14, x18)  */
+  li       x2, 128
+  sub      x22, x2, x14
+  sub      x2, x22, x18
+  srli     x2, x2, 31
+  beq      x2, x0, _sha512_update_x18_lt_128_minus_x14
+  addi     x15, x18, 0
+  _sha512_update_x18_lt_128_minus_x14:
+
+  /* Store the number of bytes we will copy in DMEM.
+       dmem[tmp] <= x22 */
+  la       x2, tmp
+  sw       x22, 0(x2)
+
+  /* Copy the new data into the partial block.
+       x19 <= dptr_msg + x15
+       dmem[partial+x14..partial+x14+x15] <= dmem[dptr_msg..dptr_msg+x15] */
+  addi     x13, x22, 0
+  add      x20, x19, 0
+  la       x2, partial
+  add      x21, x2, x14
+  jal      x1, copy
+
+  /* Update the message length in DMEM.
+       dmem[len] <= dmem[len] + dmem[tmp] */
+  li       x20, 20
+  la       x2, tmp
+  bn.lid   x20++, 0(x2)
+  la       x2, len
+  bn.lid   x20, 0(x2)
+  bn.add   w21, w21, w20
+  bn.sid   x20, 0(x2)
+
+  /* Update the remaining length of new data. */
+  sub      x18, x18, x22
+
+  /* Check if the partial block is now full. If not, we're done. */
+  li       x2, 128
+  sub      x2, x2, x14
+  sub      x2, x2, x15
+  beq      x2, x0, _sha512_update_partial_full
+  ret
+
+  _sha512_update_partial_full:
+  /* The partial block is full; format it and udpate the SHA-512 state. */
+  li       x11, 1 
+  la       x12, partial
+  jal      x1, sha512_format_blocks
+  jal      x1, sha512_compact
+
+
+  /* Check if there is still message data remaining. If not, we're done. */
+  bne      x18, x0, _sha512_update_message_data_nonempty
+  ret
+  
+  _sha512_update_message_data_nonempty:
+  /* There is still message data remaining; recursive tail-call. */
+  /* TODO: subsequent calls can assume that partial block is empty; should this
+     be a loop with simpler logic or is the code size not worth it? */
+  jal      x0, sha512_update
+
+/**
+ * Finish SHA-512 operation. 
+ *
+ * This routine runs in constant time relative to the data but variable time
+ * relative to the total message length.
+ *
+ * @param[in]  x18: dptr_result, pointer to the output buffer.
+ * @param[in]  w31: all-zero.
+ * @param[in]  dmem[len]: len, total message length so far (256 bits).
+ * @param[in]  dmem[partial]: Current partial message block ((len % 128) bytes).
+ * @param[in]  dmem[state]: Working hash state.
+ * @param[out] dmem[dptr_result..dptr_result+64]: SHA-512 digest.
+ *
+ * clobbered registers: x2 to x5, x10 to x12, x14 to x17, x19 to x23, x28 
+ *                      w0 to w7, w10, w15 to w30
+ * clobbered flag groups: FG0
+ */
+sha512_final:
+  /* Load the least significant 32 bits of the current message byte-length.
+       x14 <= dmem[len][31:0] */
+  la       x2, len
+  lw       x14, 0(x2)
+
+  /* Calculate the byte-length of the current partial data.
+       x14 <= x14[6:0] = len mod 128 */
+  andi     x14, x14, 127
+
+  /* Append padding to the message.
+       x21 <= dptr_end, pointer to the end of the padding
+       dmem[partial+len..dptr_end] <= padding */
+  la       x12, partial
+  add      x10, x12, x14
+  la       x11, len
+  jal      x1, sha512_pad_message
+
+  /* Calculate and store the number of blocks with padding included (1 or 2).
+       dmem[sha512_n_chunks] <= x11 <= (x21 - x12) >> 7 */
+  sub      x2, x21, x12
+  srli     x11, x2, 7
+  la       x2, sha512_n_chunks
+  sw       x11, 0(x2)
+
+  /* Format the blocks and call the update function. */
+  jal      x1, sha512_format_blocks
+  jal      x1, sha512_compact
+
+  /* Load the mask for byte-swaps.
+       w29 <= dmem[bswap64_mask] */
+  la       x2, bswap64_mask
+  li       x3, 29
+  bn.lid   x3, 0(x2)
+
+  /* Load a 64-bit mask.
+       w30 <= 2^64 - 1 */
+  bn.not   w30, w31
+  bn.rshi  w30, w31, w30 >> 192
+
+  /* Read out the 8 64-bit integers that comprise the state. Reverse their
+     bytes and concatenate to get the standard SHA-512 byte order. */
+  li       x28, 28
+  li       x21, 21
+  la       x2, state
+  addi     x3, x18, 0
+  loopi    2, 7
+    /* w28 <= 0 */
+    bn.sub   w28, w28, w28
+    loopi    4, 3
+      /* w21[63:0] <= H[i] */
+      bn.lid   x21, 0(x2++)
+      /* w21 <= w21[63:0] */
+      bn.and   w21, w21, w30
+      /* w28 <= H[i] ^ (w28 << 64) */
+      bn.xor   w28, w21, w28 << 64
+    /* w28 <= reverse_bytes(w28) */
+    jal      x1, reverse_bytes
+    /* dmem[dptr_result+i*32] <= w28 */
+    bn.sid   x28, 0(x3++)
+
+  ret
+
 
 /**
  * Copy data from one buffer to another in DMEM.
  *
- * The source and destination buffers should not overlap.
+ * The source and destination buffers should not overlap. The routine updates
+ * both the source and destination pointers to point to the end of the copied
+ * region (i.e. they both have `src_len` bytes added to them). The source and
+ * destination pointers do not need to be word-aligned. 
  *
  * This routine runs in constant time relative to the data but variable time
  * relative to data length and alignment.
  *
- * @param[in]     x18: src_len, length of the source data in bytes. 
- * @param[in]     x20: dptr_src, pointer to the source buffer
- * @param[in]     x21: dptr_dst, pointer to the destination buffer
+ * @param[in]     x13: src_len, length of the source data in bytes. 
  * @param[in]     w31: all-zero.
+ * @param[in]     dmem[dptr_src..dptr_src+src_len]: data, value to copy.
+ * @param[in,out] x20: dptr_src, pointer to the source buffer.
+ * @param[in,out] x21: dptr_dst, pointer to the destination buffer.
+ * @param[out]    dmem[dptr_dst..dptr_dst+src_len]: data, copied value.
  *
- * clobbered registers: TODO 
+ * clobbered registers: x2, x10, x11, x13, x16, x17, x19 to x21, w20, w21 
  * clobbered flag groups: FG0
  */
 copy:
   /* Continue only if the length of new data is nonzero; otherwise return. */
-  bne      x0, x18, _copy_len_nonzero
+  bne      x0, x13, _copy_len_nonzero
   ret
   _copy_len_nonzero:
 
@@ -139,40 +303,43 @@ copy:
      We compare the values by subtracting them and then checking the high bit
      of the result to detect underflow.
 
-       x19 <= min(x16, x17, x18) */
+       x19 <= min(x16, x17, x13) */
   addi     x19, x16, 0
   sub      x2, x16, x17
   srli     x2, x2, 31
   bne      x2, x0, _copy_x16_lt_x17
   addi     x19, x17, 0
   _copy_x16_lt_x17:
-  sub      x2, x19, x18
+  sub      x2, x19, x13
   srli     x2, x2, 31
-  bne      x2, x0, _copy_x19_lt_x18
-  addi     x19, x18, 0
-  _copy_x19_lt_x18:
+  bne      x2, x0, _copy_x19_lt_x13
+  addi     x19, x13, 0
+  _copy_x19_lt_x13:
 
 
   /* Rotate the bytes of the old value at the destination that precede the
      destination pointer so that they occupy the most significant part of the
-     word. These bytes will be unmodified. */
-  loopi    x11, 1
+     word. These bytes will be unmodified. We skip the loop if there are no
+     preceding bytes, because loops may not have zero iterations. */
+  beq      x11, x0, _copy_dst_offset_zero
+  loop     x11, 1
     bn.rshi  w21, w21, w21 >> 8 
+  _copy_dst_offset_zero:
 
-  /* Now shift in bytes starting from the source pointer. */
-  loopi    x10, 1
+  /* Now shift in bytes starting from the source pointer. The number of bytes
+     is always nonzero, but the source pointer offset can be zero. */
+  beq      x10, x0, _copy_src_offset_zero
+  loop     x10, 1
     bn.rshi  w20, w20, w20 >> 8 
-  loopi    x19, 1
+  _copy_src_offset_zero:
+  loop     x19, 1
     bn.rshi  w21, w20, w21 >> 8 
 
   /* Finally, if we reached the end of the source data, copy final bytes from
-     the old value of the destination. We skip the loop if there are no final
-     bytes, because loops cannot have zero iterations. */
-  li       x2, 32
-  sub      x2, x2, x11
-  sub      x2, x2, x19
+     the old value of the destination. */
+  sub      x2, x16, x19
   beq      x2, x0, _copy_no_final_bytes
-  loopi    x2, 1
+  loop     x2, 1
     bn.rshi  w21, w21, w21 >> 8
   _copy_no_final_bytes:
 
@@ -182,10 +349,11 @@ copy:
   bn.sid   x2, 0(x21)
 
   /* Update pointers and recursively tail-call the copy routine again. */
-  sub      x18, x18, x19
-  addi     x20, x20, x19
-  addi     x21, x21, x19
+  sub      x13, x13, x19
+  add      x20, x20, x19
+  add      x21, x21, x19
   jal      x0, copy
+
 
 /**
  * One-shot interface for SHA-512.
@@ -200,7 +368,7 @@ copy:
  * @param[in]     x19: len, message length in bytes.
  * @param[in]     w31: all-zero.
  * @param[in]     dmem[sha512_dptr_msg]: pointer to the start of the message.
- * @param[in,out] dmem[dptr_result..dptr_result+64]: SHA-512 digest.
+ * @param[out]    dmem[dptr_result..dptr_result+64]: SHA-512 digest.
  *
  * clobbered registers: x2 to x5, x10, x11, x14 to x17, x19 to x23,
  *                      w0 to w7, w10, w15 to w29
@@ -405,15 +573,22 @@ bswap64:
 state:
 .zero 256
 
-/* Temporary buffer for message length. */
+/* Buffer for message length. */
 .balign 32
 len:
 .zero 32
 
-/* Partial message block (1024 bits). */
+/* Temporary working buffer (initialized to zero). */
+.balign 32
+tmp:
+.zero 32
+
+/* Partial message block (1024 bits + extra 1024 bits of space for padding). */
 .balign 32
 partial:
-.zero 128
+.zero 256
+
+.bss
 
 .data
 
