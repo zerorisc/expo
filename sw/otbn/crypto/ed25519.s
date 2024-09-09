@@ -958,7 +958,7 @@ affine_decode_var:
   csrrs    x2, FG0, x0
   andi     x2, x3, 4
   beq      x2, x0, decode_success
-  
+
   /* Exit with FAILURE. */
   li       x20, 0xeda2bfaf
   bn.mov   w10, w31

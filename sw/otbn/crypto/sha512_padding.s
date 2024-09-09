@@ -44,7 +44,7 @@ sha512_pad_message:
   /* Align the address and compute the offset.
        x20 <= dptr_pad % 4
        x21 <= dptr_pad // 4 */
-  andi    x20, x10, 3 
+  andi    x20, x10, 3
   xor     x21, x10, x20
 
   /* Load the first word past the padding. Skip if the offset is zero, because
@@ -105,7 +105,7 @@ sha512_pad_message:
 
   /* Convert the message byte-length to bit-length in-place.
        dmem[dptr_len] <= dmem[dptr_len] << 3 */
-  li      x4, 27 
+  li      x4, 27
   bn.lid  x4, 0(x11)
   bn.rshi w27, w27, w31 >> 253
   bn.sid  x4, 0(x11)
@@ -125,7 +125,7 @@ sha512_pad_message:
 
 /**
  * Swap the bytes in a 32-bit word, in-place.
- * 
+ *
  * This routine runs in constant time.
  *
  * @param[in]  x23: w, input word (w[0] || w[1] || w[2] || w[3])

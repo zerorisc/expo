@@ -27,7 +27,7 @@ main:
        dmem[dst..dptr_end] = message padding */
   la        x10, dst
   jal       x1, sha512_pad_message
- 
+
   /* Store the results (padding byte-length and value).
        x12 <= dptr_end - dst
        [w0..w3] <= dst */
@@ -36,7 +36,7 @@ main:
   bn.lid    x6++, 32(x10)
   bn.lid    x6++, 64(x10)
   bn.lid    x6++, 96(x10)
- 
+
   /* Reset destination buffer. */
   bn.sid    x30, 0(x10)
   bn.sid    x30, 32(x10)

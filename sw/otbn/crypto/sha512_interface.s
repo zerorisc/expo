@@ -12,15 +12,15 @@
 .globl sha512_final
 
 /**
- * Initialize a SHA-512 operation by setting the initial state. 
+ * Initialize a SHA-512 operation by setting the initial state.
  *
  * Sets internal buffers to their initial values. Only one SHA-512 operation
  * can be in progress at a time with this library.
  *
  * This routine runs in constant time.
  *
- * @param[in] w31: all-zero. 
- * @param[out] dmem[len]: Reset to zero. 
+ * @param[in] w31: all-zero.
+ * @param[out] dmem[len]: Reset to zero.
  * @param[out] dmem[state..state+256]: Working SHA-512 state.
  * @param[out] dmem[sha512_dptr_state]: state, pointer to working state.
  *
@@ -46,7 +46,7 @@ sha512_init:
   la       x2, sha512_dptr_msg
   la       x3, partial
   sw       x3, 0(x2)
-  
+
   /* We only ever update one block at a time, so set the number of chunks to 1.
        dmem[sha512_n_chunks] <= 1 */
   la       x2, sha512_n_chunks
@@ -70,13 +70,13 @@ sha512_init:
   ret
 
 /**
- * Add more message data to an ongoing SHA-512 operation. 
+ * Add more message data to an ongoing SHA-512 operation.
  *
  * This routine runs in constant time relative to the data but variable time
  * relative to message length.
  *
- * @param[in]     x18: msg_len, length of the new data in bytes. 
- * @param[in]     x20: dptr_msg, pointer to the new message data. 
+ * @param[in]     x18: msg_len, length of the new data in bytes.
+ * @param[in]     x20: dptr_msg, pointer to the new message data.
  * @param[in]     w31: all-zero.
  * @param[in,out] dmem[len]: len, total message length so far (256 bits).
  * @param[in,out] dmem[partial]: Current partial message block ((len % 128) bytes).
@@ -145,7 +145,7 @@ sha512_update:
 
   _sha512_update_partial_full:
   /* The partial block is full; format it and udpate the SHA-512 state. */
-  li       x11, 1 
+  li       x11, 1
   la       x12, partial
   jal      x1, sha512_format_blocks
   jal      x1, sha512_compact
@@ -154,7 +154,7 @@ sha512_update:
   /* Check if there is still message data remaining. If not, we're done. */
   bne      x18, x0, _sha512_update_message_data_nonempty
   ret
-  
+
   _sha512_update_message_data_nonempty:
   /* There is still message data remaining; recursive tail-call. */
   /* TODO: subsequent calls can assume that partial block is empty; should this
@@ -162,7 +162,7 @@ sha512_update:
   jal      x0, sha512_update
 
 /**
- * Finish SHA-512 operation. 
+ * Finish SHA-512 operation.
  *
  * This routine runs in constant time relative to the data but variable time
  * relative to the total message length.
@@ -174,7 +174,7 @@ sha512_update:
  * @param[in]  dmem[state]: Working hash state.
  * @param[out] dmem[dptr_result..dptr_result+64]: SHA-512 digest.
  *
- * clobbered registers: x2 to x5, x10 to x12, x14 to x17, x19 to x23, x28 
+ * clobbered registers: x2 to x5, x10 to x12, x14 to x17, x19 to x23, x28
  *                      w0 to w7, w10, w15 to w30
  * clobbered flag groups: FG0
  */
@@ -248,19 +248,19 @@ sha512_final:
  * The source and destination buffers should not overlap. The routine updates
  * both the source and destination pointers to point to the end of the copied
  * region (i.e. they both have `src_len` bytes added to them). The source and
- * destination pointers do not need to be word-aligned. 
+ * destination pointers do not need to be word-aligned.
  *
  * This routine runs in constant time relative to the data but variable time
  * relative to data length and alignment.
  *
- * @param[in]     x13: src_len, length of the source data in bytes. 
+ * @param[in]     x13: src_len, length of the source data in bytes.
  * @param[in]     w31: all-zero.
  * @param[in]     dmem[dptr_src..dptr_src+src_len]: data, value to copy.
  * @param[in,out] x20: dptr_src, pointer to the source buffer.
  * @param[in,out] x21: dptr_dst, pointer to the destination buffer.
  * @param[out]    dmem[dptr_dst..dptr_dst+src_len]: data, copied value.
  *
- * clobbered registers: x2, x10, x11, x13, x16, x17, x19 to x21, w20, w21 
+ * clobbered registers: x2, x10, x11, x13, x16, x17, x19 to x21, w20, w21
  * clobbered flag groups: FG0
  */
 copy:
@@ -322,18 +322,18 @@ copy:
      preceding bytes, because loops may not have zero iterations. */
   beq      x11, x0, _copy_dst_offset_zero
   loop     x11, 1
-    bn.rshi  w21, w21, w21 >> 8 
+    bn.rshi  w21, w21, w21 >> 8
   _copy_dst_offset_zero:
 
   /* Now shift in bytes starting from the source pointer. The number of bytes
      is always nonzero, but the source pointer offset can be zero. */
   beq      x10, x0, _copy_src_offset_zero
   loop     x10, 1
-    bn.rshi  w20, w20, w20 >> 8 
+    bn.rshi  w20, w20, w20 >> 8
   _copy_src_offset_zero:
   loop     x19, 2
-    bn.rshi  w21, w20, w21 >> 8 
-    bn.rshi  w20, w20, w20 >> 8 
+    bn.rshi  w21, w20, w21 >> 8
+    bn.rshi  w20, w20, w20 >> 8
 
   /* Finally, if we reached the end of the source data, copy final bytes from
      the old value of the destination. */
@@ -354,103 +354,6 @@ copy:
   add      x21, x21, x19
   jal      x0, copy
 
-
-/**
- * One-shot interface for SHA-512.
- *
- * The input message needs to start at a 32-byte-aligned address and be
- * followed by enough DMEM space for the padding (see `sha512_pad_message` for
- * guidance on how much space is enough).
- *
- * This routine runs in constant time.
- *
- * @param[in]     x18: dptr_result, pointer to the output buffer.
- * @param[in]     x19: len, message length in bytes.
- * @param[in]     w31: all-zero.
- * @param[in]     dmem[sha512_dptr_msg]: pointer to the start of the message.
- * @param[out]    dmem[dptr_result..dptr_result+64]: SHA-512 digest.
- *
- * clobbered registers: x2 to x5, x10, x11, x14 to x17, x19 to x23,
- *                      w0 to w7, w10, w15 to w29
- * clobbered flag groups: FG0
- */
-sha512_oneshot:
-  /* Store the length in memory as a 256-bit number, for the padding routine.
-       dmem[len] <= x11 */
-  li       x2, 31
-  la       x3, len
-  bn.sid   x2, 0(x3)
-  sw       x19, 0(x3)
-
-  /* Append padding to the message.
-       x21 <= dptr_end, pointer to the end of the padding
-       dmem[dptr_msg+len..dptr_end] <= padding */
-  la       x12, sha512_dptr_msg
-  lw       x12, 0(x12)
-  add      x10, x12, x19
-  la       x11, len
-  jal      x1, sha512_pad_message
-
-  /* Calculate and store the number of blocks with padding included.
-       dmem[sha512_n_chunks] <= x11 <= (x21 - dptr_msg) / 128 */
-  sub      x2, x21, x12
-  srli     x11, x2, 7
-  la       x2, sha512_n_chunks
-  sw       x11, 0(x2)
-  
-  /* Format the message blocks in preparation for sha512 computation. */
-  jal      x1, sha512_format_blocks
-
-  /* Copy the initial state into the working buffer.
-       dmem[state..state+256] <= dmem[init_state..init_state+256] */
-  li       x20, 20
-  la       x2, init_state
-  la       x3, state
-  loopi    8, 2
-    bn.lid   x20, 0(x2++)
-    bn.sid   x20, 0(x3++)
-
-  /* dmem[sha512_dptr_state] <= state */
-  la       x2, sha512_dptr_state
-  la       x3, state
-  sw       x3, 0(x2)
-
-  /* Call the hash function to update the state in-place. */
-  jal      x1, sha512_compact
-  
-  /* Load the mask for byte-swaps.
-       w29 <= dmem[bswap64_mask] */
-  la       x2, bswap64_mask
-  li       x3, 29
-  bn.lid   x3, 0(x2)
-
-  /* Load a 64-bit mask.
-       w30 <= 2^64 - 1 */
-  bn.not   w30, w31
-  bn.rshi  w30, w31, w30 >> 192
-
-  /* Read out the 8 64-bit integers that comprise the state. Reverse their
-     bytes and concatenate to get the standard SHA-512 byte order. */
-  li       x28, 28
-  li       x21, 21
-  la       x2, state
-  addi     x3, x18, 0
-  loopi    2, 7
-    /* w28 <= 0 */
-    bn.sub   w28, w28, w28
-    loopi    4, 3
-      /* w21[63:0] <= H[i] */
-      bn.lid   x21, 0(x2++)
-      /* w21 <= w21[63:0] */
-      bn.and   w21, w21, w30
-      /* w28 <= H[i] ^ (w28 << 64) */
-      bn.xor   w28, w21, w28 << 64
-    /* w28 <= reverse_bytes(w28) */
-    jal      x1, reverse_bytes
-    /* dmem[dptr_result+i*32] <= w28 */
-    bn.sid   x28, 0(x3++)
-
-  ret 
 
 /**
  * Completely reverse the bytes of a 256-bit word.
@@ -477,9 +380,9 @@ reverse_bytes:
 
   /* Reverse the order of the 64-bit chunks.
        w28 <= w20 || w21 || w22 || w23 */
-  bn.or    w28, w21, w20 << 64 
-  bn.or    w28, w22, w28 << 64 
-  bn.or    w28, w23, w28 << 64 
+  bn.or    w28, w21, w20 << 64
+  bn.or    w28, w22, w28 << 64
+  bn.or    w28, w23, w28 << 64
 
   /* Tail-call to byte-swap each 64-bit word. */
   jal      x0, bswap64
@@ -496,7 +399,7 @@ reverse_bytes:
  * This routine runs in constant time relative to the message content but
  * variable time relative to the number of blocks.
  *
- * @param[in]     x11: nblocks, number of blocks to process. 
+ * @param[in]     x11: nblocks, number of blocks to process.
  * @param[in]     x12: dptr_msg, pointer to the start of the first block.
  * @param[in,out] dmem[dptr_msg..dptr_msg+nblocks*128]: Message (modified in-place).
  *
