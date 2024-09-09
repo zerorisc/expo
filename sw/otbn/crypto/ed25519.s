@@ -262,9 +262,10 @@ ed25519_verify_var:
  * @param[in]  dmem[ed25519_ctx]: context string (ctx_len bytes)
  * @param[in]  dmem[ed25519_ctx_len]: length of context string in bytes
  * @param[in]  dmem[ed25519_msg]: pre-hashed message (512 bits)
- * @param[out] dmem[ed25519_sig]: encoded signature (512 bits)
+ * @param[out] dmem[ed25519_sig_R]: R component of signature (256 bits)
+ * @param[out] dmem[ed25519_sig_S]: S component of signature (256 bits)
  *
- * clobbered registers: x2 to x4, x20 to x23, w2 to w30
+ * clobbered registers: x2 to x4, x20 to x23, w1 to w30
  * clobbered flag groups: FG0
  */
 .globl ed25519_sign_prehashed
@@ -272,19 +273,43 @@ ed25519_sign_prehashed:
   /* Initialize all-zero register. */
   bn.xor   w31, w31, w31
 
-  /* Point the SHA-512 interface to the secret key.
-       dmem[sha512_dptr_msg] <= ed25519_d */
-   la      x2, ed25519_d
-   la      x3, sha512_dptr_msg
-   sw      x2, 0(x3)
-
   /* Call the SHA-512 routine to hash d.
        dmem[ed25519_hash_h] <= SHA-512(d) = h */
+  jal      x1, sha512_init
+  li       x18, 32
+  la       x20, ed25519_d
+  jal      x1, sha512_update
   la       x18, ed25519_hash_h
-  li       x19, 32
-  jal      x1, sha512_oneshot
+  jal      x1, sha512_final
 
-  /* TODO: compute and hash r */
+  /* Append the context length to the domain separator prefix.
+       dmem[ed25519_prehash_dom_sep+33] <= ctx_len */
+  la       x2, ed25519_ctx_len
+  lw       x2, 0(x2)
+  slli     x2, x2, 8 
+  la       x3, ed25519_prehash_dom_sep
+  lw       x3, 32(x3)
+  or       x3, x3, x2
+  sw       x3, 0(x3)
+
+  /* dmem[ed25519_r] <= SHA-512(domain-separator || h[63:32] || PH(M)) */
+  jal      x1, sha512_init
+  li       x18, 34 
+  la       x20, ed25519_prehash_dom_sep
+  jal      x1, sha512_update
+  la       x18, ed25519_ctx_len
+  lw       x18, 0(x18) 
+  la       x20, ed25519_ctx
+  jal      x1, sha512_update
+  li       x18, 32
+  la       x20, ed25519_hash_h
+  addi     x20, x20, 32
+  jal      x1, sha512_update
+  li       x18, 64
+  la       x20, ed25519_msg
+  jal      x1, sha512_update
+  la       x18, ed25519_hash_r
+  jal      x1, sha512_final
 
   /* Set up for scalar arithmetic.
        [w15:w14] <= mu
@@ -294,7 +319,7 @@ ed25519_sign_prehashed:
   /* Load the 256-bit lower half of the hash h.
        w16 <= h[255:0] */
   li       x2, 16
-  la       x3, ed25519_hash_h_low
+  la       x3, ed25519_hash_h
   bn.lid   x2, 0(x3)
 
   /* Recover the secret scalar s from h.
@@ -314,7 +339,7 @@ ed25519_sign_prehashed:
        w5 <= s mod L */
   bn.mov   w5, w18
 
-  /* Load the 512-bit precomputed hash r.
+  /* Load the 512-bit hash r.
        [w17:w16] <= r */
   li       x2, 16
   la       x3, ed25519_hash_r
@@ -327,8 +352,8 @@ ed25519_sign_prehashed:
   jal      x1, sc_reduce
 
   /* Save r for later.
-       w28 <= w18 = r mod L */
-  bn.mov   w28, w18
+       w1 <= w18 = r mod L */
+  bn.mov   w1, w18
 
   /* Set up for field arithmetic in preparation for scalar multiplication.
        MOD <= p
@@ -355,7 +380,8 @@ ed25519_sign_prehashed:
   jal      x1, affine_to_ext
 
   /* Compute the signature point R = [r]B.
-       [w13:w10] <= w28 * [w9:w6] = [r]B */
+       [w13:w10] <= w1 * [w9:w6] = [r]B */
+  bn.mov   w28, w1
   jal      x1, ext_scmul
 
   /* Convert R to affine coordinates.
@@ -391,71 +417,34 @@ ed25519_sign_prehashed:
   la       x3, ed25519_public_key
   bn.sid   x2, 0(x3)
 
-  /* TODO: instead of saving to DMEM here, */
+  /* TODO: we could start with the pre-computed domain separator prefix here potentially */
+  /* dmem[ed25519_hash_k] <= SHA-512(domain-separator || R_ || A_ || PH(M)) */
+  jal      x1, sha512_init
+  li       x18, 34 
+  la       x20, ed25519_prehash_dom_sep
+  jal      x1, sha512_update
+  la       x18, ed25519_ctx_len
+  lw       x18, 0(x18) 
+  la       x20, ed25519_ctx
+  jal      x1, sha512_update
+  li       x18, 32
+  la       x20, ed25519_sig_R
+  jal      x1, sha512_update
+  li       x18, 32
+  la       x20, ed25519_public_key
+  jal      x1, sha512_update
+  li       x18, 64
+  la       x20, ed25519_msg
+  jal      x1, sha512_update
+  la       x18, ed25519_hash_k
+  jal      x1, sha512_final
 
-/*
- * @param[in]     x18: dptr_result, pointer to the output buffer.
- * @param[in]     x19: len, message length in bytes.
- * @param[in]     w31: all-zero.
- * @param[in]     dmem[sha512_dptr_msg]: pointer to the start of the message.
- * @param[in,out] dmem[dptr_result..dptr_result+64]: SHA-512 digest.
- *
- * clobbered registers: x2 to x5, x10, x11, x14 to x17, x19 to x23,
- *                      w0 to w7, w10, w15 to w29
-*/
-
-  ret
-
-/**
- * Top-level Ed25519 signature generation operation (second stage).
- *
- * Returns S (a scalar modulo L), the second half of the signature.
- *
- * See the docstring of ed25519_sign_stage1 for details about the breakdown of
- * the signature generation into two stages. This second stage takes inputs h,
- * r, and k, where r and k are SHA-512 hashes, and h is the first half of a
- * SHA-512 hash. This routine:
- *    - Reduces r and k modulo L (for efficiency)
- *    - Constructs the secret scalar s from the first half of h.
- *    - Computes the signature scalar S = (r + k * s) mod L.
- *
- * This routine runs in constant time.
- *
- * Flags: Flags have no meaning beyond the scope of this subroutine.
- *
- * @param[in]  w31: all-zero
- * @param[in]  dmem[ed25519_hash_k]: precomputed hash k, 512 bits
- * @param[in]  dmem[ed25519_hash_r]: precomputed hash r, 512 bits
- * @param[in]  dmem[ed25519_hash_h_low]: lower half of precomputed hash h, 256 bits
- * @param[out] dmem[ed25519_sig_S]: signature scalar S, 256 bits
- *
- * clobbered registers: x2 to x4, x20 to x23, w2 to w30
- * clobbered flag groups: FG0
- */
-.globl ed25519_sign_stage2
-ed25519_sign_stage2:
   /* Set up for scalar arithmetic.
        [w15:w14] <= mu
        MOD <= L */
   jal      x1, sc_init
 
-  /* Load the 512-bit precomputed hash r.
-       [w17:w16] <= r */
-  li       x2, 16
-  la       x3, ed25519_hash_r
-  bn.lid   x2, 0(x3++)
-  addi     x2, x2, 1
-  bn.lid   x2, 0(x3)
-
-  /* Reduce r modulo L.
-       w18 <= [w17:w16] mod L = r mod L */
-  jal      x1, sc_reduce
-
-  /* Save r for later.
-       w5 <= r mod L */
-  bn.mov   w5, w18
-
-  /* Load the 512-bit precomputed hash k.
+  /* Load the 512-bit hash k.
        [w17:w16] <= k */
   li       x2, 16
   la       x3, ed25519_hash_k
@@ -471,24 +460,14 @@ ed25519_sign_stage2:
        w4 <= k mod L */
   bn.mov   w4, w18
 
-  /* Load the 256-bit lower half of the precomputed hash h.
-       w16 <= h[255:0] */
-  li       x2, 16
-  la       x3, ed25519_hash_h_low
-  bn.lid   x2, 0(x3)
-
-  /* Recover the secret scalar s from h.
-       w16 <= s */
-  jal      x1, sc_clamp
-
   /* Compute the signature scalar S = (r + (k * s)) mod L. Note: s is not fully
      reduced modulo L here, but that is permitted according to the
      specification of sc_mul, which only requires that its inputs fit in 256
      bits. */
 
-  /* w18 <= (w4 * w16) mod L = (k * s) mod L */
+  /* w18 <= (w4 * w5) mod L = (k * s) mod L */
   bn.mov   w21, w4
-  bn.mov   w22, w16
+  bn.mov   w22, w5
   jal      x1, sc_mul
 
   /* w4 <= (w5 + w18) mod L = (r + k * s) mod L = S */
@@ -1742,7 +1721,8 @@ ed25519_d:
   .word 0x2b6ffe73
   .word 0x52036cee
 
-/* Ed25519 pre-hash domain separator (256 bits) = 'SigEd25519 no Ed25519 collisions'. */
+/* Ed25519 pre-hash domain separator (256 bits).
+     Equal to 'SigEd25519 no Ed25519 collisions' followed by a 1 byte (33 bytes total). */
 ed25519_prehash_dom_sep:
   .word 0x45676953
   .word 0x35353264
@@ -1752,6 +1732,7 @@ ed25519_prehash_dom_sep:
   .word 0x6f632039
   .word 0x73696c6c
   .word 0x736e6f69
+  .word 0x00000001 
 
 .bss
 
@@ -1760,21 +1741,10 @@ ed25519_prehash_dom_sep:
 ed25519_ctx_len:
   .zero 4
 
-/* Context string for pre-hashed EdDSA. The weird alignment here is to
-   accomodate two special bytes at the beginning of the context.
-
-   Note that the context is read in 32-bit increments, so if the end of the
-   context string would end on a non-aligned address then it should be followed
-   by some zeroes to prevent errors. */
-.balign 4
-.zero 2
-ed25519_ctx:
-  .zero 258
-
 /* Verification result code (32 bits). Output for verify.
    If verification is successful, this will be SUCCESS = 0xf77fe650.
    Otherwise, this will be FAILURE = 0xeda2bfaf. */
-.balign 32
+.balign 4
 .weak ed25519_verify_result
 ed25519_verify_result:
   .zero 4
@@ -1802,6 +1772,16 @@ ed25519_public_key:
 .weak ed25519_hash_k
 ed25519_hash_k:
   .zero 64
+
+/* Context string for pre-hashed EdDSA (up to 255 bytes).
+
+   Note: If the context length is not a multiple of 32 bytes, the bytes up to
+   the next multiple of 32 should be initialized in order to prevent read
+   errors. The value of these bytes is ignored. */
+.balign 32
+.weak ed25519_ctx
+ed25519_ctx:
+  .zero 256
 
 /* Message (pre-hashed, 64 bytes). */
 .balign 32
