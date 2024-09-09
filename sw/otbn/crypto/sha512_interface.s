@@ -59,7 +59,7 @@ sha512_init:
   bn.sid   x3, 0(x2)
 
   /* Zero the temporary buffer. */
-  la       x2, tmp
+  la       x2, tmp_len
   bn.sid   x3, 0(x2)
 
   /* Zero the partial block. */
@@ -76,7 +76,7 @@ sha512_init:
  * relative to message length.
  *
  * @param[in]     x18: msg_len, length of the new data in bytes. 
- * @param[in]     x19: dptr_msg, pointer to the new message data. 
+ * @param[in]     x20: dptr_msg, pointer to the new message data. 
  * @param[in]     w31: all-zero.
  * @param[in,out] dmem[len]: len, total message length so far (256 bits).
  * @param[in,out] dmem[partial]: Current partial message block ((len % 128) bytes).
@@ -99,35 +99,34 @@ sha512_update:
   /* Calculate how much of the new data we can copy into the partial block. We
      can determine which number is smaller by subtracting and checking for
      underflow; the MSB of (128 - x14 - x18) will be set if and only if
-     x18 > 128 - x14.
+     128 - x14 < x18, since (128 - x14) is always < 2^31.
 
        x22 <= min(128 - x14, x18)  */
   li       x2, 128
   sub      x22, x2, x14
   sub      x2, x22, x18
   srli     x2, x2, 31
-  beq      x2, x0, _sha512_update_x18_lt_128_minus_x14
-  addi     x15, x18, 0
-  _sha512_update_x18_lt_128_minus_x14:
+  bne      x2, x0, _sha512_update_x22_lt_x18
+  addi     x22, x18, 0
+  _sha512_update_x22_lt_x18:
 
   /* Store the number of bytes we will copy in DMEM.
-       dmem[tmp] <= x22 */
-  la       x2, tmp
+       dmem[tmp_len] <= x22 */
+  la       x2, tmp_len
   sw       x22, 0(x2)
 
   /* Copy the new data into the partial block.
-       x19 <= dptr_msg + x15
-       dmem[partial+x14..partial+x14+x15] <= dmem[dptr_msg..dptr_msg+x15] */
+       x20 <= dptr_msg + x22
+       dmem[partial+x14..partial+x14+x22] <= dmem[dptr_msg..dptr_msg+x22] */
   addi     x13, x22, 0
-  add      x20, x19, 0
   la       x2, partial
   add      x21, x2, x14
   jal      x1, copy
 
   /* Update the message length in DMEM.
-       dmem[len] <= dmem[len] + dmem[tmp] */
+       dmem[len] <= dmem[len] + dmem[tmp_len] */
   li       x20, 20
-  la       x2, tmp
+  la       x2, tmp_len
   bn.lid   x20++, 0(x2)
   la       x2, len
   bn.lid   x20, 0(x2)
@@ -332,8 +331,9 @@ copy:
   loop     x10, 1
     bn.rshi  w20, w20, w20 >> 8 
   _copy_src_offset_zero:
-  loop     x19, 1
+  loop     x19, 2
     bn.rshi  w21, w20, w21 >> 8 
+    bn.rshi  w20, w20, w20 >> 8 
 
   /* Finally, if we reached the end of the source data, copy final bytes from
      the old value of the destination. */
@@ -578,9 +578,9 @@ state:
 len:
 .zero 32
 
-/* Temporary working buffer (initialized to zero). */
+/* Temporary working buffer to hold message length. */
 .balign 32
-tmp:
+tmp_len:
 .zero 32
 
 /* Partial message block (1024 bits + extra 1024 bits of space for padding). */

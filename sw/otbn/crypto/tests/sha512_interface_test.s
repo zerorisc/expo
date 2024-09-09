@@ -18,20 +18,18 @@ main:
   /* Test 1: SHA512("abc") */
   jal       x1, sha512_init
   li        x18, 3
-  la        x19, test1_msg
+  la        x20, test1_msg
   jal       x1, sha512_update
   la        x18, test1_digest
   jal       x1, sha512_final
 
   /* Test 2: SHA512("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu") */
-/*
   la        x2, test2_msg
   la        x3, sha512_dptr_msg
   sw        x2, 0(x3)
   la        x18, test2_digest
   li        x19, 112
   jal       x1, sha512_oneshot
-*/
 
   /* w0, w1 <= test 1 digest */
   li        x2, 0
