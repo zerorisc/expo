@@ -261,7 +261,7 @@ ed25519_verify_var:
  * @param[in]  dmem[ed25519_d]: secret key (256 bits)
  * @param[in]  dmem[ed25519_ctx]: context string (ctx_len bytes)
  * @param[in]  dmem[ed25519_ctx_len]: length of context string in bytes
- * @param[in]  dmem[ed25519_msg]: pre-hashed message (512 bits)
+ * @param[in]  dmem[ed25519_message]: pre-hashed message (512 bits)
  * @param[out] dmem[ed25519_sig_R]: R component of signature (256 bits)
  * @param[out] dmem[ed25519_sig_S]: S component of signature (256 bits)
  *
@@ -288,9 +288,9 @@ ed25519_sign_prehashed:
   lw       x2, 0(x2)
   slli     x2, x2, 8 
   la       x3, ed25519_prehash_dom_sep
-  lw       x3, 32(x3)
-  or       x3, x3, x2
-  sw       x3, 0(x3)
+  lw       x4, 32(x3)
+  or       x4, x4, x2
+  sw       x4, 0(x3)
 
   /* dmem[ed25519_r] <= SHA-512(domain-separator || h[63:32] || PH(M)) */
   jal      x1, sha512_init
@@ -306,7 +306,7 @@ ed25519_sign_prehashed:
   addi     x20, x20, 32
   jal      x1, sha512_update
   li       x18, 64
-  la       x20, ed25519_msg
+  la       x20, ed25519_message
   jal      x1, sha512_update
   la       x18, ed25519_hash_r
   jal      x1, sha512_final
@@ -434,7 +434,7 @@ ed25519_sign_prehashed:
   la       x20, ed25519_public_key
   jal      x1, sha512_update
   li       x18, 64
-  la       x20, ed25519_msg
+  la       x20, ed25519_message
   jal      x1, sha512_update
   la       x18, ed25519_hash_k
   jal      x1, sha512_final
@@ -1664,12 +1664,6 @@ ed25519_hash_h:
 ed25519_hash_r:
   .zero 64
 
-/* Temporary buffer for hash inputs. */
-.balign 32
-.weak tmp
-tmp:
-  .zero 416
-
 .data
 
 /* Affine x coordinate of base point B (see RFC 8032, section 5.1). */
@@ -1738,6 +1732,7 @@ ed25519_prehash_dom_sep:
 
 /* Context string length in bytes for pre-hashed EdDSA */
 .balign 4
+.weak ed25519_ctx_len
 ed25519_ctx_len:
   .zero 4
 
