@@ -33,6 +33,7 @@ opentitan_binary(
         "//hw/top_earlgrey:fpga_cw310",
         "//hw/top_earlgrey:fpga_cw305",
         "//hw/top_earlgrey:fpga_cw340",
+        "//hw/top_earlgrey:fpga_vcu118",
         "//hw/top_earlgrey:sim_dv_base",
         "//hw/top_earlgrey:sim_verilator_base",
         "//hw/top_darjeeling:sim_dv_base",

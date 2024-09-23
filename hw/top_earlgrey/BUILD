@@ -369,13 +369,33 @@ fpga_cw340(
 ###########################################################################
 # Derived from the CW340 targets
 fpga_vcu118(
+    name = "fpga_vcu118",
+    args = [
+        "--rcfile=",
+        "--logging=info",
+        "--interface={interface}",
+    ] + select({
+        "//conditions:default": [],
+    }),
+    design = "earlgrey",
+    exec_env = "fpga_vcu118",
+    libs = [
+        "//sw/device/lib/arch:boot_stage_rom_ext",
+        "//sw/device/lib/arch:fpga_cw340",
+    ],
+    linker_script = "//sw/device/lib/testing/test_framework:ottf_ld_silicon_creator_slot_a",
+    param = {
+        "interface": "vcu118",
+        "exit_success": DEFAULT_TEST_SUCCESS_MSG,
+        "exit_failure": DEFAULT_TEST_FAILURE_MSG,
+    },
+    test_cmd = "testing-not-supported",
+)
+
+fpga_vcu118(
     name = "fpga_vcu118_test_rom",
     testonly = True,
-    base = ":fpga_cw340",
-    # Although this is an FPGA environment, to avoid long reconfiguration
-    # times, the command below doesn't load a bitstream. Updating the
-    # `base_bitstream`, `otp`, or `rom` fields will have no effect. Use
-    # `--define bitstream=skip` to skip generating a new bitstream.
+    base = ":fpga_vcu118",
     base_bitstream = "//hw/bitstream/vcu118:bitstream",
     exec_env = "fpga_vcu118_test_rom",
     otp = "//hw/ip/otp_ctrl/data:img_rma",
@@ -384,6 +404,7 @@ fpga_vcu118(
     rom_mmi = "//hw/bitstream/vcu118:rom_mmi",
     test_cmd = """
         --exec="transport init"
+        --exec="fpga load-bitstream {bitstream}"
         --exec="bootstrap --clear-uart=true {firmware}"
         --exec="console --non-interactive --exit-success='{exit_success}' --exit-failure='{exit_failure}'"
         no-op
