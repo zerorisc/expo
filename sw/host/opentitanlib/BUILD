@@ -265,6 +265,7 @@ rust_library(
         "@crate_index//:sha2",
         "@crate_index//:shellwords",
         "@crate_index//:strum",
+        "@crate_index//:tempfile",
         "@crate_index//:thiserror",
         "@crate_index//:tokio",
         "@crate_index//:typetag",

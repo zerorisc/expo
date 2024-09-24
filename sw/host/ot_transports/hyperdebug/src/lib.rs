@@ -36,6 +36,13 @@ use opentitanlib::util::usb::UsbBackend;
 use ot_transport_chipwhisperer::ChipWhisperer;
 use ot_transport_chipwhisperer::board::Board;
 use ot_transport_chipwhisperer::board::{Cw310, Cw340};
+use std::process::Command;
+
+extern crate tempfile;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::os::unix::fs::OpenOptionsExt;
+use tempfile::tempdir;
 
 pub mod c2d2;
 pub mod dfu;
@@ -994,6 +1001,68 @@ impl<B: Board> Flavor for ChipWhispererFlavor<B> {
     }
 }
 
+/// A `VCU118Flavor` is a Hyperdebug attached to a VCU118 board.  Furthermore,
+/// both the Hyperdebug and USB interfaces are attached to the host.
+/// Hyperdebug is used for all IO with the VCU118 board except for bitstream
+/// programming.
+pub struct VCU118Flavor;
+
+impl Flavor for VCU118Flavor {
+    fn gpio_pin(inner: &Rc<Inner>, pinname: &str) -> Result<Rc<dyn GpioPin>> {
+        StandardFlavor::gpio_pin(inner, pinname)
+    }
+    fn spi_index(inner: &Rc<Inner>, instance: &str) -> Result<(u8, u8)> {
+        StandardFlavor::spi_index(inner, instance)
+    }
+    fn i2c_index(inner: &Rc<Inner>, instance: &str) -> Result<(u8, i2c::Mode)> {
+        StandardFlavor::i2c_index(inner, instance)
+    }
+    fn get_default_usb_vid() -> u16 {
+        StandardFlavor::get_default_usb_vid()
+    }
+    fn get_default_usb_pid() -> u16 {
+        StandardFlavor::get_default_usb_pid()
+    }
+    fn load_bitstream(fpga_program: &FpgaProgram) -> Result<()> {
+        log::info!("Programming the FPGA bitstream.");
+        let tmp_dir = tempdir()?;
+
+        let vcu118_bit_path = tmp_dir.path().join("vcu118.bit");
+        let mut vcu118_bit_file = File::create(vcu118_bit_path.clone())?; // default permissions (0o644) are enough
+        vcu118_bit_file.write_all(&fpga_program.bitstream)?;
+        drop(vcu118_bit_file); // close vcu118.bit before use
+
+        let program_vcu118_tcl_path = tmp_dir.path().join("program_vcu118.tcl");
+        let mut program_vcu118_tcl_file = File::create(program_vcu118_tcl_path)?; // default permissions (0o644) are enough
+        program_vcu118_tcl_file.write_all(include_str!(env!("program_vcu118_tcl")).as_bytes())?;
+        drop(program_vcu118_tcl_file); // close program_vcu118.tcl before executing
+
+        let program_vcu118_sh_path = tmp_dir.path().join("program_vcu118.sh");
+        let mut program_vcu118_sh_file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .mode(0o755)
+            .open(program_vcu118_sh_path.clone())?;
+        program_vcu118_sh_file.write_all(include_str!(env!("program_vcu118_sh")).as_bytes())?;
+        drop(program_vcu118_sh_file); // close program_vcu118.sh before executing
+
+        let status = Command::new(program_vcu118_sh_path)
+            .arg(vcu118_bit_path)
+            .status()
+            .expect("Failed to execute program_vcu118.sh");
+        if status.success() {
+            Ok(())
+        } else {
+            bail!("program_vcu118.sh exited with non-zero exit code")
+        }
+    }
+    fn clear_bitstream() -> Result<()> {
+        // TODO(#84)
+        bail!("Clearing the FPGA bitstream is currently not supported on the VCU118.")
+    }
+}
+
 struct HyperdebugBackend<T>(T);
 
 impl<T: Flavor + 'static> Backend for HyperdebugBackend<T> {
@@ -1034,6 +1103,16 @@ define_interface!(
 builtin_file!(
     "hyperdebug_cw340.json5",
     include_str!("../config/hyperdebug_cw340.json5")
+);
+
+define_interface!(
+    "vcu118",
+    HyperdebugBackend<VCU118Flavor>,
+    "/__builtin__/hyperdebug_vcu118.json5"
+);
+builtin_file!(
+    "hyperdebug_vcu118.json5",
+    include_str!("../config/hyperdebug_vcu118.json5")
 );
 
 builtin_file!(

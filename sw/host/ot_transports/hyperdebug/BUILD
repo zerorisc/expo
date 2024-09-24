@@ -22,6 +22,8 @@ rust_library(
     compile_data = glob(["config/*.json5"]) + [
         "@hyperdebug_firmware//:hyperdebug/ec.bin",
         "//third_party/openocd:jtag_cmsis_dap_adapter_cfg",
+        "//util/fpga:program_vcu118.tcl",
+        "//util/fpga:program_vcu118.sh",
     ],
     crate_features = [
         "include_hyperdebug_firmware",
@@ -30,6 +32,8 @@ rust_library(
     rustc_env = {
         "hyperdebug_firmware": "$(location @hyperdebug_firmware//:hyperdebug/ec.bin)",
         "openocd_cmsis_dap_adapter_cfg": "$(location //third_party/openocd:jtag_cmsis_dap_adapter_cfg)",
+        "program_vcu118_tcl": "$(location //util/fpga:program_vcu118.tcl)",
+        "program_vcu118_sh": "$(location //util/fpga:program_vcu118.sh)",
     },
     deps = [
         "//sw/host/opentitanlib:opentitanlib_base",
@@ -41,6 +45,7 @@ rust_library(
         "@crate_index//:regex",
         "@crate_index//:rusb",
         "@crate_index//:serialport",
+        "@crate_index//:tempfile",
         "@crate_index//:zerocopy",
     ],
 )

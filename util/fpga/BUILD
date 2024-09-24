@@ -7,6 +7,11 @@ load("@ot_python_deps//:requirements.bzl", "requirement")
 
 package(default_visibility = ["//visibility:public"])
 
+exports_files([
+    "program_vcu118.sh",
+    "program_vcu118.tcl",
+])
+
 py_library(
     name = "bitstream_bisect_support",
     deps = [

@@ -1,0 +1,20 @@
+{
+  "includes": ["/__builtin__/hyperdebug_chipwhisperer.json5"],
+  "interface": "vcu118",
+  "pins": [
+    {
+      "name": "RESET",
+      "mode": "OpenDrain",
+      "pull_mode": "PullUp",
+      "alias_of": "CN10_29"
+    }
+  ],
+  "spi": [
+    {
+      "name": "BOOTSTRAP",
+      "bits_per_sec": 5000000,
+      "chip_select": "CN10_6",
+      "alias_of": "QSPI"
+    }
+  ]
+}

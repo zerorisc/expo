@@ -63,7 +63,6 @@ PROVIDER_FIELDS = [
     "logs",
     "mapfile",
     "vmem",
->>>>>>> a8a2122e57 ([examples/hello_world] Add VCU118 build)
 ]
 
 def get_binary_files(attrs, field = "binary", providers = ALL_BINARY_PROVIDERS):
