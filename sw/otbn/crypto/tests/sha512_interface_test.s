@@ -23,9 +23,14 @@ main:
   la        x18, test1_digest
   jal       x1, sha512_final
 
-  /* Test 2: SHA512("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu") */
+  /* Test 2 (two updates): SHA512("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu") */
   jal       x1, sha512_init
-  li        x18, 112
+  li        x18, 40
+  la        x20, test2_msg
+  jal       x1, sha512_update
+  la        x20, test2_msg
+  addi      x20, x20, 40
+  li        x18, 82
   la        x20, test2_msg
   jal       x1, sha512_update
   la        x18, test2_digest
