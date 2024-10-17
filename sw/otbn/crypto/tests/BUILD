@@ -16,6 +16,9 @@ otbn_sim_test(
         "//sw/otbn/crypto:ed25519",
         "//sw/otbn/crypto:ed25519_scalar",
         "//sw/otbn/crypto:field25519",
+        "//sw/otbn/crypto:sha512_compact",
+        "//sw/otbn/crypto:sha512_padding",
+        "//sw/otbn/crypto:sha512_interface",
     ],
 )
 
@@ -29,6 +32,9 @@ otbn_sim_test(
         "//sw/otbn/crypto:ed25519",
         "//sw/otbn/crypto:ed25519_scalar",
         "//sw/otbn/crypto:field25519",
+        "//sw/otbn/crypto:sha512_compact",
+        "//sw/otbn/crypto:sha512_padding",
+        "//sw/otbn/crypto:sha512_interface",
     ],
 )
 
@@ -61,6 +67,9 @@ otbn_sim_test(
         "//sw/otbn/crypto:ed25519",
         "//sw/otbn/crypto:ed25519_scalar",
         "//sw/otbn/crypto:field25519",
+        "//sw/otbn/crypto:sha512_compact",
+        "//sw/otbn/crypto:sha512_padding",
+        "//sw/otbn/crypto:sha512_interface",
     ],
 )
 
