@@ -935,7 +935,7 @@ affine_decode_var:
      case is not critical for security. */
   bn.xor   w14, w10, w24
   csrrs    x2, FG0, x0
-  andi     x2, x3, 4
+  andi     x2, x2, 4
   beq      x2, x0, decode_success
 
   /* Exit with FAILURE. */
