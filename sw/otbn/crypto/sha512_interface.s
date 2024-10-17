@@ -315,7 +315,6 @@ copy:
   addi     x19, x13, 0
   _copy_x19_lt_x13:
 
-
   /* Rotate the bytes of the old value at the destination that precede the
      destination pointer so that they occupy the most significant part of the
      word. These bytes will be unmodified. We skip the loop if there are no
@@ -350,7 +349,9 @@ copy:
 
   /* Update pointers and recursively tail-call the copy routine again. */
   sub      x13, x13, x19
+  add      x20, x20, x10
   add      x20, x20, x19
+  add      x21, x21, x11
   add      x21, x21, x19
   jal      x0, copy
 

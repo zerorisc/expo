@@ -25,15 +25,22 @@ main:
 
   /* Test 2 (two updates): SHA512("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu") */
   jal       x1, sha512_init
+  li        x18, 112
+  la        x20, test2_msg
+  jal       x1, sha512_update
+  la        x18, test2_digest
+  jal       x1, sha512_final
+
+  /* Test 3: same as test 2 but with more updates. */
+  jal       x1, sha512_init
   li        x18, 40
   la        x20, test2_msg
   jal       x1, sha512_update
   la        x20, test2_msg
   addi      x20, x20, 40
-  li        x18, 82
-  la        x20, test2_msg
+  li        x18, 72
   jal       x1, sha512_update
-  la        x18, test2_digest
+  la        x18, test3_digest
   jal       x1, sha512_final
 
   /* w0, w1 <= test 1 digest */
@@ -44,6 +51,11 @@ main:
 
   /* w2, w3 <= test 2 digest */
   la        x3, test2_digest
+  bn.lid    x2++, 0(x3)
+  bn.lid    x2++, 32(x3)
+
+  /* w4, w5 <= test 3 digest */
+  la        x3, test3_digest
   bn.lid    x2++, 0(x3)
   bn.lid    x2++, 32(x3)
 
@@ -60,6 +72,11 @@ test1_digest:
 /* Temporary buffer for test 2 result. */
 .balign 32
 test2_digest:
+.zero 64
+
+/* Temporary buffer for test 3 result. */
+.balign 32
+test3_digest:
 .zero 64
 
 /* Test 1 input message (plus space for padding). */
