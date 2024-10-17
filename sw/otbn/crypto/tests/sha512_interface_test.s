@@ -24,12 +24,12 @@ main:
   jal       x1, sha512_final
 
   /* Test 2: SHA512("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu") */
-  la        x2, test2_msg
-  la        x3, sha512_dptr_msg
-  sw        x2, 0(x3)
+  jal       x1, sha512_init
+  li        x18, 112
+  la        x20, test2_msg
+  jal       x1, sha512_update
   la        x18, test2_digest
-  li        x19, 112
-  jal       x1, sha512_oneshot
+  jal       x1, sha512_final
 
   /* w0, w1 <= test 1 digest */
   li        x2, 0
