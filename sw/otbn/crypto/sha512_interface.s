@@ -125,13 +125,13 @@ sha512_update:
 
   /* Update the message length in DMEM.
        dmem[len] <= dmem[len] + dmem[tmp_len] */
-  li       x20, 20
+  li       x3, 20
   la       x2, tmp_len
-  bn.lid   x20++, 0(x2)
+  bn.lid   x3++, 0(x2)
   la       x2, len
-  bn.lid   x20, 0(x2)
+  bn.lid   x3, 0(x2)
   bn.add   w21, w21, w20
-  bn.sid   x20, 0(x2)
+  bn.sid   x3, 0(x2)
 
   /* Update the remaining length of new data. */
   sub      x18, x18, x22
@@ -139,17 +139,19 @@ sha512_update:
   /* Check if the partial block is now full. If not, we're done. */
   li       x2, 128
   sub      x2, x2, x14
-  sub      x2, x2, x15
+  sub      x2, x2, x22
   beq      x2, x0, _sha512_update_partial_full
   ret
 
   _sha512_update_partial_full:
-  /* The partial block is full; format it and udpate the SHA-512 state. */
+  /* Save the message pointer. */
+  addi     x21, x20, 0
+
+  /* Format the partial block and update the SHA-512 state. */
   li       x11, 1
   la       x12, partial
   jal      x1, sha512_format_blocks
   jal      x1, sha512_compact
-
 
   /* Check if there is still message data remaining. If not, we're done. */
   bne      x18, x0, _sha512_update_message_data_nonempty
@@ -159,6 +161,7 @@ sha512_update:
   /* There is still message data remaining; recursive tail-call. */
   /* TODO: subsequent calls can assume that partial block is empty; should this
      be a loop with simpler logic or is the code size not worth it? */
+  addi     x20, x21, 0
   jal      x0, sha512_update
 
 /**
@@ -334,9 +337,11 @@ copy:
     bn.rshi  w21, w20, w21 >> 8
     bn.rshi  w20, w20, w20 >> 8
 
-  /* Finally, if we reached the end of the source data, copy final bytes from
-     the old value of the destination. */
-  sub      x2, x16, x19
+  /* Finally, finish rotating the word until the old values of the destination
+     are in their original position. */
+  li       x2, 32
+  sub      x2, x2, x11
+  sub      x2, x2, x19
   beq      x2, x0, _copy_no_final_bytes
   loop     x2, 1
     bn.rshi  w21, w21, w21 >> 8

@@ -1715,8 +1715,8 @@ ed25519_d:
   .word 0x2b6ffe73
   .word 0x52036cee
 
-/* Ed25519 pre-hash domain separator (256 bits).
-     Equal to 'SigEd25519 no Ed25519 collisions' followed by a 1 byte (33 bytes total). */
+/* Ed25519 pre-hash domain separator.
+   Equal to 'SigEd25519 no Ed25519 collisions' followed by a 1 byte (33 bytes total). */
 ed25519_prehash_dom_sep:
   .word 0x45676953
   .word 0x35353264
