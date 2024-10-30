@@ -456,22 +456,41 @@ ed25519_sign_prehashed:
        w18 <= [w17:w16] mod L = k mod L */
   jal      x1, sc_reduce
 
-  /* Save k for later.
-       w4 <= k mod L */
-  bn.mov   w4, w18
+  /* Load the 256-bit lower half of the hash h.
+       w16 <= h[255:0] */
+  li       x2, 16
+  la       x3, ed25519_hash_h
+  bn.lid   x2, 0(x3)
+
+  /* Recover the secret scalar s from h.
+       w16 <= s */
+  jal      x1, sc_clamp
 
   /* Compute the signature scalar S = (r + (k * s)) mod L. Note: s is not fully
      reduced modulo L here, but that is permitted according to the
      specification of sc_mul, which only requires that its inputs fit in 256
      bits. */
 
-  /* w18 <= (w4 * w5) mod L = (k * s) mod L */
-  bn.mov   w21, w4
-  bn.mov   w22, w5
+  /* w4 <= (w18 * w16) mod L = (k * s) mod L */
+  bn.mov   w21, w18
+  bn.mov   w22, w16
   jal      x1, sc_mul
+  bn.mov   w4, w18
 
-  /* w4 <= (w5 + w18) mod L = (r + k * s) mod L = S */
-  bn.addm  w4, w5, w18
+  /* Load the 512-bit hash r.
+       [w17:w16] <= r */
+  li       x2, 16
+  la       x3, ed25519_hash_r
+  bn.lid   x2, 0(x3++)
+  addi     x2, x2, 1
+  bn.lid   x2, 0(x3)
+
+  /* Reduce r modulo L.
+       w18 <= [w17:w16] mod L = r mod L */
+  jal      x1, sc_reduce
+
+  /* w4 <= (w4 + w18) mod L = (r + k * s) mod L = S */
+  bn.addm  w4, w4, w18
 
   /* Write S to dmem.
        dmem[ed25519_sig_S] <= w4 = S */
