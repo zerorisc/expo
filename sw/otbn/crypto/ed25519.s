@@ -258,7 +258,7 @@ ed25519_verify_var:
  *
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
- * @param[in]  dmem[ed25519_sk]: secret key (256 bits)
+ * @param[in]  dmem[ed25519_hash_h]: hash of secret key (512 bits)
  * @param[in]  dmem[ed25519_ctx]: context string (ctx_len bytes)
  * @param[in]  dmem[ed25519_ctx_len]: length of context string in bytes
  * @param[in]  dmem[ed25519_message]: pre-hashed message (512 bits)
@@ -272,15 +272,6 @@ ed25519_verify_var:
 ed25519_sign_prehashed:
   /* Initialize all-zero register. */
   bn.xor   w31, w31, w31
-
-  /* Call the SHA-512 routine to hash d.
-       dmem[ed25519_hash_h] <= SHA-512(d) = h */
-  jal      x1, sha512_init
-  li       x18, 32
-  la       x20, ed25519_sk
-  jal      x1, sha512_update
-  la       x18, ed25519_hash_h
-  jal      x1, sha512_final
 
   /* Append the context length to the domain separator prefix.
        dmem[ed25519_prehash_dom_sep+33] <= ctx_len */

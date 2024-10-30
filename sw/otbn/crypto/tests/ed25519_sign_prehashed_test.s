@@ -35,6 +35,18 @@
  */
 
 main:
+  /* Initialize all-zero register.*/
+  bn.xor   w31, w31, w31
+
+  /* Call the SHA-512 routine to hash d.
+       dmem[ed25519_hash_h] <= SHA-512(d) = h */
+  jal      x1, sha512_init
+  li       x18, 32
+  la       x20, ed25519_sk
+  jal      x1, sha512_update
+  la       x18, ed25519_hash_h
+  jal      x1, sha512_final
+
   /* Compute signature.
        dmem[ed25519_sig_R] <= R
        dmem[ed25519_sig_S] <= S */
