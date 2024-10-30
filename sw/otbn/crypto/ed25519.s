@@ -258,7 +258,7 @@ ed25519_verify_var:
  *
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
- * @param[in]  dmem[ed25519_d]: secret key (256 bits)
+ * @param[in]  dmem[ed25519_sk]: secret key (256 bits)
  * @param[in]  dmem[ed25519_ctx]: context string (ctx_len bytes)
  * @param[in]  dmem[ed25519_ctx_len]: length of context string in bytes
  * @param[in]  dmem[ed25519_message]: pre-hashed message (512 bits)
@@ -277,7 +277,7 @@ ed25519_sign_prehashed:
        dmem[ed25519_hash_h] <= SHA-512(d) = h */
   jal      x1, sha512_init
   li       x18, 32
-  la       x20, ed25519_d
+  la       x20, ed25519_sk
   jal      x1, sha512_update
   la       x18, ed25519_hash_h
   jal      x1, sha512_final
@@ -290,7 +290,7 @@ ed25519_sign_prehashed:
   la       x3, ed25519_prehash_dom_sep
   lw       x4, 32(x3)
   or       x4, x4, x2
-  sw       x4, 0(x3)
+  sw       x4, 32(x3)
 
   /* dmem[ed25519_r] <= SHA-512(domain-separator || h[63:32] || PH(M)) */
   jal      x1, sha512_init

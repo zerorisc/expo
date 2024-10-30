@@ -50,8 +50,8 @@ ed25519_ctx_len:
 .word 0x00000000
 
 .balign 32
-.globl ed25519_d
-ed25519_d:
+.globl ed25519_sk
+ed25519_sk:
 .word 0x24e63f83
 .word 0x9d7b2309
 .word 0x5877ec62

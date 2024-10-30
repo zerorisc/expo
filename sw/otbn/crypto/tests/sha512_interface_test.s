@@ -51,7 +51,7 @@ main:
        r = SHA512(b'SigEd25519 no Ed25519 collisions' + bytes([1,0]) + h[32:] + PH(M)) */
   jal       x1, sha512_init
   li        x18, 32
-  la        x20, test4_d
+  la        x20, test4_sk
   jal       x1, sha512_update
   la        x18, test4_digest
   jal       x1, sha512_final
@@ -173,7 +173,7 @@ test4_dom_sep:
 /* Test 4: Ed25519ph secret key value (32 bytes)
      From RFC 8032, section 7.3, test 1 */
 .balign 32
-test4_d:
+test4_sk:
 .word 0x24e63f83
 .word 0x9d7b2309
 .word 0x5877ec62
