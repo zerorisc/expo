@@ -114,7 +114,8 @@ class chip_sw_spi_passthrough_vseq extends chip_sw_base_vseq;
                                        opcode == local::opcode;
                                        address_q.size() == 0;
                                        payload_q.size() <= local::max_payload_size;
-                                       read_size == payload_q.size(););
+                                       read_size == payload_q.size();
+                                       cmd_in_mbx == 0;);
         `uvm_send(m_spi_host_seq);
         // Wait for a small delay to allow the device agent to push the response
         // into the queue.
