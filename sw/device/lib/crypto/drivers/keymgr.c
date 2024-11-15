@@ -43,6 +43,22 @@ static_assert(kKeymgrOutputShareNumWords ==
                   KEYMGR_SW_SHARE1_OUTPUT_MULTIREG_COUNT,
               "Number of output share 1 registers does not match.");
 
+// CDI_1 (Owner) attestation key diverisfier constants.
+const keymgr_diversification_t kCdi1KeymgrDiversifier = {
+    .salt =
+        {
+            0x2d12c2e3,
+            0x6acc6876,
+            0x4bfb07ee,
+            0xc45fc414,
+            0x5d4fa9de,
+            0xf295b128,
+            0x50f49882,
+            0xbbdefa29,
+        },
+    .version = 0,
+};
+
 /**
  * Fails if the keymgr is not idle.
  *
@@ -133,8 +149,8 @@ static status_t keymgr_wait_until_done(void) {
 /**
  * Set the control register of the key manager.
  *
- * The CDI select bit is always set to false for this driver (i.e. Sealing
- * CDI). The driver does not support attestation CDI.
+ * The CDI select bit is always set to false for this macro (i.e. Sealing
+ * CDI).
  *
  * @param dest (NONE, AES, ACC, or KMAC)
  * @param operation (GENERATE_SW or GENERATE_HW)
@@ -252,6 +268,28 @@ status_t keymgr_generate_key_acc(keymgr_diversification_t diversification) {
   // Check the control register.
   VERIFY_CTRL(ACC, GENERATE_HW);
   return OTCRYPTO_OK;
+}
+
+status_t keymgr_generate_attestation_key_otbn(void) {
+  // Ensure that the entropy complex has been initialized and keymgr is idle.
+  HARDENED_TRY(entropy_complex_check());
+  HARDENED_TRY(keymgr_is_idle());
+
+  // Set the control register to generate *attestation* CDI key material for
+  // OTBN.
+  uint32_t ctrl =
+      bitfield_field32_write(0, KEYMGR_CONTROL_SHADOWED_DEST_SEL_FIELD,
+                             KEYMGR_CONTROL_SHADOWED_DEST_SEL_VALUE_OTBN);
+  ctrl = bitfield_bit32_write(ctrl, KEYMGR_CONTROL_SHADOWED_CDI_SEL_BIT, true);
+  ctrl = bitfield_field32_write(
+      ctrl, KEYMGR_CONTROL_SHADOWED_OPERATION_FIELD,
+      KEYMGR_CONTROL_SHADOWED_OPERATION_VALUE_GENERATE_HW_OUTPUT);
+  abs_mmio_write32_shadowed(kBaseAddr + KEYMGR_CONTROL_SHADOWED_REG_OFFSET,
+                            ctrl);
+
+  // Start the operation and wait for it to complete.
+  keymgr_start(kCdi1KeymgrDiversifier);
+  return keymgr_wait_until_done();
 }
 
 /**

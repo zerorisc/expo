@@ -102,6 +102,14 @@ status_t keymgr_generate_key_acc(
     const keymgr_diversification_t diversification);
 
 /**
+ * Sideload CDI1 attestation key material into OTBN.
+ *
+ * @return OK or error.
+ */
+OT_WARN_UNUSED_RESULT
+status_t keymgr_generate_attestation_key_otbn(void);
+
+/**
  * Clear the sideloaded AES key.
  *
  * @return OK or error.
