@@ -227,6 +227,32 @@ opentitan_test(
 )
 
 opentitan_test(
+    name = "attestation_endorse_functest",
+    srcs = ["attestation_endorse_functest.c"],
+    exec_env = {
+        # Test only runs on ROM_EXT, because it expects DICE certificates in place.
+        "//hw/top_earlgrey:fpga_cw310_rom_ext": None,
+    },
+    verilator = verilator_params(
+        timeout = "long",
+    ),
+    deps = [
+        "//hw/top_earlgrey/ip_autogen/flash_ctrl:flash_ctrl_c_regs",
+        "//sw/device/lib/crypto/drivers:entropy",
+        "//sw/device/lib/crypto/drivers:keymgr",
+        "//sw/device/lib/crypto/drivers:otbn",
+        "//sw/device/lib/crypto/impl:ecc",
+        "//sw/device/lib/crypto/impl:hash",
+        "//sw/device/lib/crypto/impl:key_transport",
+        "//sw/device/lib/runtime:log",
+        "//sw/device/lib/testing:keymgr_testutils",
+        "//sw/device/lib/testing/test_framework:ottf_main",
+        "//sw/device/silicon_creator/lib/cert:cdi_1_template_library",
+        "//sw/device/silicon_creator/manuf/base:perso_tlv_data",
+    ],
+)
+
+opentitan_test(
     name = "drbg_functest",
     srcs = ["drbg_functest.c"],
     exec_env = EARLGREY_TEST_ENVS,
