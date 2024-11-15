@@ -11,6 +11,7 @@
 #include "sw/device/lib/base/hardened.h"
 #include "sw/device/lib/base/hardened_memory.h"
 #include "sw/device/lib/crypto/drivers/acc.h"
+#include "sw/device/lib/crypto/drivers/flash_ctrl.h"
 #include "sw/device/lib/crypto/impl/ecc/p256_insn_counts.h"
 
 #include "hw/top_earlgrey/sw/autogen/top_earlgrey.h"
@@ -32,6 +33,7 @@ ACC_DECLARE_SYMBOL_ADDR(run_p256, y);      // Public key y-coordinate.
 ACC_DECLARE_SYMBOL_ADDR(run_p256, d0_io);  // Private key scalar d (share 0).
 ACC_DECLARE_SYMBOL_ADDR(run_p256, d1_io);  // Private key scalar d (share 1).
 ACC_DECLARE_SYMBOL_ADDR(run_p256, x_r);    // ECDSA verification result.
+ACC_DECLARE_SYMBOL_ADDR(run_p256, seed);   // Attestation seed.
 ACC_DECLARE_SYMBOL_ADDR(run_p256, ok);     // Status code.
 
 static const acc_addr_t kAccVarMode = ACC_ADDR_T_INIT(run_p256, mode);
@@ -43,6 +45,7 @@ static const acc_addr_t kAccVarY = ACC_ADDR_T_INIT(run_p256, y);
 static const acc_addr_t kAccVarD0 = ACC_ADDR_T_INIT(run_p256, d0_io);
 static const acc_addr_t kAccVarD1 = ACC_ADDR_T_INIT(run_p256, d1_io);
 static const acc_addr_t kAccVarXr = ACC_ADDR_T_INIT(run_p256, x_r);
+static const acc_addr_t kAccVarSeed = ACC_ADDR_T_INIT(run_p256, seed);
 static const acc_addr_t kAccVarOk = ACC_ADDR_T_INIT(run_p256, ok);
 
 // Declare mode constants.
@@ -54,6 +57,7 @@ ACC_DECLARE_SYMBOL_ADDR(run_p256, MODE_ECDH);
 ACC_DECLARE_SYMBOL_ADDR(run_p256, MODE_SIDELOAD_KEYGEN);
 ACC_DECLARE_SYMBOL_ADDR(run_p256, MODE_SIDELOAD_SIGN);
 ACC_DECLARE_SYMBOL_ADDR(run_p256, MODE_SIDELOAD_ECDH);
+ACC_DECLARE_SYMBOL_ADDR(run_p256, MODE_ATTESTATION_ENDORSE);
 static const uint32_t kAccP256ModeKeygen =
     ACC_ADDR_T_INIT(run_p256, MODE_KEYGEN);
 static const uint32_t kAccP256ModeKeyCheck =
@@ -67,6 +71,8 @@ static const uint32_t kAccP256ModeSideloadKeygen =
 static const uint32_t kAccP256ModeSideloadSign =
     ACC_ADDR_T_INIT(run_p256, MODE_SIDELOAD_SIGN);
 static const uint32_t kAccP256ModeSideloadEcdh =
+    ACC_ADDR_T_INIT(run_p256, MODE_SIDELOAD_ECDH);
+static const uint32_t kAccP256ModeAttestationEndorse =
     ACC_ADDR_T_INIT(run_p256, MODE_SIDELOAD_ECDH);
 
 enum {
@@ -85,6 +91,14 @@ enum {
   kMaskedScalarPaddingWords =
       (kAccWideWordNumWords -
        (kP256MaskedScalarShareWords % kAccWideWordNumWords)) %
+      kAccWideWordNumWords,
+  /**
+   * Size of the OTBN attestation seed buffer in 32-bit words (rounding the
+   * attestation seed size up to the next OTBN wide word).
+   */
+  kAccAttestationSeedBufferWords =
+      ((kFlashCtrlAttestationKeySeedWords + kAccWideWordNumWords - 1) /
+       kAccWideWordNumWords) *
       kAccWideWordNumWords,
 };
 
@@ -276,6 +290,47 @@ status_t p256_ecdsa_sign_finalize(p256_ecdsa_signature_t *result) {
 
   // Wipe DMEM.
   return acc_dmem_sec_wipe();
+}
+
+status_t p256_ecdsa_attestation_endorse_start(
+    const uint32_t digest[kP256ScalarWords]) {
+  // Load the P-256 app. Fails if ACC is non-idle.
+  HARDENED_TRY(acc_load_app(kAccAppP256));
+
+  // Set mode so start() will jump into attestation endorsement.
+  uint32_t mode = kAccP256ModeAttestationEndorse;
+  HARDENED_TRY(acc_dmem_write(kAccP256ModeWords, &mode, kAccVarMode));
+
+  // Set the CDI1 attestation key seed (plus zero-padding so wide-word reads
+  // don't error).
+  uint32_t seed[kAccAttestationSeedBufferWords];
+  memset(seed, 0, sizeof(seed));
+  HARDENED_TRY(flash_ctrl_cdi1_seed_read(seed));
+  HARDENED_TRY(
+      acc_dmem_write(kAccAttestationSeedBufferWords, seed, kAccVarSeed));
+
+  // Set the message digest.
+  HARDENED_TRY(set_message_digest(digest));
+
+  // Start the ACC routine.
+  return acc_execute();
+}
+
+status_t p256_ecdsa_attestation_endorse_finalize(
+    p256_ecdsa_signature_t *result) {
+  // Spin here waiting for ACC to complete.
+  HARDENED_TRY(acc_busy_wait_for_done());
+
+  // Read signature R out of OTBN dmem.
+  HARDENED_TRY(acc_dmem_read(kP256ScalarWords, kAccVarR, result->r));
+
+  // Read signature S out of OTBN dmem.
+  HARDENED_TRY(acc_dmem_read(kP256ScalarWords, kAccVarS, result->s));
+
+  // Wipe DMEM.
+  HARDENED_TRY(acc_dmem_sec_wipe());
+
+  return OTCRYPTO_OK;
 }
 
 status_t p256_ecdsa_verify_start(const p256_ecdsa_signature_t *signature,

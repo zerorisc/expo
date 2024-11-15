@@ -222,6 +222,29 @@ OT_WARN_UNUSED_RESULT
 status_t p256_ecdsa_sign_finalize(p256_ecdsa_signature_t *result);
 
 /**
+ * Start an async ECDSA/P-256 attestation signature generation on ACC.
+ *
+ * Expects a sideloaded key from keymgr to be already loaded on ACC. Returns
+ * an `OTCRYPTO_ASYNC_INCOMPLETE` error if ACC is busy.
+ *
+ * @param digest Digest of the message to sign.
+ * @return Result of the operation (OK or error).
+ */
+status_t p256_ecdsa_attestation_endorse_start(
+    const uint32_t digest[kP256ScalarWords]);
+
+/**
+ * Finish an async ECDSA/P-256 attestation signature generation on ACC.
+ *
+ * Blocks until ACC is idle.
+ *
+ * @param[out] result Buffer in which to store the generated signature.
+ * @return Result of the operation (OK or error).
+ */
+status_t p256_ecdsa_attestation_endorse_finalize(
+    p256_ecdsa_signature_t *result);
+
+/**
  * Start an async ECDSA/P-256 signature verification operation on ACC.
  *
  * See the documentation of `p256_ecdsa_verify` for details.

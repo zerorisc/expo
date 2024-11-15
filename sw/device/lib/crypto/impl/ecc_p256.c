@@ -313,6 +313,15 @@ otcrypto_status_t otcrypto_ecdsa_p256_sign(
   return otcrypto_ecdsa_p256_sign_async_finalize(signature);
 }
 
+otcrypto_status_t otcrypto_ecdsa_p256_attestation_endorse(
+    const otcrypto_hash_digest_t message_digest,
+    otcrypto_word32_buf_t signature) {
+  HARDENED_TRY(
+      otcrypto_ecdsa_p256_attestation_endorse_async_start(message_digest));
+  ACC_WIPE_IF_ERROR(acc_busy_wait_for_done());
+  return otcrypto_ecdsa_p256_attestation_endorse_async_finalize(signature);
+}
+
 otcrypto_status_t otcrypto_ecdsa_p256_verify(
     const otcrypto_unblinded_key_t *public_key,
     const otcrypto_hash_digest_t message_digest,
@@ -573,6 +582,48 @@ otcrypto_status_t otcrypto_ecdsa_p256_sign_async_finalize(
   HARDENED_TRY(p256_ecdsa_sign_finalize(sig_p256));
 
   // Clear the ACC sideload slot (in case the key was sideloaded).
+  return keymgr_sideload_clear_acc();
+}
+
+otcrypto_status_t otcrypto_ecdsa_p256_attestation_endorse_async_start(
+    const otcrypto_hash_digest_t message_digest) {
+  if (message_digest.data == NULL) {
+    return OTCRYPTO_BAD_ARGS;
+  }
+
+  // Check that the entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
+
+  // Check the digest length.
+  if (launder32(message_digest.len) != kP256ScalarWords) {
+    return OTCRYPTO_BAD_ARGS;
+  }
+  HARDENED_CHECK_EQ(message_digest.len, kP256ScalarWords);
+
+  // Sideload the attestation key material from keymgr.
+  HARDENED_TRY(keymgr_generate_attestation_key_otbn());
+
+  // Start the signing operation.
+  return p256_ecdsa_attestation_endorse_start(message_digest.data);
+}
+
+otcrypto_status_t otcrypto_ecdsa_p256_attestation_endorse_async_finalize(
+    otcrypto_word32_buf_t signature) {
+  if (signature.data == NULL) {
+    return OTCRYPTO_BAD_ARGS;
+  }
+
+  // Ensure the entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
+
+  HARDENED_TRY(p256_signature_length_check(signature.len));
+  p256_ecdsa_signature_t *sig_p256 = (p256_ecdsa_signature_t *)signature.data;
+  // Note: This operation wipes DMEM, so if an error occurs after this
+  // point then the signature would be unrecoverable. This should be the
+  // last potentially error-causing line before returning to the caller.
+  HARDENED_TRY(p256_ecdsa_attestation_endorse_finalize(sig_p256));
+
+  // Clear the ACC sideload slot.
   return keymgr_sideload_clear_acc();
 }
 
