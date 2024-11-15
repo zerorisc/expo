@@ -18,12 +18,13 @@
  * 6. MODE_SIDELOAD_KEYGEN: generate a keypair from a sideloaded seed
  * 7. MODE_SIDELOAD_SIGN: generate an ECDSA signature using sideloaded secret key/seed
  * 8. MODE_SIDELOAD_ECDH: ECDH key exchange using a secret key from a sideloaded seed
+ * 9. MODE_ATTESTATION_ENDORSE: generate signature using attestation secret key/seed
  */
 
 /**
  * Mode magic values, generated with
- * $ ./util/design/sparse-fsm-encode.py -d 6 -m 8 -n 11 \
- *     --avoid-zero -s 380925547
+ * $ ./util/design/sparse-fsm-encode.py -d 6 -m 9 -n 11 \
+ *     --avoid-zero -s 1905904247
  *
  * Call the same utility with the same arguments and a higher -m to generate
  * additional value(s) without changing the others or sacrificing mutual HD.
@@ -33,14 +34,15 @@
  * as `li`. If support is added, we could use 32-bit values here instead of
  * 11-bit.
  */
-.equ MODE_KEYGEN, 0x1f8
-.equ MODE_KEY_CHECK, 0x669
-.equ MODE_SIGN, 0x23e
-.equ MODE_VERIFY, 0x54e
-.equ MODE_ECDH, 0x695
-.equ MODE_SIDELOAD_KEYGEN, 0x7a2
-.equ MODE_SIDELOAD_SIGN, 0x0e7
-.equ MODE_SIDELOAD_ECDH, 0x353
+.equ MODE_KEYGEN, 0x1e0
+.equ MODE_KEY_CHECK, 0x70b
+.equ MODE_SIGN, 0x66c
+.equ MODE_VERIFY, 0x690
+.equ MODE_ECDH, 0x335
+.equ MODE_SIDELOAD_KEYGEN, 0x056
+.equ MODE_SIDELOAD_SIGN, 0x08d
+.equ MODE_SIDELOAD_ECDH, 0x2fb
+.equ MODE_ATTESTATION_ENDORSE, 0x5be
 
 /**
  * Make the mode constants visible to Ibex.
@@ -52,7 +54,7 @@
 .globl MODE_ECDH
 .globl MODE_SIDELOAD_KEYGEN
 .globl MODE_SIDELOAD_SIGN
-.globl MODE_SIDELOAD_ECDH
+.globl MODE_ATTESTATION_ENDORSE
 
 /**
  * Hardened boolean values.
@@ -107,6 +109,9 @@ start:
 
   addi  x3, x0, MODE_ECDH
   beq   x2, x3, shared_key
+
+  addi  x3, x0, MODE_ATTESTATION_ENDORSE
+  beq   x2, x3, attestation_endorse
 
   /* Invalid mode; fail. */
   unimp
@@ -288,6 +293,8 @@ sideload_keygen:
   /* Generate secret key d in shares.
        dmem[d0] <= d0
        dmem[d1] <= d1 */
+  bn.xor  w22, w22, w22
+  bn.xor  w23, w23, w23
   jal   x1, secret_key_from_seed
 
   /* Generate public key d*G.
@@ -308,7 +315,47 @@ sideload_ecdsa_sign:
   /* Generate secret key d in shares.
        dmem[d0] <= d0
        dmem[d1] <= d1 */
-  jal   x1, secret_key_from_seed
+  bn.xor  w22, w22, w22
+  bn.xor  w23, w23, w23
+  jal     x1, secret_key_from_seed
+
+  /* Tail-call signature-generation routine. */
+  jal      x0, ecdsa_sign
+
+/**
+ * Sign a message using the saved signing key from the scratchpad.
+ *
+ * Clears the saved key after use, so only one signature is possible with a
+ * saved key.
+ *
+ * @param[in]  dmem[msg]: Message digest (256 bits)
+ * @param[in]   dmem[d0]: First share of private key d (320 bits)
+ * @param[in]   dmem[d1]: Second share of private key d (320 bits)
+ * @param[out]   dmem[r]: Buffer for r component of signature (256 bits)
+ * @param[out]   dmem[s]: Buffer for s component of signature (256 bits)
+ */
+/**
+ * Generate an attestation signature.
+ *
+ * Very similar to sideload_ecdsa_sign, but combines the sideloaded key
+ * material with the attestation seed value before converting the combined seed
+ * to a secret key.
+ *
+ * @param[in]  dmem[msg]:  message to be signed (256 bits)
+ * @param[in]  dmem[seed]: attestation seed (320 bits)
+ * @param[in]  dmem[r]:    dmem buffer for r component of signature (256 bits)
+ * @param[in]  dmem[s]:    dmem buffer for s component of signature (256 bits)
+ */
+attestation_endorse:
+  /* Load seed value from DMEM.
+       w22, w23 <= dmem[seed] */
+  li       x2, 22
+  la       x3, seed
+  bn.lid   x2++, 0(x3)
+  bn.lid   x2++, 32(x3)
+
+  /* Derive the secret key. */
+  jal      x1, secret_key_from_seed
 
   /* Tail-call signature-generation routine. */
   jal      x0, ecdsa_sign
@@ -345,6 +392,11 @@ shared_key_from_seed:
 /**
  * Generate a secret key from a keymgr-derived seed.
  *
+ * XORs a given additional seed with the keymgr one (zero except for
+ * attestation).
+ *
+ * @param[in]  w22:      Lower half of value to XOR with seed.
+ * @param[in]  w23:      Upper half of value to XOR with seed.
  * @param[out] dmem[d0]: First share of secret key.
  * @param[out] dmem[d0]: Second share of secret key.
  */
@@ -356,6 +408,10 @@ secret_key_from_seed:
   bn.wsrr  w21, KEY_S0_H
   bn.wsrr  w10, KEY_S1_L
   bn.wsrr  w11, KEY_S1_H
+
+  /* XOR one share with the additional seed. */
+  bn.xor   w10, w10, w22
+  bn.xor   w11, w11, w23
 
   /* Init all-zero register. */
   bn.xor   w31, w31, w31
@@ -444,6 +500,12 @@ d1_io:
 .balign 32
 x_r:
   .zero 32
+
+/* Seed for attestation endorsement. */
+.globl seed
+.balign 32
+seed:
+  .zero 64
 
 .section .scratchpad
 
