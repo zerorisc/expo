@@ -25,6 +25,8 @@ filesets:
       - lowrisc:prim:secded
       - lowrisc:prim:edn_req
       - lowrisc:prim:sec_anchor
+      # TODO: prim_pkg is deprecated
+      - lowrisc:prim:prim_pkg
       - lowrisc:ip_interfaces:pwrmgr_pkg
       - lowrisc:ip:edn_pkg
       - lowrisc:prim:sparse_fsm
