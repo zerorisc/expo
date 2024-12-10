@@ -13,6 +13,7 @@ filesets:
       - ${instance_vlnv("lowrisc:dv:pwrmgr_test:0.1")}
       - ${instance_vlnv("lowrisc:dv:pwrmgr_sva:0.1")}
       - ${instance_vlnv("lowrisc:dv:pwrmgr_unit_only_sva:0.1")}
+      - lowrisc:prim_generic:all
     files:
       - tb.sv
       - cov/pwrmgr_cov_bind.sv

@@ -13,6 +13,7 @@ filesets:
     depend:
       - ${instance_vlnv("lowrisc:dv:rstmgr_test:0.1")}
       - ${instance_vlnv("lowrisc:dv:rstmgr_sva:0.1")}
+      - lowrisc:prim_generic:all
     files:
       - tb.sv
       - cov/rstmgr_cov_bind.sv

@@ -18,6 +18,7 @@ filesets:
       - ${instance_vlnv("lowrisc:dv:flash_ctrl_test")}
       - ${instance_vlnv("lowrisc:dv:flash_ctrl_sva")}
       - ${instance_vlnv("lowrisc:dv:flash_ctrl_cov")}
+      - lowrisc:prim_generic:all
     files:
       - tb/tb.sv
     file_type: systemVerilogSource
@@ -35,4 +36,3 @@ targets:
 
   lint:
     <<: *default_target
-    default_tool: vcs

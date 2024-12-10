@@ -13,6 +13,7 @@ filesets:
     depend:
       - lowrisc:opentitan:top_earlgrey_rstmgr_test:0.1
       - lowrisc:opentitan:top_earlgrey_rstmgr_sva:0.1
+      - lowrisc:prim_generic:all
     files:
       - tb.sv
       - cov/rstmgr_cov_bind.sv
