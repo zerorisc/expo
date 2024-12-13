@@ -126,7 +126,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: quick_lint
     env:
-      BUCKET: gold-hybrid-255313-prod
+      BUCKET: gold-hybrid-255313-staging
     steps:
       - uses: actions/checkout@v4
         with:
@@ -138,7 +138,7 @@ jobs:
       - name: Build documentation
         run: util/site/build-docs.sh build
       - name: Upload files
-        if: ${{ github.event_name != 'pull_request' && github.ref_name == 'earlgrey_1.0.0' }}
+        if: ${{ github.event_name != 'pull_request' && github.ref_name == 'earlgrey_1.0.0-doc-test' }}
         run: |
           echo "::group::Upload all uncompressed files"
           gcloud storage cp -R --gzip-in-flight=js,css,html "build-site/*" gs://$BUCKET/earlgrey_1.0.0
