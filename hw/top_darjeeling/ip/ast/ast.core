@@ -28,6 +28,7 @@ filesets:
       - lowrisc:opentitan:top_darjeeling_clkmgr_pkg
       - lowrisc:opentitan:top_darjeeling_rstmgr_pkg
       - lowrisc:systems:top_darjeeling_ast_pkg
+      - lowrisc:prim_generic:all
     files:
       - rtl/ast_reg_pkg.sv
       - rtl/ast_bhv_pkg.sv
@@ -79,6 +80,10 @@ filesets:
       # common waivers
       - lowrisc:lint:common
 
+  files_lint:
+    depend:
+      - lowrisc:prim_generic:all
+
 parameters:
   SYNTHESIS:
     datatype: bool
@@ -108,6 +113,8 @@ targets:
   lint:
     <<: *default_target
     default_tool: verilator
+    filesets_append:
+      - files_lint
     parameters:
       - SYNTHESIS=true
     tools:
