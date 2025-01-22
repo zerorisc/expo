@@ -864,7 +864,7 @@
     },
     "//third_party/tock:extensions.bzl%tock": {
       "general": {
-        "bzlTransitiveDigest": "0mMNhyXsdhmZnuNkQUp7k2qlfuaKpg4NcGaTIePVzKU=",
+        "bzlTransitiveDigest": "zFRHcqo3QkGflhUdjPxrikkNgKib8Flv/nrtUWnCWBY=",
         "usagesDigest": "E0++DPi4A+g+XGZA7s7iXugGNnQjEYNYZMZAHWrJieQ=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -942,11 +942,6 @@
           }
         },
         "recordedRepoMappingEntries": [
-          [
-            "",
-            "",
-            ""
-          ],
           [
             "",
             "bazel_tools",
