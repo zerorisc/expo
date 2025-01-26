@@ -8,8 +8,12 @@ on:
   push:
     branches-ignore:
       - "backport-*"
+      - "gh-readonly-queue/*"
     tags:
       - "*"
+  merge_group:
+    types:
+      - checks_requested
 
 permissions:
   contents: read
@@ -79,6 +83,7 @@ jobs:
     name: Lint (slow)
     runs-on: ubuntu-22.04
     needs: quick_lint
+    if: ${{ github.event_name != 'merge_group' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -169,6 +174,7 @@ jobs:
     name: Airgapped build
     runs-on: ubuntu-22.04
     needs: quick_lint
+    if: ${{ github.event_name != 'merge_group' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -227,6 +233,7 @@ jobs:
     name: Run OTBN smoke Test
     needs: quick_lint
     runs-on: ubuntu-22.04
+    if: ${{ github.event_name != 'merge_group' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -260,6 +267,7 @@ jobs:
     name: Run OTBN crypto tests
     needs: quick_lint
     runs-on: ubuntu-22.04
+    if: ${{ github.event_name != 'merge_group' }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -276,6 +284,7 @@ jobs:
     name: Verilated English Breakfast
     runs-on: ubuntu-22.04
     needs: quick_lint
+    if: ${{ github.event_name != 'merge_group' }}
     steps:
       - uses: actions/checkout@v4
       - name: Prepare environment
@@ -297,6 +306,7 @@ jobs:
     name: Verilated Earl Grey
     runs-on: ubuntu-22.04
     needs: quick_lint
+    if: ${{ github.event_name != 'merge_group' }}
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
@@ -317,6 +327,7 @@ jobs:
     name: CW305's Bitstream
     runs-on: ubuntu-22.04-vivado
     needs: quick_lint
+    if: ${{ github.event_name != 'merge_group' }}
     steps:
       - uses: actions/checkout@v4
       - name: Prepare environment
@@ -413,6 +424,7 @@ jobs:
     name: CW310 Test ROM Tests
     needs: chip_earlgrey_cw310
     uses: ./.github/workflows/fpga.yml
+    if: ${{ github.event_name != 'merge_group' }}
     secrets: inherit
     with:
       job_name: execute_test_rom_fpga_tests_cw310
@@ -425,6 +437,7 @@ jobs:
     name: CW310 ROM Tests
     needs: chip_earlgrey_cw310
     uses: ./.github/workflows/fpga.yml
+    if: ${{ github.event_name != 'merge_group' }}
     secrets: inherit
     with:
       job_name: execute_rom_fpga_tests_cw310
@@ -438,6 +451,7 @@ jobs:
     name: CW310 ROM_EXT Tests
     needs: chip_earlgrey_cw310_hyperdebug
     uses: ./.github/workflows/fpga.yml
+    if: ${{ github.event_name != 'merge_group' }}
     secrets: inherit
     with:
       job_name: execute_rom_ext_fpga_tests_cw310
@@ -450,6 +464,7 @@ jobs:
     name: CW310 SiVal Tests
     needs: chip_earlgrey_cw310_hyperdebug
     uses: ./.github/workflows/fpga.yml
+    if: ${{ github.event_name != 'merge_group' }}
     secrets: inherit
     with:
       job_name: execute_sival_fpga_tests_cw310
@@ -462,6 +477,7 @@ jobs:
     name: CW310 SiVal ROM_EXT Tests
     needs: chip_earlgrey_cw310_hyperdebug
     uses: ./.github/workflows/fpga.yml
+    if: ${{ github.event_name != 'merge_group' }}
     secrets: inherit
     with:
       job_name: execute_sival_rom_ext_fpga_tests_cw310
@@ -474,6 +490,7 @@ jobs:
     name: CW310 Manufacturing Tests
     needs: chip_earlgrey_cw310_hyperdebug
     uses: ./.github/workflows/fpga.yml
+    if: ${{ github.event_name != 'merge_group' }}
     secrets: inherit
     with:
       job_name: execute_manuf_fpga_tests_cw310
@@ -487,6 +504,7 @@ jobs:
     name: CW340 Test ROM Tests
     needs: chip_earlgrey_cw340
     uses: ./.github/workflows/fpga.yml
+    if: ${{ github.event_name != 'merge_group' }}
     secrets: inherit
     with:
       job_name: execute_test_rom_fpga_tests_cw340
@@ -499,6 +517,7 @@ jobs:
     name: CW340 ROM Tests
     needs: chip_earlgrey_cw340
     uses: ./.github/workflows/fpga.yml
+    if: ${{ github.event_name != 'merge_group' }}
     secrets: inherit
     with:
       job_name: execute_rom_fpga_tests_cw340
@@ -511,6 +530,7 @@ jobs:
     name: CW340 ROM_EXT Tests
     needs: chip_earlgrey_cw340
     uses: ./.github/workflows/fpga.yml
+    if: ${{ github.event_name != 'merge_group' }}
     secrets: inherit
     with:
       job_name: execute_rom_ext_fpga_tests_cw340
@@ -523,6 +543,7 @@ jobs:
     name: CW340 SiVal Tests
     needs: chip_earlgrey_cw340
     uses: ./.github/workflows/fpga.yml
+    if: ${{ github.event_name != 'merge_group' }}
     secrets: inherit
     with:
       job_name: execute_sival_fpga_tests_cw340
@@ -535,6 +556,7 @@ jobs:
     name: CW340 SiVal ROM_EXT Tests
     needs: chip_earlgrey_cw340
     uses: ./.github/workflows/fpga.yml
+    if: ${{ github.event_name != 'merge_group' }}
     secrets: inherit
     with:
       job_name: execute_sival_rom_ext_fpga_tests_cw340
@@ -547,6 +569,7 @@ jobs:
     name: CW340 Manufacturing Tests
     needs: chip_earlgrey_cw340
     uses: ./.github/workflows/fpga.yml
+    if: ${{ github.event_name != 'merge_group' }}
     secrets: inherit
     with:
       job_name: execute_manuf_fpga_tests_cw340
@@ -614,6 +637,7 @@ jobs:
     name: Build Docker Containers
     runs-on: ubuntu-22.04
     needs: quick_lint
+    if: ${{ github.event_name != 'merge_group' }}
     steps:
       - uses: actions/checkout@v4
       - name: Build Developer Utility Container
@@ -638,6 +662,7 @@ jobs:
     runs-on: ubuntu-22.04-vivado
     timeout-minutes: 120
     needs: quick_lint
+    if: ${{ github.event_name != 'merge_group' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -702,3 +727,22 @@ jobs:
       - name: Check for unrunnable tests
         run: ./ci/scripts/check-unrunnable-tests.sh
         continue-on-error: true
+
+  # The branch protection will gate on "Merge blocker" and we use these jobs with conditional names to
+  # gate on different jobs for merge queue and pull request checks.
+  merge_blocker_pr:
+    name: Merge blocker${{ github.event_name != 'pull_request' && ' (skipped)' || '' }}
+    runs-on: ubuntu-latest
+    needs: quick_lint
+    if: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - name: Complete
+        run: 'true'
+  merge_blocker_merge:
+    name: Merge blocker${{ github.event_name != 'merge_group' && ' (skipped)' || '' }}
+    runs-on: ubuntu-latest
+    needs: cache_bitstreams
+    if: ${{ github.event_name == 'merge_group' }}
+    steps:
+      - name: Complete
+        run: 'true'
