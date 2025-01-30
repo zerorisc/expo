@@ -18,7 +18,9 @@ filesets:
       - lowrisc:opentitan:top_englishbreakfast_flash_ctrl_test
       - lowrisc:opentitan:top_englishbreakfast_flash_ctrl_sva
       - lowrisc:opentitan:top_englishbreakfast_flash_ctrl_cov
+      - lowrisc:opentitan:top_englishbreakfast_flash_ctrl_prim_reg_top
       - lowrisc:prim_generic:all
+      - lowrisc:prim_generic:flash
     files:
       - tb/tb.sv
     file_type: systemVerilogSource

@@ -18,7 +18,9 @@ filesets:
       - ${instance_vlnv("lowrisc:dv:flash_ctrl_test")}
       - ${instance_vlnv("lowrisc:dv:flash_ctrl_sva")}
       - ${instance_vlnv("lowrisc:dv:flash_ctrl_cov")}
+      - ${instance_vlnv("lowrisc:ip:flash_ctrl_prim_reg_top")}
       - lowrisc:prim_generic:all
+      - lowrisc:prim_generic:flash
     files:
       - tb/tb.sv
     file_type: systemVerilogSource
