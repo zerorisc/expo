@@ -71,10 +71,6 @@ filesets:
       - lowrisc:lint:common
       - lowrisc:lint:comportable
 
-  files_lint:
-    depend:
-      - lowrisc:prim_generic:all
-
 parameters:
   SYNTHESIS:
     datatype: bool
@@ -93,8 +89,6 @@ targets:
   lint:
     <<: *default_target
     default_tool: verilator
-    filesets_append:
-      - files_lint
     parameters:
       - SYNTHESIS=true
     tools:

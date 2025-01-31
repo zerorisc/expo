@@ -12,10 +12,6 @@ filesets:
       - ${instance_vlnv(f"lowrisc:ip:{module_instance_name}_reg:0.1")}
     file_type: systemVerilogSource
 
-  files_lint:
-    depend:
-      - lowrisc:prim_generic:all
-
 parameters:
   SYNTHESIS:
     datatype: bool
@@ -31,8 +27,6 @@ targets:
   lint:
     <<: *default_target
     default_tool: verilator
-    filesets_append:
-      - files_lint
     parameters:
       - SYNTHESIS=true
     tools:
