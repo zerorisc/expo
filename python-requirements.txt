@@ -198,9 +198,8 @@ fastjsonschema==2.20.0 \
 flake8==7.1.1 \
     --hash=sha256:049d058491e228e03e67b390f311bbf88fce2dbaa8fa673e7aea87b7198b8d38 \
     --hash=sha256:597477df7860daa5aa0fdd84bf5208a043ab96b8e96ab708770ae0364dd03213
-fusesoc==2.4.2 \
-    --hash=sha256:5b7bf203901dd33362dc0f1e64028ea01e8d9cd8a6de401e10d609baf7ae34e0 \
-    --hash=sha256:bc9bda06a28fdbcf2ef04f2ae50800bcb8024809bf09862d556b1ab89bf5c6d8
+fusesoc @ https://github.com/a-will/fusesoc/releases/download/2.4.2.dev0%2Ba-will/fusesoc-2.4.2.dev0.tar.gz \
+    --hash=sha256:97f64336d86d23231b10a4eb5569e6e1a9b9e0ad70b2ab14c9500aa0d1c25b0e
 gitdb==4.0.10 \
     --hash=sha256:6eb990b69df4e15bad899ea868dc46572c3f75339735663b81de79b06f17eb9a \
     --hash=sha256:c286cf298426064079ed96a9e4a9d39e7f3e9bf15ba60701e95f5492f28415c7
