@@ -17,7 +17,6 @@ filesets:
       - lowrisc:dv_dpi_c:usbdpi
       - lowrisc:dv_dpi_sv:usbdpi
       - lowrisc:prim:usb_diff_rx
-      - lowrisc:prim_generic:all
     files:
       - tb/tb.sv
     file_type: systemVerilogSource

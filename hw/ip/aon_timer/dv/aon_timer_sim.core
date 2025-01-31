@@ -13,7 +13,6 @@ filesets:
     depend:
       - lowrisc:dv:aon_timer_test
       - lowrisc:dv:aon_timer_sva
-      - lowrisc:prim_generic:all
     files:
       - tb.sv
     file_type: systemVerilogSource

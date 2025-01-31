@@ -15,7 +15,6 @@ filesets:
       - lowrisc:dv:aes_sva
       - lowrisc:dv:aes_err_injection
       - lowrisc:dv:aes_cov
-      - lowrisc:prim_generic:all
     files:
       - tb/tb.sv
     file_type: systemVerilogSource
