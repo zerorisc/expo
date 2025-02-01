@@ -17,9 +17,9 @@ fusesoc_build(
     ],
     cores = ["//:cores"],
     output_groups = {
-        "bitstream": [_FPGA_PATH_TMPL("chip_englishbreakfast_cw305", "lowrisc_systems_chip_englishbreakfast_cw305_0.1.bit")],
-        "mmi": [_FPGA_PATH_TMPL("chip_englishbreakfast_cw305", "memories.mmi")],
-        "logs": [_FPGA_PATH_TMPL("chip_englishbreakfast_cw305", "lowrisc_systems_chip_englishbreakfast_cw305_0.1.runs/")],
+        "bitstream": [_FPGA_PATH_TMPL.format("chip_englishbreakfast_cw305", "lowrisc_systems_chip_englishbreakfast_cw305_0.1.bit")],
+        "mmi": [_FPGA_PATH_TMPL.format("chip_englishbreakfast_cw305", "memories.mmi")],
+        "logs": [_FPGA_PATH_TMPL.format("chip_englishbreakfast_cw305", "lowrisc_systems_chip_englishbreakfast_cw305_0.1.runs/")],
     },
     systems = ["lowrisc:systems:chip_englishbreakfast_cw305"],
     tags = ["manual"],
