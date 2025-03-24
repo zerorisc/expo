@@ -2,12 +2,13 @@ CAPI=2:
 # Copyright lowRISC contributors (OpenTitan project).
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
-name: "lowrisc:dv:racl_ctrl_sim:0.1"
-description: "RACL_CTRL DV sim target"
+name: ${instance_vlnv("lowrisc:dv:racl_ctrl_sim:0.1")}
+description: "A racl_ctrl simulation"
 filesets:
   files_rtl:
     depend:
-      - lowrisc:ip:racl_ctrl
+      - lowrisc:systems:top_${topname}_racl_pkg
+      - ${instance_vlnv("lowrisc:ip:racl_ctrl")}
 
   files_dv:
     depend:
@@ -17,6 +18,7 @@ filesets:
       - tb.sv
     file_type: systemVerilogSource
 
+
 targets:
   sim: &sim_target
     toplevel: tb
@@ -25,6 +27,6 @@ targets:
       - files_dv
     default_tool: vcs
 
-  # TODO: add a lint check cfg in `hw/top_earlgrey/lint/top_earlgrey_dv_lint_cfgs.hjson`
+  # TODO: add a lint check cfg in `hw/top_earlgrey/lint/top_*_dv_lint_cfgs.hjson`
   lint:
     <<: *sim_target
