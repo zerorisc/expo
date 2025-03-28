@@ -107,5 +107,5 @@ module rv_plic_assert_fpv #(parameter int NumSrc = 1,
           irq_o[tgt_sel] || ((irq_id_o[tgt_sel]) == $past(i_high_prio) && !$past(irq)))
 
   // When fatal alert happens then only reset can clear it.
-  `ASSERT(FatalAlertNeverdrops_A, !$fell(fatal_alert_i))
+  `ASSERT(FatalAlertNeverdrops_A, ##1 !$fell(fatal_alert_i))
 endmodule : rv_plic_assert_fpv
