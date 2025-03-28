@@ -725,7 +725,9 @@ module gpio_reg_top
   end
 
   always_comb begin
-    addr_hit = '0;
+    `ifndef FPV_ON
+      addr_hit = '0;
+    `endif
     racl_addr_hit_read  = '0;
     racl_addr_hit_write = '0;
     addr_hit[ 0] = (reg_addr == GPIO_INTR_STATE_OFFSET);
@@ -864,7 +866,9 @@ module gpio_reg_top
 
   // Assign write-enables to checker logic vector.
   always_comb begin
-    reg_we_check = '0;
+    `ifndef FPV_ON
+      reg_we_check = '0;
+    `endif
     reg_we_check[0] = intr_state_we;
     reg_we_check[1] = intr_enable_we;
     reg_we_check[2] = intr_test_we;
