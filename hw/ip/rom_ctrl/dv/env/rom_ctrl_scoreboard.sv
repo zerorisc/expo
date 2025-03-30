@@ -193,13 +193,13 @@ task rom_ctrl_scoreboard::process_tl_access(tl_seq_item item,
   bit     do_read_check   = 1'b1;
   bit     write           = item.is_write();
 
-  bit addr_phase_read   = (!write && channel == AddrChannel);
-  bit addr_phase_write  = (write && channel == AddrChannel);
-  bit data_phase_read   = (!write && channel == DataChannel);
-  bit data_phase_write  = (write && channel == DataChannel);
+  bit addr_phase_read   = (!write && channel == AChannel);
+  bit addr_phase_write  = (write && channel == AChannel);
+  bit data_phase_read   = (!write && channel == DChannel);
+  bit data_phase_write  = (write && channel == DChannel);
 
   if (ral_name == "rom_ctrl_prim_reg_block") begin
-    if (channel == DataChannel && !disable_rom_acc_chk) begin
+    if (channel == DChannel && !disable_rom_acc_chk) begin
       check_rom_access(item);
     end
     return;
