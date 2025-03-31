@@ -465,7 +465,7 @@ endfunction
 function bit tl_seq_item::is_ok(bit throw_error = 1'b1);
   is_ok = 1'b1;
   is_ok &= check_opcodes(throw_error);
-  // addr and data channels should have the same source
+  // A and D channels should have the same source
   is_ok &= (a_source == d_source);
   if (!is_ok && throw_error)
     `uvm_error(`gfn, $sformatf("a_source: 0x%0h & d_source: 0x%0h mismatch", a_source, d_source))

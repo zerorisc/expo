@@ -84,8 +84,8 @@ The following covergroups have been developed to prove that the test intent has 
 #### Scoreboard
 The `uart_scoreboard` is primarily used for end to end checking.
 It creates the following analysis fifos to retrieve the data monitored by corresponding interface agents:
-* tl_a_chan_fifo, tl_d_chan_fifo: These 2 fifos provides transaction items at the end of address channel and
-  data channel respectively
+* `tl_a_chan_fifo`, `tl_d_chan_fifo`: These 2 fifos provides transaction items at the end of A and
+  D channel respectively
 * uart_tx_fifo, uart_rx_fifo:     These 2 fifos provides UART TX and RX item when its transfer completes
 
 #### Assertions

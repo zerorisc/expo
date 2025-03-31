@@ -66,7 +66,7 @@ class rv_timer_scoreboard extends cip_base_scoreboard #(.CFG_T (rv_timer_env_cfg
       end
     end
 
-    // grab write transactions from address channel; grab completed transactions from data channel
+    // grab write transactions from A channel; grab completed transactions from D channel
 
     // if incoming access is a write to a valid csr, then make updates right away
     if (write && channel == AChannel) begin
@@ -305,7 +305,7 @@ class rv_timer_scoreboard extends cip_base_scoreboard #(.CFG_T (rv_timer_env_cfg
                 // enabling one clock cycle of ignore period
                 ignore_period[a_i][a_j] = 1'b1;
                 `uvm_info(`gfn, $sformatf("Timer expired check for interrupt"), UVM_MEDIUM)
-                // Update exp val and predict it in read address_channel
+                // Update exp val and predict it when we see it read on the A channel
                 intr_status_exp[a_i][a_j] = 1'b1;
                 check_interrupt_pin();
                 if (cfg.en_cov) begin
