@@ -49,6 +49,17 @@ OPTIONAL_FIELDS.update({
 })
 
 
+class EmptyMultiRegException(Exception):
+    '''A MultiRegister was requested without a positive count.'''
+    def __init__(self, name: str, count: int):
+        self.name = name
+        self.count = count
+
+    def __str__(self) -> str:
+        return (f"Multireg {self.name} has a count of {self.count}, "
+                "which isn't positive.")
+
+
 class MultiRegister(RegBase):
     def __init__(self,
                  offset: int,
@@ -129,9 +140,7 @@ class MultiRegister(RegBase):
         self.count = params.expand(count_str,
                                    'count field of multireg ' + self.reg.name)
         if self.count <= 0:
-            raise ValueError("Multireg {} has a count of {}, "
-                             "which isn't positive."
-                             .format(self.reg.name, self.count))
+            raise EmptyMultiRegException(self.reg.name, self.count)
 
         # Generate the registers that this multireg expands into. Here, a
         # "creg" is a "compacted register", which might contain multiple actual
