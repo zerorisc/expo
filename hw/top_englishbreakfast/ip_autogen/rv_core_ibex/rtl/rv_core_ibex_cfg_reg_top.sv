@@ -1171,7 +1171,9 @@ module rv_core_ibex_cfg_reg_top (
 
   logic [24:0] addr_hit;
   always_comb begin
-    addr_hit = '0;
+    `ifndef FPV_ON
+      addr_hit = '0;
+    `endif
     addr_hit[ 0] = (reg_addr == RV_CORE_IBEX_ALERT_TEST_OFFSET);
     addr_hit[ 1] = (reg_addr == RV_CORE_IBEX_SW_RECOV_ERR_OFFSET);
     addr_hit[ 2] = (reg_addr == RV_CORE_IBEX_SW_FATAL_ERR_OFFSET);
@@ -1320,7 +1322,9 @@ module rv_core_ibex_cfg_reg_top (
 
   // Assign write-enables to checker logic vector.
   always_comb begin
-    reg_we_check = '0;
+    `ifndef FPV_ON
+      reg_we_check = '0;
+    `endif
     reg_we_check[0] = alert_test_we;
     reg_we_check[1] = sw_recov_err_we;
     reg_we_check[2] = sw_fatal_err_we;

@@ -702,7 +702,9 @@ ${finst_gen(sr, field, finst_name, fsig_name, fidx)}
 
 % endif
   always_comb begin
-    addr_hit = '0;
+    `ifndef FPV_ON
+      addr_hit = '0;
+    `endif
   % if racl_support:
     racl_addr_hit_read  = '0;
     racl_addr_hit_write = '0;
@@ -793,7 +795,9 @@ ${field_wd_gen(f, r.name.lower() + "_" + f.name.lower(), r.hwext, r.shadowed, r.
 
   // Assign write-enables to checker logic vector.
   always_comb begin
-    reg_we_check = '0;
+    `ifndef FPV_ON
+      reg_we_check = '0;
+    `endif
     % for i, r in enumerate(regs_flat):
 <%
     # The WE checking logic does NOT protect RC fields.

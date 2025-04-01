@@ -34425,7 +34425,9 @@ module pinmux_reg_top (
 
   logic [502:0] addr_hit;
   always_comb begin
-    addr_hit = '0;
+    `ifndef FPV_ON
+      addr_hit = '0;
+    `endif
     addr_hit[  0] = (reg_addr == PINMUX_ALERT_TEST_OFFSET);
     addr_hit[  1] = (reg_addr == PINMUX_MIO_PERIPH_INSEL_REGWEN_0_OFFSET);
     addr_hit[  2] = (reg_addr == PINMUX_MIO_PERIPH_INSEL_REGWEN_1_OFFSET);
@@ -38729,7 +38731,9 @@ module pinmux_reg_top (
 
   // Assign write-enables to checker logic vector.
   always_comb begin
-    reg_we_check = '0;
+    `ifndef FPV_ON
+      reg_we_check = '0;
+    `endif
     reg_we_check[0] = alert_test_we;
     reg_we_check[1] = mio_periph_insel_regwen_0_we;
     reg_we_check[2] = mio_periph_insel_regwen_1_we;

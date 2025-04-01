@@ -1232,7 +1232,9 @@ module ast_reg_top (
 
   logic [35:0] addr_hit;
   always_comb begin
-    addr_hit = '0;
+    `ifndef FPV_ON
+      addr_hit = '0;
+    `endif
     addr_hit[ 0] = (reg_addr == AST_REGA0_OFFSET);
     addr_hit[ 1] = (reg_addr == AST_REGA1_OFFSET);
     addr_hit[ 2] = (reg_addr == AST_REGA2_OFFSET);
@@ -1417,7 +1419,9 @@ module ast_reg_top (
 
   // Assign write-enables to checker logic vector.
   always_comb begin
-    reg_we_check = '0;
+    `ifndef FPV_ON
+      reg_we_check = '0;
+    `endif
     reg_we_check[0] = 1'b0;
     reg_we_check[1] = 1'b0;
     reg_we_check[2] = rega2_we;
