@@ -366,6 +366,7 @@ alert_required = {
     'width': ['d', 'the number of alerts in this signal, typically 1'],
     'async': ['s', 'string interpreted as boolean'],
     'module_name': ['s', 'The module name of the source'],
+    'handler': ['s', 'alert handler managing this alert'],
 }
 alert_optional = {
     'desc': ['s', 'the description of the alert'],
@@ -586,6 +587,8 @@ def check_alerts(top: ConfigT, ip_name_to_block: IpBlocksT, prefix: str) -> int:
     if 'alert' not in top:
         return 0
     error = 0
+
+    # Check alert keys
     for alert in top['alert']:
         error += check_keys(alert, alert_required, alert_optional, alert_added,
                             prefix + ' Alert')
