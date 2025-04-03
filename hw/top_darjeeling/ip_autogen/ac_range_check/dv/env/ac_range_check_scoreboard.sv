@@ -38,14 +38,15 @@ class ac_range_check_scoreboard extends cip_base_scoreboard #(
   extern function void report_phase(uvm_phase phase);
 
   // Class specific methods
-  extern task process_tl_unfilt_a_chan_fifo(output tl_filt_t tl_unfilt);
-  extern task get_tl_unfilt_d_chan_item(output tl_filt_t tl_unfilt);
-  extern task get_tl_filt_a_chan_item(output tl_filt_t tl_filt);
-  extern task get_tl_filt_d_chan_item(output tl_filt_t tl_filt);
+  extern task process_tl_unfilt_a_chan_fifo(output ac_range_check_scb_item tl_unfilt);
+  extern task get_tl_unfilt_d_chan_item(output ac_range_check_scb_item tl_unfilt);
+  extern task get_tl_filt_a_chan_item(output ac_range_check_scb_item tl_filt);
+  extern task get_tl_filt_d_chan_item(output ac_range_check_scb_item tl_filt);
   extern task process_tl_access(tl_seq_item item, tl_channels_e channel, string ral_name);
   extern task manage_tl_fifos();
   extern function void reset(string kind = "HARD");
-  extern function void compare_tl_item(string tl_type, tl_filt_t exp, tl_filt_t act);
+  extern function void compare_tl_item(string tl_type, ac_range_check_scb_item exp,
+    ac_range_check_scb_item act);
   extern function access_decision_e check_access(tl_seq_item item);
   extern function cip_tl_seq_item predict_tl_unfilt_d_chan();
 endclass : ac_range_check_scoreboard
