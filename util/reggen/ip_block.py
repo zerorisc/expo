@@ -667,7 +667,7 @@ class IpBlock:
                 status = False
         return status
 
-    def get_alert_by_name(self, name: str) -> Alert:
+    def get_alert_by_name(self, name: str) -> Optional[Alert]:
         for alert in self.alerts:
             if alert.name == name:
                 return alert
