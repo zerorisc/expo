@@ -18,6 +18,9 @@ class rom_ctrl_env_cfg extends cip_base_env_cfg #(.RAL_T(rom_ctrl_regs_reg_block
   // An interface bound into the rom_ctrl_compare module
   virtual rom_ctrl_compare_if compare_vif;
 
+  // An interface bound into the rom_ctrl_fsm module
+  virtual rom_ctrl_fsm_if fsm_vif;
+
   // Default is 10ms (see default_spinwait_timeout_ns in csr_utils_pkg.sv)
   // We have to increase this here since the ROM check may actually take longer than that,
   // which sometimes causes blocked TL accesses to time out.
