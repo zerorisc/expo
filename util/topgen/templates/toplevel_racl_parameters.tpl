@@ -1,7 +1,7 @@
 ## Copyright lowRISC contributors (OpenTitan project).
 ## Licensed under the Apache License, Version 2.0, see LICENSE for details.
 ## SPDX-License-Identifier: Apache-2.0
-<%page args="m, top"/>\
+<%page args="m, top, block"/>\
 % if m.get('racl_mappings'):
     .EnableRacl(1'b1),
     .RaclErrorRsp(top_racl_pkg::ErrorRsp),
@@ -22,9 +22,8 @@
     % for window_name, policy_idx in window_mapping.items():
     .RaclPolicySelWin${if_suffix2}${window_name.replace("_","").title()}(RACL_POLICY_SEL_WIN_${policy_sel_name}_${window_name.upper()}),
     % endfor
-    % if len(range_mapping) > 0:
+    % if len(range_mapping) > 0 and block.bus_interfaces.racl_range_support.get(if_name):
     .RaclPolicySelNumRanges${if_suffix2}(RACL_POLICY_SEL_NUM_RANGES_${policy_sel_name}),
-    .RaclPolicySelRanges${if_suffix2}(RACL_POLICY_SEL_RANGES_${policy_sel_name}),
     % endif
   % endfor
 % endif

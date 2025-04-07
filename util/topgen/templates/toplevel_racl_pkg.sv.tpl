@@ -37,7 +37,7 @@ package top_${topcfg["name"]}_racl_pkg;
         "range_mapping"    : mapping.get('range_mapping', []),
         "policy_names"     : policy_names,
         "racl_group"       : racl_group,
-        "module_name"      : m['name'],
+        "m"                : m,
         "if_name"          : if_name
       }
 %>\
