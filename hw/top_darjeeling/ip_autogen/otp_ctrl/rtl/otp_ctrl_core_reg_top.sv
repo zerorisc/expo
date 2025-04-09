@@ -190,28 +190,7 @@ module otp_ctrl_core_reg_top (
   logic alert_test_fatal_prim_otp_alert_wd;
   logic alert_test_recov_prim_otp_alert_wd;
   logic status_re;
-  logic status_vendor_test_error_qs;
-  logic status_creator_sw_cfg_error_qs;
-  logic status_owner_sw_cfg_error_qs;
-  logic status_ownership_slot_state_error_qs;
-  logic status_rot_creator_auth_error_qs;
-  logic status_rot_owner_auth_slot0_error_qs;
-  logic status_rot_owner_auth_slot1_error_qs;
-  logic status_plat_integ_auth_slot0_error_qs;
-  logic status_plat_integ_auth_slot1_error_qs;
-  logic status_plat_owner_auth_slot0_error_qs;
-  logic status_plat_owner_auth_slot1_error_qs;
-  logic status_plat_owner_auth_slot2_error_qs;
-  logic status_plat_owner_auth_slot3_error_qs;
-  logic status_ext_nvm_error_qs;
-  logic status_rom_patch_error_qs;
-  logic status_hw_cfg0_error_qs;
-  logic status_hw_cfg1_error_qs;
-  logic status_secret0_error_qs;
-  logic status_secret1_error_qs;
-  logic status_secret2_error_qs;
-  logic status_secret3_error_qs;
-  logic status_life_cycle_error_qs;
+  logic status_partition_error_qs;
   logic status_dai_error_qs;
   logic status_lci_error_qs;
   logic status_timeout_error_qs;
@@ -723,337 +702,22 @@ module otp_ctrl_core_reg_top (
 
 
   // R[status]: V(True)
-  //   F[vendor_test_error]: 0:0
+  //   F[partition_error]: 0:0
   prim_subreg_ext #(
     .DW    (1)
-  ) u_status_vendor_test_error (
+  ) u_status_partition_error (
     .re     (status_re),
     .we     (1'b0),
     .wd     ('0),
-    .d      (hw2reg.status.vendor_test_error.d),
+    .d      (hw2reg.status.partition_error.d),
     .qre    (),
     .qe     (),
     .q      (),
     .ds     (),
-    .qs     (status_vendor_test_error_qs)
+    .qs     (status_partition_error_qs)
   );
 
-  //   F[creator_sw_cfg_error]: 1:1
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_creator_sw_cfg_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.creator_sw_cfg_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_creator_sw_cfg_error_qs)
-  );
-
-  //   F[owner_sw_cfg_error]: 2:2
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_owner_sw_cfg_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.owner_sw_cfg_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_owner_sw_cfg_error_qs)
-  );
-
-  //   F[ownership_slot_state_error]: 3:3
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_ownership_slot_state_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.ownership_slot_state_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_ownership_slot_state_error_qs)
-  );
-
-  //   F[rot_creator_auth_error]: 4:4
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_rot_creator_auth_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.rot_creator_auth_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_rot_creator_auth_error_qs)
-  );
-
-  //   F[rot_owner_auth_slot0_error]: 5:5
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_rot_owner_auth_slot0_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.rot_owner_auth_slot0_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_rot_owner_auth_slot0_error_qs)
-  );
-
-  //   F[rot_owner_auth_slot1_error]: 6:6
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_rot_owner_auth_slot1_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.rot_owner_auth_slot1_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_rot_owner_auth_slot1_error_qs)
-  );
-
-  //   F[plat_integ_auth_slot0_error]: 7:7
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_plat_integ_auth_slot0_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.plat_integ_auth_slot0_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_plat_integ_auth_slot0_error_qs)
-  );
-
-  //   F[plat_integ_auth_slot1_error]: 8:8
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_plat_integ_auth_slot1_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.plat_integ_auth_slot1_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_plat_integ_auth_slot1_error_qs)
-  );
-
-  //   F[plat_owner_auth_slot0_error]: 9:9
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_plat_owner_auth_slot0_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.plat_owner_auth_slot0_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_plat_owner_auth_slot0_error_qs)
-  );
-
-  //   F[plat_owner_auth_slot1_error]: 10:10
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_plat_owner_auth_slot1_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.plat_owner_auth_slot1_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_plat_owner_auth_slot1_error_qs)
-  );
-
-  //   F[plat_owner_auth_slot2_error]: 11:11
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_plat_owner_auth_slot2_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.plat_owner_auth_slot2_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_plat_owner_auth_slot2_error_qs)
-  );
-
-  //   F[plat_owner_auth_slot3_error]: 12:12
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_plat_owner_auth_slot3_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.plat_owner_auth_slot3_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_plat_owner_auth_slot3_error_qs)
-  );
-
-  //   F[ext_nvm_error]: 13:13
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_ext_nvm_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.ext_nvm_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_ext_nvm_error_qs)
-  );
-
-  //   F[rom_patch_error]: 14:14
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_rom_patch_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.rom_patch_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_rom_patch_error_qs)
-  );
-
-  //   F[hw_cfg0_error]: 15:15
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_hw_cfg0_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.hw_cfg0_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_hw_cfg0_error_qs)
-  );
-
-  //   F[hw_cfg1_error]: 16:16
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_hw_cfg1_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.hw_cfg1_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_hw_cfg1_error_qs)
-  );
-
-  //   F[secret0_error]: 17:17
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_secret0_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.secret0_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_secret0_error_qs)
-  );
-
-  //   F[secret1_error]: 18:18
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_secret1_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.secret1_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_secret1_error_qs)
-  );
-
-  //   F[secret2_error]: 19:19
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_secret2_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.secret2_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_secret2_error_qs)
-  );
-
-  //   F[secret3_error]: 20:20
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_secret3_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.secret3_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_secret3_error_qs)
-  );
-
-  //   F[life_cycle_error]: 21:21
-  prim_subreg_ext #(
-    .DW    (1)
-  ) u_status_life_cycle_error (
-    .re     (status_re),
-    .we     (1'b0),
-    .wd     ('0),
-    .d      (hw2reg.status.life_cycle_error.d),
-    .qre    (),
-    .qe     (),
-    .q      (),
-    .ds     (),
-    .qs     (status_life_cycle_error_qs)
-  );
-
-  //   F[dai_error]: 22:22
+  //   F[dai_error]: 1:1
   prim_subreg_ext #(
     .DW    (1)
   ) u_status_dai_error (
@@ -1068,7 +732,7 @@ module otp_ctrl_core_reg_top (
     .qs     (status_dai_error_qs)
   );
 
-  //   F[lci_error]: 23:23
+  //   F[lci_error]: 2:2
   prim_subreg_ext #(
     .DW    (1)
   ) u_status_lci_error (
@@ -1083,7 +747,7 @@ module otp_ctrl_core_reg_top (
     .qs     (status_lci_error_qs)
   );
 
-  //   F[timeout_error]: 24:24
+  //   F[timeout_error]: 3:3
   prim_subreg_ext #(
     .DW    (1)
   ) u_status_timeout_error (
@@ -1098,7 +762,7 @@ module otp_ctrl_core_reg_top (
     .qs     (status_timeout_error_qs)
   );
 
-  //   F[lfsr_fsm_error]: 25:25
+  //   F[lfsr_fsm_error]: 4:4
   prim_subreg_ext #(
     .DW    (1)
   ) u_status_lfsr_fsm_error (
@@ -1113,7 +777,7 @@ module otp_ctrl_core_reg_top (
     .qs     (status_lfsr_fsm_error_qs)
   );
 
-  //   F[scrambling_fsm_error]: 26:26
+  //   F[scrambling_fsm_error]: 5:5
   prim_subreg_ext #(
     .DW    (1)
   ) u_status_scrambling_fsm_error (
@@ -1128,7 +792,7 @@ module otp_ctrl_core_reg_top (
     .qs     (status_scrambling_fsm_error_qs)
   );
 
-  //   F[key_deriv_fsm_error]: 27:27
+  //   F[key_deriv_fsm_error]: 6:6
   prim_subreg_ext #(
     .DW    (1)
   ) u_status_key_deriv_fsm_error (
@@ -1143,7 +807,7 @@ module otp_ctrl_core_reg_top (
     .qs     (status_key_deriv_fsm_error_qs)
   );
 
-  //   F[bus_integ_error]: 28:28
+  //   F[bus_integ_error]: 7:7
   prim_subreg_ext #(
     .DW    (1)
   ) u_status_bus_integ_error (
@@ -1158,7 +822,7 @@ module otp_ctrl_core_reg_top (
     .qs     (status_bus_integ_error_qs)
   );
 
-  //   F[dai_idle]: 29:29
+  //   F[dai_idle]: 8:8
   prim_subreg_ext #(
     .DW    (1)
   ) u_status_dai_idle (
@@ -1173,7 +837,7 @@ module otp_ctrl_core_reg_top (
     .qs     (status_dai_idle_qs)
   );
 
-  //   F[check_pending]: 30:30
+  //   F[check_pending]: 9:9
   prim_subreg_ext #(
     .DW    (1)
   ) u_status_check_pending (
@@ -4354,37 +4018,16 @@ module otp_ctrl_core_reg_top (
       end
 
       addr_hit[4]: begin
-        reg_rdata_next[0] = status_vendor_test_error_qs;
-        reg_rdata_next[1] = status_creator_sw_cfg_error_qs;
-        reg_rdata_next[2] = status_owner_sw_cfg_error_qs;
-        reg_rdata_next[3] = status_ownership_slot_state_error_qs;
-        reg_rdata_next[4] = status_rot_creator_auth_error_qs;
-        reg_rdata_next[5] = status_rot_owner_auth_slot0_error_qs;
-        reg_rdata_next[6] = status_rot_owner_auth_slot1_error_qs;
-        reg_rdata_next[7] = status_plat_integ_auth_slot0_error_qs;
-        reg_rdata_next[8] = status_plat_integ_auth_slot1_error_qs;
-        reg_rdata_next[9] = status_plat_owner_auth_slot0_error_qs;
-        reg_rdata_next[10] = status_plat_owner_auth_slot1_error_qs;
-        reg_rdata_next[11] = status_plat_owner_auth_slot2_error_qs;
-        reg_rdata_next[12] = status_plat_owner_auth_slot3_error_qs;
-        reg_rdata_next[13] = status_ext_nvm_error_qs;
-        reg_rdata_next[14] = status_rom_patch_error_qs;
-        reg_rdata_next[15] = status_hw_cfg0_error_qs;
-        reg_rdata_next[16] = status_hw_cfg1_error_qs;
-        reg_rdata_next[17] = status_secret0_error_qs;
-        reg_rdata_next[18] = status_secret1_error_qs;
-        reg_rdata_next[19] = status_secret2_error_qs;
-        reg_rdata_next[20] = status_secret3_error_qs;
-        reg_rdata_next[21] = status_life_cycle_error_qs;
-        reg_rdata_next[22] = status_dai_error_qs;
-        reg_rdata_next[23] = status_lci_error_qs;
-        reg_rdata_next[24] = status_timeout_error_qs;
-        reg_rdata_next[25] = status_lfsr_fsm_error_qs;
-        reg_rdata_next[26] = status_scrambling_fsm_error_qs;
-        reg_rdata_next[27] = status_key_deriv_fsm_error_qs;
-        reg_rdata_next[28] = status_bus_integ_error_qs;
-        reg_rdata_next[29] = status_dai_idle_qs;
-        reg_rdata_next[30] = status_check_pending_qs;
+        reg_rdata_next[0] = status_partition_error_qs;
+        reg_rdata_next[1] = status_dai_error_qs;
+        reg_rdata_next[2] = status_lci_error_qs;
+        reg_rdata_next[3] = status_timeout_error_qs;
+        reg_rdata_next[4] = status_lfsr_fsm_error_qs;
+        reg_rdata_next[5] = status_scrambling_fsm_error_qs;
+        reg_rdata_next[6] = status_key_deriv_fsm_error_qs;
+        reg_rdata_next[7] = status_bus_integ_error_qs;
+        reg_rdata_next[8] = status_dai_idle_qs;
+        reg_rdata_next[9] = status_check_pending_qs;
       end
 
       addr_hit[5]: begin
@@ -4420,95 +4063,95 @@ module otp_ctrl_core_reg_top (
         reg_rdata_next[2:0] = err_code_0_qs;
       end
 
-      addr_hit[6]: begin
+      addr_hit[7]: begin
         reg_rdata_next[2:0] = err_code_1_qs;
       end
 
-      addr_hit[7]: begin
+      addr_hit[8]: begin
         reg_rdata_next[2:0] = err_code_2_qs;
       end
 
-      addr_hit[8]: begin
+      addr_hit[9]: begin
         reg_rdata_next[2:0] = err_code_3_qs;
       end
 
-      addr_hit[9]: begin
+      addr_hit[10]: begin
         reg_rdata_next[2:0] = err_code_4_qs;
       end
 
-      addr_hit[10]: begin
+      addr_hit[11]: begin
         reg_rdata_next[2:0] = err_code_5_qs;
       end
 
-      addr_hit[11]: begin
+      addr_hit[12]: begin
         reg_rdata_next[2:0] = err_code_6_qs;
       end
 
-      addr_hit[12]: begin
+      addr_hit[13]: begin
         reg_rdata_next[2:0] = err_code_7_qs;
       end
 
-      addr_hit[13]: begin
+      addr_hit[14]: begin
         reg_rdata_next[2:0] = err_code_8_qs;
       end
 
-      addr_hit[14]: begin
+      addr_hit[15]: begin
         reg_rdata_next[2:0] = err_code_9_qs;
       end
 
-      addr_hit[15]: begin
+      addr_hit[16]: begin
         reg_rdata_next[2:0] = err_code_10_qs;
       end
 
-      addr_hit[16]: begin
+      addr_hit[17]: begin
         reg_rdata_next[2:0] = err_code_11_qs;
       end
 
-      addr_hit[17]: begin
+      addr_hit[18]: begin
         reg_rdata_next[2:0] = err_code_12_qs;
       end
 
-      addr_hit[18]: begin
+      addr_hit[19]: begin
         reg_rdata_next[2:0] = err_code_13_qs;
       end
 
-      addr_hit[19]: begin
+      addr_hit[20]: begin
         reg_rdata_next[2:0] = err_code_14_qs;
       end
 
-      addr_hit[20]: begin
+      addr_hit[21]: begin
         reg_rdata_next[2:0] = err_code_15_qs;
       end
 
-      addr_hit[21]: begin
+      addr_hit[22]: begin
         reg_rdata_next[2:0] = err_code_16_qs;
       end
 
-      addr_hit[22]: begin
+      addr_hit[23]: begin
         reg_rdata_next[2:0] = err_code_17_qs;
       end
 
-      addr_hit[23]: begin
+      addr_hit[24]: begin
         reg_rdata_next[2:0] = err_code_18_qs;
       end
 
-      addr_hit[24]: begin
+      addr_hit[25]: begin
         reg_rdata_next[2:0] = err_code_19_qs;
       end
 
-      addr_hit[25]: begin
+      addr_hit[26]: begin
         reg_rdata_next[2:0] = err_code_20_qs;
       end
 
-      addr_hit[26]: begin
+      addr_hit[27]: begin
         reg_rdata_next[2:0] = err_code_21_qs;
       end
 
-      addr_hit[27]: begin
+      addr_hit[28]: begin
         reg_rdata_next[2:0] = err_code_22_qs;
       end
 
-      addr_hit[28]: begin
+      addr_hit[29]: begin
         reg_rdata_next[2:0] = err_code_23_qs;
       end
 

@@ -475,9 +475,9 @@ interface otp_ctrl_if(input clk_i, input rst_ni);
   // The digests and optional zeroizable fields are excluded from the broadcast, so we exclude
   // either 8 or 16 bytes from each hw_cfg partition.
   `OTP_FATAL_ERR_ASSERT(HwCfg0OData_A, otp_broadcast_o.hw_cfg0_data ==
-                        RndCnstOtpCtrlPartInvDefault[HwCfg0Offset*8+:(HwCfg0Size - 8)*8])
+                        RndCnstOtpCtrlPartInvDefault[HwCfg0Offset*8+:(HwCfg0Size - 16)*8])
   `OTP_FATAL_ERR_ASSERT(HwCfg1OData_A, otp_broadcast_o.hw_cfg1_data ==
-                        RndCnstOtpCtrlPartInvDefault[HwCfg1Offset*8+:(HwCfg1Size - 8)*8])
+                        RndCnstOtpCtrlPartInvDefault[HwCfg1Offset*8+:(HwCfg1Size - 16)*8])
 
   `OTP_FATAL_ERR_ASSERT(LcProgAck_A, lc_prog_ack == 0)
   `OTP_FATAL_ERR_ASSERT(SramAcks_A, sram_acks == 0)

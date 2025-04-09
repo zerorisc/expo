@@ -370,12 +370,6 @@ module top_${top["name"]} #(
   logic unused_otp_broadcast_bits;
   assign unused_otp_broadcast_bits = ^{
     otp_ctrl_otp_broadcast.valid,
-    otp_ctrl_otp_broadcast.hw_cfg0_data.hw_cfg0_digest,
-    otp_ctrl_otp_broadcast.hw_cfg1_data.hw_cfg1_digest,
-    otp_ctrl_otp_broadcast.hw_cfg2_data.hw_cfg2_digest,
-    otp_ctrl_otp_broadcast.hw_cfg0_data.hw_cfg0_zer,
-    otp_ctrl_otp_broadcast.hw_cfg1_data.hw_cfg1_zer,
-    otp_ctrl_otp_broadcast.hw_cfg2_data.hw_cfg2_zer,
     otp_ctrl_otp_broadcast.hw_cfg1_data.unallocated,
     otp_ctrl_otp_broadcast.hw_cfg2_data.unallocated
   };

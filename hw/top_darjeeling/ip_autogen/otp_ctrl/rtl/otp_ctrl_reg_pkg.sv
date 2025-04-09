@@ -650,6 +650,12 @@ package otp_ctrl_reg_pkg;
     } dai_error;
     struct packed {
       logic        d;
+    } partition_error;
+  } otp_ctrl_hw2reg_status_reg_t;
+
+  typedef struct packed {
+    struct packed {
+      logic        d;
     } life_cycle_error;
     struct packed {
       logic        d;
@@ -726,7 +732,7 @@ package otp_ctrl_reg_pkg;
     struct packed {
       logic        d;
     } vendor_test_error;
-  } otp_ctrl_hw2reg_status_reg_t;
+  } otp_ctrl_hw2reg_partition_status_0_reg_t;
 
   typedef struct packed {
     logic [2:0]  d;
@@ -1025,29 +1031,8 @@ package otp_ctrl_reg_pkg;
   parameter logic [0:0] OTP_CTRL_ALERT_TEST_FATAL_BUS_INTEG_ERROR_RESVAL = 1'h 0;
   parameter logic [0:0] OTP_CTRL_ALERT_TEST_FATAL_PRIM_OTP_ALERT_RESVAL = 1'h 0;
   parameter logic [0:0] OTP_CTRL_ALERT_TEST_RECOV_PRIM_OTP_ALERT_RESVAL = 1'h 0;
-  parameter logic [30:0] OTP_CTRL_STATUS_RESVAL = 31'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_VENDOR_TEST_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_CREATOR_SW_CFG_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_OWNER_SW_CFG_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_OWNERSHIP_SLOT_STATE_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_ROT_CREATOR_AUTH_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_ROT_OWNER_AUTH_SLOT0_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_ROT_OWNER_AUTH_SLOT1_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_PLAT_INTEG_AUTH_SLOT0_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_PLAT_INTEG_AUTH_SLOT1_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_PLAT_OWNER_AUTH_SLOT0_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_PLAT_OWNER_AUTH_SLOT1_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_PLAT_OWNER_AUTH_SLOT2_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_PLAT_OWNER_AUTH_SLOT3_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_EXT_NVM_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_ROM_PATCH_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_HW_CFG0_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_HW_CFG1_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_SECRET0_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_SECRET1_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_SECRET2_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_SECRET3_ERROR_RESVAL = 1'h 0;
-  parameter logic [0:0] OTP_CTRL_STATUS_LIFE_CYCLE_ERROR_RESVAL = 1'h 0;
+  parameter logic [9:0] OTP_CTRL_STATUS_RESVAL = 10'h 0;
+  parameter logic [0:0] OTP_CTRL_STATUS_PARTITION_ERROR_RESVAL = 1'h 0;
   parameter logic [0:0] OTP_CTRL_STATUS_DAI_ERROR_RESVAL = 1'h 0;
   parameter logic [0:0] OTP_CTRL_STATUS_LCI_ERROR_RESVAL = 1'h 0;
   parameter logic [0:0] OTP_CTRL_STATUS_TIMEOUT_ERROR_RESVAL = 1'h 0;
@@ -1291,6 +1276,7 @@ package otp_ctrl_reg_pkg;
     OTP_CTRL_INTR_TEST,
     OTP_CTRL_ALERT_TEST,
     OTP_CTRL_STATUS,
+    OTP_CTRL_PARTITION_STATUS_0,
     OTP_CTRL_ERR_CODE_0,
     OTP_CTRL_ERR_CODE_1,
     OTP_CTRL_ERR_CODE_2,

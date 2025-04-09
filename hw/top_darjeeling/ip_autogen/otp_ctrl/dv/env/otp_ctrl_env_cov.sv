@@ -358,54 +358,22 @@ class otp_ctrl_env_cov extends cip_base_env_cov #(.CFG_T(otp_ctrl_env_cfg));
       ignore_bins part_not_zeroizable =
            binsof (zeroizable) intersect {1}
         && binsof (part_idx) intersect {
-          VendorTestIdx,
-          CreatorSwCfgIdx,
-          OwnerSwCfgIdx,
-          OwnershipSlotStateIdx,
-          RotCreatorAuthIdx,
-          RotOwnerAuthSlot0Idx,
-          RotOwnerAuthSlot1Idx,
-          PlatIntegAuthSlot0Idx,
-          PlatIntegAuthSlot1Idx,
-          PlatOwnerAuthSlot0Idx,
-          PlatOwnerAuthSlot1Idx,
-          PlatOwnerAuthSlot2Idx,
-          PlatOwnerAuthSlot3Idx,
-          ExtNvmIdx,
-          RomPatchIdx,
-          HwCfg0Idx,
-          HwCfg1Idx,
+          SocFusesCpIdx,
+          SocFusesFtIdx,
           LifeCycleIdx
         };
 
       ignore_bins part_not_zeroizable_no_digest_addr =
            binsof (zeroizable) intersect {0}
         && binsof (part_idx) intersect {
-          OwnershipSlotStateIdx,
-          ExtNvmIdx
         }
         && binsof (offset_addr) intersect {OtpPartDigestAddr};
 
       ignore_bins part_not_zeroizable_no_zero_addr =
            binsof (zeroizable) intersect {0}
         && binsof (part_idx) intersect {
-          VendorTestIdx,
-          CreatorSwCfgIdx,
-          OwnerSwCfgIdx,
-          OwnershipSlotStateIdx,
-          RotCreatorAuthIdx,
-          RotOwnerAuthSlot0Idx,
-          RotOwnerAuthSlot1Idx,
-          PlatIntegAuthSlot0Idx,
-          PlatIntegAuthSlot1Idx,
-          PlatOwnerAuthSlot0Idx,
-          PlatOwnerAuthSlot1Idx,
-          PlatOwnerAuthSlot2Idx,
-          PlatOwnerAuthSlot3Idx,
-          ExtNvmIdx,
-          RomPatchIdx,
-          HwCfg0Idx,
-          HwCfg1Idx,
+          SocFusesCpIdx,
+          SocFusesFtIdx,
           LifeCycleIdx
         }
         && binsof (offset_addr) intersect {OtpPartZeroAddr};
@@ -413,6 +381,25 @@ class otp_ctrl_env_cov extends cip_base_env_cov #(.CFG_T(otp_ctrl_env_cfg));
       ignore_bins part_zeroizable =
            binsof (zeroizable) intersect {0}
         && binsof (part_idx) intersect {
+          VendorTestIdx,
+          CreatorSwCfgIdx,
+          OwnerSwCfgIdx,
+          OwnershipSlotStateIdx,
+          RotCreatorIdentityIdx,
+          RotOwnerAuthSlot0Idx,
+          RotOwnerAuthSlot1Idx,
+          PlatIntegAuthSlot0Idx,
+          PlatIntegAuthSlot1Idx,
+          PlatOwnerAuthSlot0Idx,
+          PlatOwnerAuthSlot1Idx,
+          PlatOwnerAuthSlot2Idx,
+          PlatOwnerAuthSlot3Idx,
+          ExtNvmIdx,
+          RomPatchIdx,
+          ScratchFusesIdx,
+          HwCfg0Idx,
+          HwCfg1Idx,
+          HwCfg2Idx,
           Secret0Idx,
           Secret1Idx,
           Secret2Idx,
@@ -427,23 +414,8 @@ class otp_ctrl_env_cov extends cip_base_env_cov #(.CFG_T(otp_ctrl_env_cfg));
     coverpoint part_idx
     {
       ignore_bins part_not_zeroizable = {
-          VendorTestIdx,
-          CreatorSwCfgIdx,
-          OwnerSwCfgIdx,
-          OwnershipSlotStateIdx,
-          RotCreatorAuthIdx,
-          RotOwnerAuthSlot0Idx,
-          RotOwnerAuthSlot1Idx,
-          PlatIntegAuthSlot0Idx,
-          PlatIntegAuthSlot1Idx,
-          PlatOwnerAuthSlot0Idx,
-          PlatOwnerAuthSlot1Idx,
-          PlatOwnerAuthSlot2Idx,
-          PlatOwnerAuthSlot3Idx,
-          ExtNvmIdx,
-          RomPatchIdx,
-          HwCfg0Idx,
-          HwCfg1Idx,
+          SocFusesCpIdx,
+          SocFusesFtIdx,
           LifeCycleIdx
       };
       ignore_bins ignored_partitions = {otp_ctrl_part_pkg::LifeCycleIdx,
@@ -566,7 +538,7 @@ class otp_ctrl_env_cov extends cip_base_env_cov #(.CFG_T(otp_ctrl_env_cfg));
       OtpOwnershipSlotStateErrIdx: begin
         unbuf_err_code_cg_wrap[part_idx].unbuf_err_code_cg.sample(val);
       end
-      RotCreatorIdentityIdx: begin
+      OtpRotCreatorIdentityErrIdx: begin
         unbuf_err_code_cg_wrap[part_idx].unbuf_err_code_cg.sample(val);
       end
       OtpRotOwnerAuthSlot0ErrIdx: begin
@@ -599,25 +571,25 @@ class otp_ctrl_env_cov extends cip_base_env_cov #(.CFG_T(otp_ctrl_env_cfg));
       OtpRomPatchErrIdx: begin
         unbuf_err_code_cg_wrap[part_idx].unbuf_err_code_cg.sample(val);
       end
-      SocFusesCpIdx: begin
+      OtpSocFusesCpErrIdx: begin
         unbuf_err_code_cg_wrap[part_idx].unbuf_err_code_cg.sample(val);
       end
-      SocFusesFtIdx: begin
+      OtpSocFusesFtErrIdx: begin
         unbuf_err_code_cg_wrap[part_idx].unbuf_err_code_cg.sample(val);
       end
-      ScratchFusesIdx: begin
+      OtpScratchFusesErrIdx: begin
         unbuf_err_code_cg_wrap[part_idx].unbuf_err_code_cg.sample(val);
       end
-      HwCfg0Idx: begin
+      OtpHwCfg0ErrIdx: begin
         buf_err_code_cg_wrap[part_idx - NumPartUnbuf].buf_err_code_cg.sample(val);
       end
       OtpHwCfg1ErrIdx: begin
         buf_err_code_cg_wrap[part_idx - NumPartUnbuf].buf_err_code_cg.sample(val);
       end
-      HwCfg2Idx: begin
+      OtpHwCfg2ErrIdx: begin
         buf_err_code_cg_wrap[part_idx - NumPartUnbuf].buf_err_code_cg.sample(val);
       end
-      Secret0Idx: begin
+      OtpSecret0ErrIdx: begin
         buf_err_code_cg_wrap[part_idx - NumPartUnbuf].buf_err_code_cg.sample(val);
       end
       OtpSecret1ErrIdx: begin

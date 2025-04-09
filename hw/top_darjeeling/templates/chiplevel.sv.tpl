@@ -588,9 +588,6 @@ module chip_${top["name"]}_${target["name"]} #(
     // external POR
     .por_ni                ( rst_n ),
 
-    // USB IO Pull-up Calibration Setting
-    .usb_io_pu_cal_o       ( ),
-
     // clocks' oscillator bypass for FPGA
     .clk_osc_byp_i         ( clks_osc_byp ),
 

@@ -581,20 +581,14 @@ package otp_ctrl_part_pkg;
 
   // Breakout types for easier access of individual items.
   typedef struct packed {
-    logic [63:0] hw_cfg0_zer;
-    logic [63:0] hw_cfg0_digest;
     logic [255:0] device_id;
   } otp_hw_cfg0_data_t;
   typedef struct packed {
-    logic [63:0] hw_cfg1_zer;
-    logic [63:0] hw_cfg1_digest;
     logic [47:0] unallocated;
     prim_mubi_pkg::mubi8_t en_sram_ifetch;
     prim_mubi_pkg::mubi8_t en_csrng_sw_app_read;
   } otp_hw_cfg1_data_t;
   typedef struct packed {
-    logic [63:0] hw_cfg2_zer;
-    logic [63:0] hw_cfg2_digest;
     logic [31:0] unallocated;
     logic [255:0] manuf_state;
     logic [31:0] soc_dbg_state;
@@ -792,14 +786,16 @@ package otp_ctrl_part_pkg;
                 part_buf_data[ScratchFusesOffset +: ScratchFusesSize]};
     // HW_CFG0
     valid &= part_init_done[HwCfg0Idx];
-    otp_broadcast.hw_cfg0_data = otp_hw_cfg0_data_t'(part_buf_data[HwCfg0Offset +: (HwCfg0Size - 8)]);
-    unused ^= ^part_buf_data[HwCfg0Offset + (HwCfg0Size - 8) +: 8];
+    otp_broadcast.hw_cfg0_data = otp_hw_cfg0_data_t'(part_buf_data[HwCfg0Offset +: (HwCfg0Size - 16)]);
+    unused ^= ^part_buf_data[HwCfg0Offset + (HwCfg0Size - 16) +: 16];
     // HW_CFG1
     valid &= part_init_done[HwCfg1Idx];
-    otp_broadcast.hw_cfg1_data = otp_hw_cfg1_data_t'(part_buf_data[HwCfg1Offset +: HwCfg1Size]);
+    otp_broadcast.hw_cfg1_data = otp_hw_cfg1_data_t'(part_buf_data[HwCfg1Offset +: (HwCfg1Size - 16)]);
+    unused ^= ^part_buf_data[HwCfg1Offset + (HwCfg1Size - 16) +: 16];
     // HW_CFG2
     valid &= part_init_done[HwCfg2Idx];
-    otp_broadcast.hw_cfg2_data = otp_hw_cfg2_data_t'(part_buf_data[HwCfg2Offset +: HwCfg2Size]);
+    otp_broadcast.hw_cfg2_data = otp_hw_cfg2_data_t'(part_buf_data[HwCfg2Offset +: (HwCfg2Size - 16)]);
+    unused ^= ^part_buf_data[HwCfg2Offset + (HwCfg2Size - 16) +: 16];
     // SECRET0
     unused ^= ^{part_init_done[Secret0Idx],
                 part_buf_data[Secret0Offset +: Secret0Size]};
