@@ -399,9 +399,9 @@ fpga_vcu118(
     base_bitstream = "//hw/bitstream/vcu118:bitstream",
     exec_env = "fpga_vcu118_test_rom",
     otp = "//hw/ip/otp_ctrl/data:img_rma",
-    otp_mmi = "//hw/bitstream/vcu118:otp_mmi",
+    #otp_mmi = "//hw/bitstream/vcu118:otp_mmi",
     rom = "//sw/device/lib/testing/test_rom:test_rom",
-    rom_mmi = "//hw/bitstream/vcu118:rom_mmi",
+    #rom_mmi = "//hw/bitstream/vcu118:rom_mmi",
     test_cmd = """
         --exec="transport init"
         --exec="fpga load-bitstream {bitstream}"
