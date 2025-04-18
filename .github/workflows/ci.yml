@@ -40,6 +40,7 @@ jobs:
     name: Lint (quick)
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
     runs-on: self-hosted
+    needs: setup
     steps:
       - uses: actions/checkout@v4
         with:
@@ -92,7 +93,9 @@ jobs:
     name: Lint (slow)
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
     runs-on: self-hosted
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     steps:
       - uses: actions/checkout@v4
         with:
@@ -138,7 +141,9 @@ jobs:
     name: Build documentation
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
     runs-on: self-hosted
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     env:
       BUCKET: gold-hybrid-255313-prod
     steps:
@@ -187,7 +192,9 @@ jobs:
     name: Airgapped build
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
     runs-on: self-hosted
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     steps:
       - uses: actions/checkout@v4
         with:
@@ -244,7 +251,9 @@ jobs:
 
   otbn_standalone_tests:
     name: Run OTBN smoke Test
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
     runs-on: self-hosted
     timeout-minutes: 10
@@ -278,7 +287,9 @@ jobs:
 
   otbn_crypto_tests:
     name: Run OTBN crypto tests
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
     runs-on: self-hosted
     timeout-minutes: 60
@@ -297,7 +308,9 @@ jobs:
     name: Verilated English Breakfast
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
     runs-on: self-hosted
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     steps:
       - uses: actions/checkout@v4
       - name: Prepare environment
@@ -328,7 +341,9 @@ jobs:
     name: Verilated Earl Grey
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
     runs-on: self-hosted
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
@@ -349,7 +364,9 @@ jobs:
     name: CW305's Bitstream
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
     runs-on: self-hosted
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     steps:
       - uses: actions/checkout@v4
       - name: Prepare environment
@@ -403,7 +420,9 @@ jobs:
 
   chip_earlgrey_cw310:
     name: Earl Grey for CW310
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     uses: ./.github/workflows/bitstream.yml
     secrets: inherit
     with:
@@ -412,7 +431,9 @@ jobs:
 
   chip_earlgrey_cw310_hyperdebug:
     name: Earl Grey for CW310 Hyperdebug
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     uses: ./.github/workflows/bitstream.yml
     secrets: inherit
     with:
@@ -421,7 +442,9 @@ jobs:
 
   chip_earlgrey_cw340:
     name: Earl Grey for CW340
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     uses: ./.github/workflows/bitstream.yml
     secrets: inherit
     with:
@@ -433,6 +456,7 @@ jobs:
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) || github.event_name != 'pull_request' }}
     runs-on: self-hosted
     needs:
+      - setup
       - chip_earlgrey_cw310
       - chip_earlgrey_cw310_hyperdebug
       - chip_earlgrey_cw340
@@ -669,7 +693,9 @@ jobs:
     name: Build Docker Containers
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
     runs-on: self-hosted
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     steps:
       - uses: actions/checkout@v4
       - name: Build Developer Utility Container
@@ -694,7 +720,9 @@ jobs:
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
     runs-on: self-hosted
     timeout-minutes: 120
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     steps:
       - uses: actions/checkout@v4
         with:
@@ -765,7 +793,9 @@ jobs:
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
     runs-on: self-hosted
     timeout-minutes: 120
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     steps:
       - uses: actions/checkout@v4
         with:
@@ -791,7 +821,9 @@ jobs:
     name: QEMU smoketest
     if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
     runs-on: self-hosted
-    needs: quick_lint
+    needs:
+      - setup
+      - quick_lint
     steps:
       - uses: actions/checkout@v4
         with:
