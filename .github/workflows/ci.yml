@@ -10,6 +10,7 @@ on:
       - "backport-*"
     tags:
       - "*"
+  workflow_dispatch:
 
 permissions:
   contents: read
