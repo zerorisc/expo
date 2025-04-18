@@ -26,9 +26,20 @@ env:
   TOOLCHAIN_VERSION: 20220210-1
 
 jobs:
+  setup:
+    # Restrict GH actions to a whitelist of actors because we're running on self-hosted
+    # otherwise PRs are an open door to RCE on the server.
+    runs-on: self-hosted
+    outputs:
+      allowed_actors: ${{ steps.set-vars.outputs.allowed_actors }}
+    steps:
+      - id: set-vars
+        run: echo "allowed_actors=[\"bunnie\"]" >> $GITHUB_OUTPUT
+
   quick_lint:
     name: Lint (quick)
-    runs-on: ubuntu-22.04
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
         with:
@@ -79,7 +90,8 @@ jobs:
 
   slow_lint:
     name: Lint (slow)
-    runs-on: ubuntu-22.04
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
+    runs-on: self-hosted
     needs: quick_lint
     steps:
       - uses: actions/checkout@v4
@@ -124,7 +136,8 @@ jobs:
 
   build_docs:
     name: Build documentation
-    runs-on: ubuntu-22.04
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
+    runs-on: self-hosted
     needs: quick_lint
     env:
       BUCKET: gold-hybrid-255313-prod
@@ -172,7 +185,8 @@ jobs:
 
   airgapped_build:
     name: Airgapped build
-    runs-on: ubuntu-22.04
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
+    runs-on: self-hosted
     needs: quick_lint
     steps:
       - uses: actions/checkout@v4
@@ -198,9 +212,9 @@ jobs:
 
   verible_lint:
     name: Verible lint
-    runs-on: ubuntu-24.04
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) || github.event_name == 'pull_request' }}
+    runs-on: self-hosted
     needs: quick_lint
-    if: ${{ github.event_name == 'pull_request' }}
     env:
       verible_config: hw/lint/tools/veriblelint/lowrisc-styleguide.rules.verible_lint
       verible_version: v0.0-3430-g060bde0f
@@ -231,7 +245,8 @@ jobs:
   otbn_standalone_tests:
     name: Run OTBN smoke Test
     needs: quick_lint
-    runs-on: ubuntu-22.04
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
+    runs-on: self-hosted
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -264,7 +279,8 @@ jobs:
   otbn_crypto_tests:
     name: Run OTBN crypto tests
     needs: quick_lint
-    runs-on: ubuntu-22.04
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
+    runs-on: self-hosted
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -279,7 +295,8 @@ jobs:
 
   verilator_englishbreakfast:
     name: Verilated English Breakfast
-    runs-on: ubuntu-22.04
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
+    runs-on: self-hosted
     needs: quick_lint
     steps:
       - uses: actions/checkout@v4
@@ -309,7 +326,8 @@ jobs:
 
   verilator_earlgrey:
     name: Verilated Earl Grey
-    runs-on: ubuntu-22.04
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
+    runs-on: self-hosted
     needs: quick_lint
     timeout-minutes: 240
     steps:
@@ -329,7 +347,8 @@ jobs:
   # Build CW305 variant of the English Breakfast toplevel design using Vivado
   chip_englishbreakfast_cw305:
     name: CW305's Bitstream
-    runs-on: ubuntu-22.04-vivado
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
+    runs-on: self-hosted
     needs: quick_lint
     steps:
       - uses: actions/checkout@v4
@@ -411,8 +430,8 @@ jobs:
 
   cache_bitstreams:
     name: Cache bitstreams to GCP
-    runs-on: ubuntu-22.04
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) || github.event_name != 'pull_request' }}
+    runs-on: self-hosted
     needs:
       - chip_earlgrey_cw310
       - chip_earlgrey_cw310_hyperdebug
@@ -593,7 +612,8 @@ jobs:
 
   verify_fpga_jobs:
     name: Verify FPGA jobs
-    runs-on: ubuntu-22.04
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) || success() || failure() }}
+    runs-on: self-hosted
     needs:
       - execute_test_rom_fpga_tests_cw310
       - execute_rom_fpga_tests_cw310
@@ -607,7 +627,6 @@ jobs:
       - execute_sival_fpga_tests_cw340
       - execute_sival_rom_ext_fpga_tests_cw340
       - execute_manuf_fpga_tests_cw340
-    if: success() || failure()
     steps:
       - uses: actions/checkout@v4
       - name: Download target pattern files
@@ -648,7 +667,8 @@ jobs:
 
   build_docker_containers:
     name: Build Docker Containers
-    runs-on: ubuntu-22.04
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
+    runs-on: self-hosted
     needs: quick_lint
     steps:
       - uses: actions/checkout@v4
@@ -671,7 +691,8 @@ jobs:
 
   sw_build_test:
     name: Build and test software
-    runs-on: ubuntu-22.04-vivado
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
+    runs-on: self-hosted
     timeout-minutes: 120
     needs: quick_lint
     steps:
@@ -741,7 +762,8 @@ jobs:
 
   dj_sw_build_test:
     name: Build and test Darjeeling software
-    runs-on: ubuntu-22.04-vivado
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
+    runs-on: self-hosted
     timeout-minutes: 120
     needs: quick_lint
     steps:
@@ -767,7 +789,8 @@ jobs:
 
   qemu_smoketest:
     name: QEMU smoketest
-    runs-on: ubuntu-22.04-vivado
+    if: ${{ contains(fromJson(needs.setup.outputs.allowed_actors), github.actor) }}
+    runs-on: self-hosted
     needs: quick_lint
     steps:
       - uses: actions/checkout@v4
