@@ -161,4 +161,4 @@ build --incompatible_strict_action_env
 
 # create symlinks for bazel-out in the current directory
 build --symlink_prefix=bazel-
-build --experimental_convenience_symlinks=normal
+build --experimental_convenience_symlinks=ignore
