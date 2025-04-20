@@ -33,11 +33,12 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Install system dependencies
-      run: |
-        sudo apt update
-        grep '^[^#]' apt-requirements.txt | xargs sudo apt install -y
-      shell: bash
+    # skip this for now as we're not yet containerized
+    # - name: Install system dependencies
+    #   run: |
+    #     sudo apt update
+    #     grep '^[^#]' apt-requirements.txt | xargs sudo apt install -y
+    #   shell: bash
 
     - uses: astral-sh/setup-uv@v5
       with:
