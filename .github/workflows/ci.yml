@@ -321,9 +321,10 @@ jobs:
       - name: Build simulator with Verilator
         run: |
           ./bazelisk.sh build //hw/top_englishbreakfast:verilator_sim
+          exec_root=$(bazel info execution_root)
           sim_binary_path=$(./bazelisk.sh cquery --output=files //hw/top_englishbreakfast:verilator_sim)
           mkdir -p build-bin/hw/top_englishbreakfast
-          cp ${sim_binary_path} build-bin/hw/top_englishbreakfast/
+          cp ${exec_root}/${sim_binary_path} build-bin/hw/top_englishbreakfast/
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
