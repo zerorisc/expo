@@ -6,6 +6,10 @@
 common --enable_bzlmod
 common --enable_workspace=no
 
+# create symlinks for bazel-out in the current directory
+build --symlink_prefix=bazel-
+build --experimental_convenience_symlinks=ignore
+
 # https://docs.opentitan.org/doc/rm/c_cpp_coding_style/#cxx-version specifies
 build --action_env=BAZEL_CXXOPTS="-std=gnu++14"
 build --cxxopt='-std=gnu++14'
@@ -158,7 +162,3 @@ run --sandbox_explicit_pseudoterminal
 # Enable strict action env. This will prevent `PATH` and `LD_LIBRARY_PATH` from being passed into the sandbox
 # which would help the cacheability.
 build --incompatible_strict_action_env
-
-# create symlinks for bazel-out in the current directory
-build --symlink_prefix=bazel-
-build --experimental_convenience_symlinks=ignore
