@@ -9,9 +9,9 @@ filesets:
     depend:
       - lowrisc:systems:top_earlgrey:0.1
       - lowrisc:systems:top_earlgrey_pkg
-      - lowrisc:systems:ast
-      - lowrisc:systems:padring
-      - lowrisc:systems:scan_role_pkg
+      - lowrisc:systems:top_earlgrey_ast
+      - lowrisc:systems:top_earlgrey_padring
+      - lowrisc:earlgrey_systems:scan_role_pkg
     files:
       - rtl/clkgen_vcu118.sv
       - rtl/usr_access_xil7series.sv

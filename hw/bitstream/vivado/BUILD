@@ -163,20 +163,19 @@ fusesoc_build(
     name = "fpga_vcu118",
     testonly = True,
     srcs = [
-        "//hw:all_files",
+        "//hw:rtl_files",
         _CW340_TESTROM,
         _OTP_RMA,
     ],
-    cores = ["//:cores"],
-    data = ["//hw/ip/otbn:all_files"],
+    cores = ["//hw:cores"],
+    data = ["//hw/ip/otbn:rtl_files"],
     flags = [
         "--BootRomInitFile=" + _CW340_TESTROM_PATH,
         "--OtpCtrlMemInitFile=" + _OTP_RMA_PATH,
     ],
     output_groups = {
         "bitstream": ["synth-vivado/lowrisc_systems_chip_earlgrey_vcu118_0.1.bit"],
-        "rom_mmi": ["synth-vivado/rom.mmi"],
-        "otp_mmi": ["synth-vivado/otp.mmi"],
+        "mmi": ["synth-vivado/memories.mmi"],
     },
     systems = ["lowrisc:systems:chip_earlgrey_vcu118"],
     tags = ["manual"],
@@ -298,16 +297,25 @@ pkg_tar(
     tags = ["manual"],
 )
 
+filegroup(
+    name = "vcu118_mmi",
+    testonly = True,
+    srcs = [":fpga_vcu118"],
+    output_group = "mmi",
+    tags = ["manual"],
+)
+
 bitstream_manifest_fragment(
     name = "earlgrey_vcu118_manifest",
     testonly = True,
     srcs = [":fpga_vcu118"],
     bitstream = "bitstream",
     design = "chip_earlgrey_vcu118",
-    memory_maps = {
-        "rom_mmi": "rom",
-        "otp_mmi": "otp",
-    },
+    memories = [
+        "rom",
+        "otp",
+    ],
+    memory_map_file = ":vcu118_mmi",
     tags = ["manual"],
 )
 
