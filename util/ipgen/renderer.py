@@ -276,12 +276,17 @@ class IpBlockRenderer(IpTemplateRendererBase):
                        f'{output_dir_existing_bak}.')
                 raise TemplateRenderError(msg).with_traceback(e.__traceback__)
 
-        try:
-            os.rename(staging_dir, output_dir)
-        except OSError as e:
-            msg = (f'Cannot move staging directory {staging_dir} to '
-                   f'{output_dir}.')
-            raise TemplateRenderError(msg).with_traceback(e.__traceback__)
+        for _ in range(5):
+            try:
+                os.rename(staging_dir, output_dir)
+                break
+            except PermissionError:
+                # give time for windows antivirus to run so the directory isn't locked
+                time.sleep(0.2)
+            except OSError as e:
+                msg = (f'Cannot move staging directory {staging_dir} to '
+                    f'{output_dir}.')
+                raise TemplateRenderError(msg).with_traceback(e.__traceback__)
 
         if do_overwrite:
             try:
