@@ -1521,12 +1521,27 @@ def main():
                         default=False,
                         action="store_true",
                         help="Only return the list of blocks and exit.")
+    parser.add_argument("--clear-cache",
+                        default=False,
+                        action="store_true",
+                        help = "Clear any temporary files")
 
     args = parser.parse_args()
 
     # check combinations
     if args.top_ral:
         args.no_top = True
+
+    if args.clear_cache:
+        for path in Path.cwd().rglob('*'):
+            if path.name.startswith('.~'):
+                try:
+                    if path.is_file() or path.is_symlink():
+                        path.unlink()
+                    elif path.is_dir():
+                        shutil.rmtree(path)
+                except Exception as e:
+                    print(f"Failed to remove {path}: {e}")
 
     if (args.no_top or args.no_xbar or
             args.no_plic) and (args.top_only or args.xbar_only or
