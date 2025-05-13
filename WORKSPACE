@@ -7,6 +7,16 @@
 
 workspace(name = "lowrisc_opentitan")
 
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+# Fixes broken rules_python, needs to come early in WORKSPACE to ensure this
+# version is used.
+git_repository(
+    name = "rules_python",
+    remote = "https://github.com/lowRISC/rules_python.git",
+    commit = "67923e883055451b39b44fd09b00aeb2fc08e604",
+)
+
 # Bazel skylib library
 load("//third_party/skylib:repos.bzl", "bazel_skylib_repos")
 bazel_skylib_repos()
