@@ -19,6 +19,7 @@ FIRMWARE_DEPS_FI = [
     "//sw/device/tests/penetrationtests/firmware/fi:rng_fi",
     "//sw/device/tests/penetrationtests/firmware/fi:rom_fi",
     "//sw/device/tests/penetrationtests/firmware/lib:extclk_sca_fi",
+    "//sw/device/tests/penetrationtests/firmware/lib:pentest_lib",
     "//sw/device/lib/base:csr",
     "//sw/device/lib/base:status",
     "//sw/device/lib/crypto/drivers:entropy",
@@ -34,6 +35,7 @@ FIRMWARE_DEPS_FI = [
 
 FIRMWARE_DEPS_FI_OTBN = [
     "//sw/device/tests/penetrationtests/firmware/fi:otbn_fi",
+    "//sw/device/tests/penetrationtests/firmware/lib:pentest_lib",
     "//sw/device/lib/base:csr",
     "//sw/device/lib/base:status",
     "//sw/device/lib/crypto/drivers:entropy",
@@ -57,6 +59,7 @@ FIRMWARE_DEPS_SCA = [
     "//sw/device/tests/penetrationtests/firmware/sca:sha3_sca",
     "//sw/device/tests/penetrationtests/firmware/sca:trigger_sca",
     "//sw/device/tests/penetrationtests/firmware/lib:extclk_sca_fi",
+    "//sw/device/tests/penetrationtests/firmware/lib:pentest_lib",
     "//sw/device/lib/base:csr",
     "//sw/device/lib/base:status",
     "//sw/device/lib/crypto/drivers:entropy",
@@ -69,20 +72,17 @@ FIRMWARE_DEPS_SCA = [
     "//sw/device/tests/penetrationtests/json:commands",
 ]
 
-[
-    opentitan_binary(
-        name = "fpga_pentest_fi_{}".format(exec_env),
-        testonly = True,
-        srcs = [":firmware_fi.c"],
-        exec_env = [
-            "//hw/top_earlgrey:{}".format(exec_env),
-        ],
-        deps = FIRMWARE_DEPS_FI,
-    )
-    for exec_env in [
-        "fpga_cw310_test_rom",
-    ]
-]
+opentitan_binary(
+    name = "firmware_fi",
+    testonly = True,
+    srcs = [":firmware_fi.c"],
+    exec_env = [
+        "//hw/top_earlgrey:fpga_cw310",
+        "//hw/top_earlgrey:fpga_cw340",
+        "//hw/top_earlgrey:silicon_owner_sival_rom_ext",
+    ],
+    deps = FIRMWARE_DEPS_FI,
+)
 
 [
     opentitan_binary(

@@ -135,6 +135,9 @@ use_repo(lowrisc_rv32imcb_toolchain, "lowrisc_rv32imcb_toolchain")
 qemu = use_extension("//third_party/qemu:extensions.bzl", "qemu")
 use_repo(qemu, "qemu_opentitan")
 
+doxygen = use_extension("//third_party/doxygen:extensions.bzl", "doxygen")
+use_repo(doxygen, "doxygen")
+
 # Extension for linking in externally managed test and provisioning customizations
 # for both secure/non-secure manufacturer domains.
 hooks = use_extension("//rules:extensions.bzl", "hooks")
@@ -158,6 +161,12 @@ use_repo(
     "manufacturer_test_hooks",
     "provisioning_exts",
     "secure_manufacturer_test_hooks",
+)
+
+bazel_dep(name = "rom_hooks", version = "")
+local_path_override(
+    module_name = "rom_hooks",
+    path = "./sw/device/silicon_creator/rom/hooks",
 )
 
 register_toolchains("//rules/opentitan:localtools")

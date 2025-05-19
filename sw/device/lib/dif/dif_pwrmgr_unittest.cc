@@ -18,6 +18,23 @@ namespace dif_pwrmgr_unittest {
 namespace {
 
 /**
+ * The following values are for Earlgrey.
+ */
+typedef enum dif_pwrmgr_wakeup_request_source {
+  kDifPwrmgrWakeupRequestSourceOne = (1u << 0),
+  kDifPwrmgrWakeupRequestSourceTwo = (1u << 1),
+  kDifPwrmgrWakeupRequestSourceThree = (1u << 2),
+  kDifPwrmgrWakeupRequestSourceFour = (1u << 3),
+  kDifPwrmgrWakeupRequestSourceFive = (1u << 4),
+  kDifPwrmgrWakeupRequestSourceSix = (1u << 5),
+} dif_pwrmgr_wakeup_request_source_t;
+
+typedef enum dif_pwrmgr_reset_request_source {
+  kDifPwrmgrResetRequestSourceOne = (1u << 0),
+  kDifPwrmgrResetRequestSourceTwo = (1u << 1),
+} dif_pwrmgr_reset_request_source_t;
+
+/**
  * Returns a `uint32_t` with a single zero bit.
  */
 uint32_t AllOnesExcept(uint32_t index) { return ~(1u << index); }

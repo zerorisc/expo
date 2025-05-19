@@ -249,7 +249,12 @@ module soc_dbg_ctrl
 
   // The status register is written by IBEX firmware and is reflected into the JTAG status register.
   // The JTAG user shall query this status register.
-  assign jtag_hw2reg.jtag_status = soc_dbg_ctrl_hw2reg_jtag_status_reg_t'(core_reg2hw.status);
+  assign jtag_hw2reg.jtag_status.auth_unlock_failed.d    = core_reg2hw.status.auth_unlock_failed.q;
+  assign jtag_hw2reg.jtag_status.auth_unlock_success.d   = core_reg2hw.status.auth_unlock_success.q;
+  assign jtag_hw2reg.jtag_status.auth_window_closed.d    = core_reg2hw.status.auth_window_closed.q;
+  assign jtag_hw2reg.jtag_status.auth_window_open.d      = core_reg2hw.status.auth_window_open.q;
+  assign jtag_hw2reg.jtag_status.auth_debug_intent_set.d =
+              core_reg2hw.status.auth_debug_intent_set.q;
 
   halt_state_e halt_state_d, halt_state_q;
 
@@ -385,10 +390,10 @@ module soc_dbg_ctrl
   // All outputs should be known value after reset
   `ASSERT_KNOWN(AlertsKnown_A, alert_tx_o)
 
-  `ASSERT_KNOWN(CoreTlDValidKnownO_A, core_tl_o.d_valid)
-  `ASSERT_KNOWN(CoreTlAReadyKnownO_A, core_tl_o.a_ready)
-  `ASSERT_KNOWN(JtagTlDValidKnownO_A, jtag_tl_o.d_valid)
-  `ASSERT_KNOWN(JtagTlAReadyKnownO_A, jtag_tl_o.a_ready)
+  `ASSERT_KNOWN_IF(CoreTlODKnown_A, core_tl_o, core_tl_o.d_valid)
+  `ASSERT_KNOWN(CoreTlOAReadyKnown_A, core_tl_o.a_ready)
+  `ASSERT_KNOWN_IF(JtagTlODKnown_A, jtag_tl_o, jtag_tl_o.d_valid)
+  `ASSERT_KNOWN(JtagTlOAReadyKnown_A, jtag_tl_o.a_ready)
 
   `ASSERT_KNOWN(SocDbgPolicyBusKnown_A, soc_dbg_policy_bus_o)
   `ASSERT_KNOWN(ContinueBootKnown_A, continue_cpu_boot_o)

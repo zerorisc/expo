@@ -283,7 +283,7 @@ module soc_dbg_ctrl_core_reg_top (
   prim_subreg #(
     .DW      (7),
     .SwAccess(prim_subreg_pkg::SwAccessRO),
-    .RESVAL  (7'h0),
+    .RESVAL  (7'h50),
     .Mubi    (1'b0)
   ) u_trace_debug_policy_category (
     .clk_i   (clk_i),
@@ -503,7 +503,6 @@ module soc_dbg_ctrl_core_reg_top (
 
   logic [6:0] addr_hit;
   always_comb begin
-    addr_hit = '0;
     addr_hit[0] = (reg_addr == SOC_DBG_CTRL_ALERT_TEST_OFFSET);
     addr_hit[1] = (reg_addr == SOC_DBG_CTRL_DEBUG_POLICY_VALID_SHADOWED_OFFSET);
     addr_hit[2] = (reg_addr == SOC_DBG_CTRL_DEBUG_POLICY_CATEGORY_SHADOWED_OFFSET);
@@ -558,7 +557,6 @@ module soc_dbg_ctrl_core_reg_top (
 
   // Assign write-enables to checker logic vector.
   always_comb begin
-    reg_we_check = '0;
     reg_we_check[0] = alert_test_we;
     reg_we_check[1] = debug_policy_valid_shadowed_we;
     reg_we_check[2] = debug_policy_category_shadowed_we;

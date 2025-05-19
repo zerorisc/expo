@@ -23,6 +23,8 @@ cc_library(
         "//sw/device/lib/base:hardened_memory",
         "//sw/device/lib/base:memory",
         "//sw/device/lib/crypto/drivers:aes",
+        "//sw/device/lib/crypto/drivers:entropy",
+        "//sw/device/lib/crypto/drivers:rv_core_ibex",
         "//sw/device/lib/crypto/include:datatypes",
     ],
 )
@@ -37,6 +39,8 @@ cc_library(
         "//sw/device/lib/base:hardened_memory",
         "//sw/device/lib/base:memory",
         "//sw/device/lib/crypto/drivers:aes",
+        "//sw/device/lib/crypto/drivers:entropy",
+        "//sw/device/lib/crypto/drivers:rv_core_ibex",
         "//sw/device/lib/crypto/impl/aes_gcm",
         "//sw/device/lib/crypto/include:datatypes",
     ],
@@ -51,6 +55,7 @@ cc_library(
         "//sw/device/lib/base:hardened_memory",
         "//sw/device/lib/base:math",
         "//sw/device/lib/crypto/drivers:entropy",
+        "//sw/device/lib/crypto/drivers:rv_core_ibex",
         "//sw/device/lib/crypto/include:datatypes",
     ],
 )
@@ -107,6 +112,21 @@ cc_library(
         "//sw/device/lib/base:hardened_memory",
         "//sw/device/lib/crypto/drivers:hmac",
         "//sw/device/lib/crypto/drivers:kmac",
+        "//sw/device/lib/crypto/drivers:rv_core_ibex",
+        "//sw/device/lib/crypto/include:datatypes",
+    ],
+)
+
+cc_library(
+    name = "hkdf",
+    srcs = ["hkdf.c"],
+    hdrs = ["//sw/device/lib/crypto/include:hkdf.h"],
+    deps = [
+        ":hmac",
+        ":integrity",
+        ":keyblob",
+        ":status",
+        "//sw/device/lib/base:math",
         "//sw/device/lib/crypto/include:datatypes",
     ],
 )
@@ -122,16 +142,15 @@ cc_library(
 )
 
 cc_library(
-    name = "kdf",
-    srcs = ["kdf.c"],
-    hdrs = ["//sw/device/lib/crypto/include:kdf.h"],
+    name = "kdf_ctr",
+    srcs = ["kdf_ctr.c"],
+    hdrs = ["//sw/device/lib/crypto/include:kdf_ctr.h"],
     deps = [
+        ":hmac",
         ":integrity",
         ":keyblob",
-        ":mac",
         ":status",
         "//sw/device/lib/base:math",
-        "//sw/device/lib/crypto/drivers:kmac",
         "//sw/device/lib/crypto/include:datatypes",
     ],
 )
@@ -145,7 +164,9 @@ cc_library(
         ":status",
         "//sw/device/lib/base:hardened_memory",
         "//sw/device/lib/base:math",
+        "//sw/device/lib/crypto/drivers:entropy",
         "//sw/device/lib/crypto/drivers:keymgr",
+        "//sw/device/lib/crypto/drivers:rv_core_ibex",
         "//sw/device/lib/crypto/include:datatypes",
     ],
 )
@@ -165,6 +186,7 @@ cc_library(
     hdrs = ["//sw/device/lib/crypto/include:key_transport.h"],
     deps = [
         ":status",
+        "//sw/device/lib/crypto/drivers:rv_core_ibex",
         "//sw/device/lib/crypto/impl:drbg",
         "//sw/device/lib/crypto/impl:integrity",
         "//sw/device/lib/crypto/impl:keyblob",
@@ -183,6 +205,20 @@ cc_test(
 )
 
 cc_library(
+    name = "kmac_kdf",
+    srcs = ["kmac_kdf.c"],
+    hdrs = ["//sw/device/lib/crypto/include:kmac_kdf.h"],
+    deps = [
+        ":integrity",
+        ":keyblob",
+        ":status",
+        "//sw/device/lib/base:math",
+        "//sw/device/lib/crypto/drivers:kmac",
+        "//sw/device/lib/crypto/include:datatypes",
+    ],
+)
+
+cc_library(
     name = "rsa",
     srcs = ["rsa.c"],
     hdrs = ["//sw/device/lib/crypto/include:rsa.h"],
@@ -191,6 +227,7 @@ cc_library(
         ":status",
         "//sw/device/lib/base:hardened_memory",
         "//sw/device/lib/crypto/drivers:entropy",
+        "//sw/device/lib/crypto/drivers:rv_core_ibex",
         "//sw/device/lib/crypto/impl/rsa:rsa_encryption",
         "//sw/device/lib/crypto/impl/rsa:rsa_keygen",
         "//sw/device/lib/crypto/impl/rsa:rsa_signature",
@@ -236,10 +273,10 @@ cc_test(
 )
 
 cc_library(
-    name = "mac",
-    srcs = ["mac.c"],
+    name = "hmac",
+    srcs = ["hmac.c"],
     hdrs = [
-        "//sw/device/lib/crypto/include:mac.h",
+        "//sw/device/lib/crypto/include:hmac.h",
     ],
     deps = [
         ":hash",
@@ -248,7 +285,23 @@ cc_library(
         "//sw/device/lib/base:hardened",
         "//sw/device/lib/base:hardened_memory",
         "//sw/device/lib/crypto/drivers:hmac",
+        "//sw/device/lib/crypto/drivers:rv_core_ibex",
+    ],
+)
+
+cc_library(
+    name = "kmac",
+    srcs = ["kmac.c"],
+    hdrs = [
+        "//sw/device/lib/crypto/include:kmac.h",
+    ],
+    deps = [
+        ":integrity",
+        ":keyblob",
+        "//sw/device/lib/base:hardened",
+        "//sw/device/lib/base:hardened_memory",
         "//sw/device/lib/crypto/drivers:kmac",
+        "//sw/device/lib/crypto/drivers:rv_core_ibex",
     ],
 )
 

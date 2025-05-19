@@ -32,9 +32,9 @@ class chip_sw_flash_init_vseq extends chip_sw_base_vseq;
   localparam uint SEED_WIDTH = flash_ctrl_pkg::SeedWidth;
   localparam uint FLASH_PAGE_SIZE_BYTES = flash_ctrl_reg_pkg::BytesPerPage;
   localparam uint FLASH_PAGES_PER_BANK = flash_ctrl_reg_pkg::RegPagesPerBank;
-  localparam uint CREATOR_SECRET_PAGE_ID = flash_ctrl_pkg::CreatorInfoPage;
-  localparam uint OWNER_SECRET_PAGE_ID = flash_ctrl_pkg::OwnerInfoPage;
-  localparam uint ISO_PART_PAGE_ID = flash_ctrl_pkg::IsolatedInfoPage;
+  localparam uint CREATOR_SECRET_PAGE_ID = flash_ctrl_top_specific_pkg::CreatorInfoPage;
+  localparam uint OWNER_SECRET_PAGE_ID = flash_ctrl_top_specific_pkg::OwnerInfoPage;
+  localparam uint ISO_PART_PAGE_ID = flash_ctrl_top_specific_pkg::IsolatedInfoPage;
 
   localparam uint NUM_TEST_WORDS = 16;
   typedef enum {
@@ -342,7 +342,7 @@ class chip_sw_flash_init_vseq extends chip_sw_base_vseq;
             // The actual data is irrelevant as long as the partition becomes locked.
             otp_write_secret2_partition(
               .mem_bkdr_util_h(cfg.mem_bkdr_util_h[Otp]),
-              .rma_unlock_token('0), .creator_root_key0('0), .creator_root_key1('0));
+              .rma_token('0), .creator_root_key_share0('0), .creator_root_key_share1('0));
           end
 
           KeyMgrTest1: begin

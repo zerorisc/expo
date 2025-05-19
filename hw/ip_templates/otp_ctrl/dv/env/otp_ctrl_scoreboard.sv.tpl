@@ -114,8 +114,7 @@ class otp_ctrl_scoreboard #(type CFG_T = otp_ctrl_env_cfg)
         otp_lc_data  = '{default:0};
 % for part in secret_parts:
 <%
-  part_name = Name.from_snake_case(part["name"])
-  part_name_camel = part_name.as_camel_case()
+  part_name_camel = Name.to_camel_case(part["name"])
 %>\
         // secret partitions have been scrambled before writing to OTP.
         // here calculate the pre-srambled raw data when clearing internal OTP to all 0s.
@@ -228,8 +227,7 @@ class otp_ctrl_scoreboard #(type CFG_T = otp_ctrl_env_cfg)
             exp_keymgr_data = '0;
 % for part in otp_mmap["partitions"]:
 <%
-  part_name = Name.from_snake_case(part["name"])
-  part_name_camel = part_name.as_camel_case()
+  part_name_camel = Name.to_camel_case(part["name"])
 %>\
   % if part["iskeymgr_creator"] or part["iskeymgr_owner"]:
     % for item in part["items"]:
@@ -544,7 +542,7 @@ class otp_ctrl_scoreboard #(type CFG_T = otp_ctrl_env_cfg)
     bit data_phase_read   = (!write && channel == DataChannel);
     bit data_phase_write  = (write && channel == DataChannel);
 
-    if (ral_name != "otp_ctrl_prim_reg_block") begin
+    if (ral_name != "otp_macro_reg_block") begin
       process_core_tl_access(item, csr_addr, ral_name, addr_mask,
                              addr_phase_read, addr_phase_write, data_phase_read, data_phase_write);
     end else begin
@@ -1235,8 +1233,7 @@ class otp_ctrl_scoreboard #(type CFG_T = otp_ctrl_env_cfg)
     case (part_idx)
 % for part in buf_parts_without_lc:
 <%
-  part_name = Name.from_snake_case(part["name"])
-  part_name_camel = part_name.as_camel_case()
+  part_name_camel = Name.to_camel_case(part["name"])
 %>\
       ${part_name_camel}Idx: mem_q = otp_a[${part_name_camel}Offset / TL_SIZE : ${part_name_camel}DigestOffset / TL_SIZE - 1];
 % endfor
@@ -1405,7 +1402,7 @@ class otp_ctrl_scoreboard #(type CFG_T = otp_ctrl_env_cfg)
     bit mem_access_allowed = super.is_tl_mem_access_allowed(item, ral_name, mem_byte_access_err,
                                                             mem_wo_err, mem_ro_err, custom_err);
 
-    if (ral_name == "otp_ctrl_prim_reg_block") return mem_access_allowed;
+    if (ral_name == "otp_macro_reg_block") return mem_access_allowed;
 
     // Ensure the address is within the memory window range.
     // Also will skip checking if memory access is not allowed due to TLUL bus error.
@@ -1462,7 +1459,7 @@ class otp_ctrl_scoreboard #(type CFG_T = otp_ctrl_env_cfg)
   endfunction
 
   virtual function bit predict_tl_err(tl_seq_item item, tl_channels_e channel, string ral_name);
-    if (ral_name == "otp_ctrl_prim_reg_block" &&
+    if (ral_name == "otp_macro_reg_block" &&
         cfg.otp_ctrl_vif.lc_dft_en_i != lc_ctrl_pkg::On) begin
       if (channel == DataChannel) begin
         `DV_CHECK_EQ(item.d_error, 1,

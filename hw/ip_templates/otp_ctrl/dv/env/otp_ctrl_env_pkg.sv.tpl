@@ -20,7 +20,7 @@ package otp_ctrl_env_pkg;
   import csr_utils_pkg::*;
   import push_pull_agent_pkg::*;
   import otp_ctrl_core_ral_pkg::*;
-  import otp_ctrl_prim_ral_pkg::*;
+  import otp_macro_ral_pkg::*;
   import otp_ctrl_reg_pkg::*;
   import otp_ctrl_pkg::*;
   import otp_ctrl_part_pkg::*;
@@ -37,17 +37,17 @@ package otp_ctrl_env_pkg;
   `include "dv_macros.svh"
 
   // parameters
-  parameter string LIST_OF_ALERTS[] = {"fatal_macro_error",
-                                       "fatal_check_error",
-                                       "fatal_bus_integ_error",
-                                       "fatal_prim_otp_alert",
-                                       "recov_prim_otp_alert"};
-  parameter uint NUM_ALERTS              = 5;
-  parameter uint NUM_EDN                 = 1;
+  parameter uint NUM_ALERTS = 5;
+  parameter string LIST_OF_ALERTS[NUM_ALERTS] = {"fatal_macro_error",
+                                                 "fatal_check_error",
+                                                 "fatal_bus_integ_error",
+                                                 "fatal_prim_otp_alert",
+                                                 "recov_prim_otp_alert"};
+  parameter uint NUM_EDN             = 1;
 
-  parameter uint DIGEST_SIZE             = 8;
-  parameter uint SW_WINDOW_BASE_ADDR     = 'h${otp_size_as_hex_text};
-  parameter uint SW_WINDOW_SIZE          = NumSwCfgWindowWords * 4;
+  parameter uint DIGEST_SIZE         = 8;
+  parameter uint SW_WINDOW_BASE_ADDR = 'h${otp_size_as_hex_text};
+  parameter uint SW_WINDOW_SIZE      = NumSwCfgWindowWords * 4;
 
   parameter uint TL_SIZE = (TL_DW / 8);
   // LC has its own storage in scb
@@ -82,8 +82,7 @@ package otp_ctrl_env_pkg;
   parameter int PART_BASE_ADDRS [NumPart-1] = {
 % for part in parts_without_lc:
 <%
-  part_name = Name.from_snake_case(part["name"])
-  part_name_camel = part_name.as_camel_case()
+  part_name_camel = Name.to_camel_case(part["name"])
 %>\
     ${part_name_camel}Offset${"" if loop.last else ","}
 % endfor
@@ -93,8 +92,7 @@ package otp_ctrl_env_pkg;
   parameter int PART_OTP_DIGEST_ADDRS [NumPart-1] = {
 % for part in parts_without_lc:
 <%
-  part_name = Name.from_snake_case(part["name"])
-  part_name_camel = part_name.as_camel_case()
+  part_name_camel = Name.to_camel_case(part["name"])
 %>\
 % if part["sw_digest"] or part["hw_digest"]:
     ${part_name_camel}DigestOffset >> 2${"" if loop.last else ","}
@@ -114,8 +112,7 @@ package otp_ctrl_env_pkg;
   typedef enum bit [5:0] {
 % for part in otp_mmap["partitions"]:
 <%
-  part_name = Name.from_snake_case(part["name"])
-  part_name_camel = part_name.as_camel_case()
+  part_name_camel = Name.to_camel_case(part["name"])
 %>\
     Otp${part_name_camel}ErrIdx,
 % endfor

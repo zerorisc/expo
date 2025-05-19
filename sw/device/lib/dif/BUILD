@@ -2,6 +2,9 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+load("//rules/opentitan:util.bzl", "flatten")
+load("//hw/top:defs.bzl", "opentitan_if_ip", "opentitan_require_top")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -55,7 +58,9 @@ DIFS = {
     "pattgen": {},
     "pinmux": {},
     "pwm": {},
-    "pwrmgr": {},
+    "pwrmgr": {
+        "ut_target_compatible_with": opentitan_require_top("earlgrey"),
+    },
     "rom_ctrl": {},
     "rstmgr": {},
     "rv_core_ibex": {},
@@ -103,6 +108,7 @@ DIFS = {
             "dif_{}_unittest.cc".format(ip),
             "//sw/device/lib/dif/autogen:{}_unittest".format(ip),
         ],
+        target_compatible_with = cfg.get("ut_target_compatible_with", []),
         deps = [
             ":{}".format(ip),
             ":test_base",
@@ -143,4 +149,22 @@ cc_library(
         ":base",
         "//hw/top:dt_rstmgr",
     ],
+)
+
+cc_library(
+    name = "all_difs",
+    deps = flatten([
+        # Add all compatible register headers
+        opentitan_if_ip(
+            ip,
+            [":{}".format(ip)],
+            [],
+        )
+        for ip in DIFS.keys()
+    ]),
+)
+
+alias(
+    name = "doxy_target",
+    actual = ":all_difs",
 )

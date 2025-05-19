@@ -52,7 +52,6 @@ module top_englishbreakfast #(
   parameter bit SramCtrlMainInstrExec = 1,
   parameter int SramCtrlMainNumPrinceRoundsHalf = 3,
   parameter bit SramCtrlMainEccCorrection = 0,
-  parameter int SramCtrlMainRaclPolicySelRangesRamNum = 1,
   // parameters for rom_ctrl
   parameter RomCtrlBootRomInitFile = "",
   parameter bit SecRomCtrlDisableScrambling = 1'b1,
@@ -84,7 +83,9 @@ module top_englishbreakfast #(
   parameter int unsigned RvCoreIbexDmHaltAddr = 0,
   parameter int unsigned RvCoreIbexDmExceptionAddr = 0,
   parameter bit RvCoreIbexPipeLine = 0,
-  parameter logic [tlul_pkg::RsvdWidth-1:0] RvCoreIbexTlulHostUserRsvdBits = '0
+  parameter logic [tlul_pkg::RsvdWidth-1:0] RvCoreIbexTlulHostUserRsvdBits = '0,
+  parameter logic [31:0] RvCoreIbexCsrMvendorId = '0,
+  parameter logic [31:0] RvCoreIbexCsrMimpId = '0
 ) (
   // Multiplexed I/O
   input        [46:0] mio_in_i,
@@ -1195,12 +1196,12 @@ module top_englishbreakfast #(
     .InstrExec(SramCtrlMainInstrExec),
     .NumPrinceRoundsHalf(SramCtrlMainNumPrinceRoundsHalf),
     .Outstanding(SramCtrlMainOutstanding),
-    .EccCorrection(SramCtrlMainEccCorrection),
-    .RaclPolicySelRangesRamNum(SramCtrlMainRaclPolicySelRangesRamNum)
+    .EccCorrection(SramCtrlMainEccCorrection)
   ) u_sram_ctrl_main (
       // [22]: fatal_error
       .alert_tx_o  ( alert_tx[22:22] ),
       .alert_rx_i  ( alert_rx[22:22] ),
+      .racl_policy_sel_ranges_ram_i('{top_racl_pkg::RACL_RANGE_T_DEFAULT}),
 
       // Inter-module signals
       .sram_otp_key_o(),
@@ -1212,7 +1213,6 @@ module top_englishbreakfast #(
       .otp_en_sram_ifetch_i(sram_ctrl_main_otp_en_sram_ifetch),
       .racl_policies_i(top_racl_pkg::RACL_POLICY_VEC_DEFAULT),
       .racl_error_o(),
-      .racl_policy_sel_ranges_ram_i({SramCtrlMainRaclPolicySelRangesRamNum{top_racl_pkg::RACL_RANGE_T_DEFAULT}}),
       .sram_rerror_o(),
       .regs_tl_i(sram_ctrl_main_regs_tl_req),
       .regs_tl_o(sram_ctrl_main_regs_tl_rsp),
@@ -1287,7 +1287,9 @@ module top_englishbreakfast #(
     .DmHaltAddr(RvCoreIbexDmHaltAddr),
     .DmExceptionAddr(RvCoreIbexDmExceptionAddr),
     .PipeLine(RvCoreIbexPipeLine),
-    .TlulHostUserRsvdBits(RvCoreIbexTlulHostUserRsvdBits)
+    .TlulHostUserRsvdBits(RvCoreIbexTlulHostUserRsvdBits),
+    .CsrMvendorId(RvCoreIbexCsrMvendorId),
+    .CsrMimpId(RvCoreIbexCsrMimpId)
   ) u_rv_core_ibex (
       // [24]: fatal_sw_err
       // [25]: recov_sw_err

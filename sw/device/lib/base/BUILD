@@ -12,6 +12,7 @@ load(
     "verilator_params",
 )
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
+load("//rules:doxygen.bzl", "doxygen_gather_all_package_cc")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -261,7 +262,19 @@ cc_library(
     name = "random_order",
     srcs = ["random_order.c"],
     hdrs = ["random_order.h"],
-    deps = [":bitfield"],
+    deps = [
+        ":bitfield",
+        ":hardened",
+    ],
+)
+
+cc_test(
+    name = "random_order_unittest",
+    srcs = ["random_order_unittest.cc"],
+    deps = [
+        ":random_order",
+        "@googletest//:gtest_main",
+    ],
 )
 
 cc_library(
@@ -429,4 +442,8 @@ cc_test(
         ":status_report_unittest_c",
         "@googletest//:gtest_main",
     ],
+)
+
+doxygen_gather_all_package_cc(
+    name = "doxy_target",
 )

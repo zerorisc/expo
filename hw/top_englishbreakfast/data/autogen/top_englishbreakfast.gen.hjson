@@ -3087,7 +3087,7 @@
         {
           name: RndCnstAllSeeds
           desc: Compile-time random bits for default seeds
-          type: flash_ctrl_pkg::all_seeds_t
+          type: flash_ctrl_top_specific_pkg::all_seeds_t
           randcount: 512
           randtype: data
           name_top: RndCnstFlashCtrlAllSeeds
@@ -3097,7 +3097,7 @@
         {
           name: RndCnstLfsrSeed
           desc: Compile-time random bits for initial LFSR seed
-          type: flash_ctrl_pkg::lfsr_seed_t
+          type: flash_ctrl_top_specific_pkg::lfsr_seed_t
           randcount: 32
           randtype: data
           name_top: RndCnstFlashCtrlLfsrSeed
@@ -3107,7 +3107,7 @@
         {
           name: RndCnstLfsrPerm
           desc: Compile-time random permutation for LFSR output
-          type: flash_ctrl_pkg::lfsr_perm_t
+          type: flash_ctrl_top_specific_pkg::lfsr_perm_t
           randcount: 32
           randtype: perm
           name_top: RndCnstFlashCtrlLfsrPerm
@@ -3886,15 +3886,6 @@
           expose: "true"
           name_top: SramCtrlMainEccCorrection
         }
-        {
-          name: RaclPolicySelRangesRamNum
-          desc: Number of Racl Policy Selection Ranges for the Ram interface
-          type: int
-          default: 1
-          local: "false"
-          expose: "true"
-          name_top: SramCtrlMainRaclPolicySelRangesRamNum
-        }
       ]
       inter_signal_list:
       [
@@ -4007,27 +3998,6 @@
           type: uni
           act: req
           width: 1
-          inst_name: sram_ctrl_main
-          index: -1
-        }
-        {
-          name: racl_policy_sel_ranges_ram
-          desc: Incoming array of RACL policy ranges.
-          struct: racl_range_t
-          package: top_racl_pkg
-          type: uni
-          act: rcv
-          width:
-          {
-            name: RaclPolicySelRangesRamNum
-            desc: Number of Racl Policy Selection Ranges for the Ram interface
-            param_type: int
-            unpacked_dimensions: null
-            default: 1
-            local: false
-            expose: true
-            name_top: SramCtrlMainRaclPolicySelRangesRamNum
-          }
           inst_name: sram_ctrl_main
           index: -1
         }
@@ -4633,6 +4603,34 @@
           local: "false"
           expose: "true"
           name_top: RvCoreIbexTlulHostUserRsvdBits
+        }
+        {
+          name: CsrMvendorId
+          desc:
+            '''
+            mvendorid: encoding of manufacturer/provider
+            0 indicates this field is not implemented.
+            Ibex implementors may wish to set their own JEDEC ID here.
+            '''
+          type: logic [31:0]
+          default: "'0"
+          local: "false"
+          expose: "true"
+          name_top: RvCoreIbexCsrMvendorId
+        }
+        {
+          name: CsrMimpId
+          desc:
+            '''
+            mimpid: encoding of processor implementation version
+            0 indicates this field is not implemented.
+            Ibex implementors may wish to indicate an RTL/netlist version here using their own unique encoding (e.g. 32 bits of the git hash of the implemented commit).
+            '''
+          type: logic [31:0]
+          default: "'0"
+          local: "false"
+          expose: "true"
+          name_top: RvCoreIbexCsrMimpId
         }
       ]
       inter_signal_list:
@@ -11228,27 +11226,6 @@
         type: uni
         act: req
         width: 1
-        inst_name: sram_ctrl_main
-        index: -1
-      }
-      {
-        name: racl_policy_sel_ranges_ram
-        desc: Incoming array of RACL policy ranges.
-        struct: racl_range_t
-        package: top_racl_pkg
-        type: uni
-        act: rcv
-        width:
-        {
-          name: RaclPolicySelRangesRamNum
-          desc: Number of Racl Policy Selection Ranges for the Ram interface
-          param_type: int
-          unpacked_dimensions: null
-          default: 1
-          local: false
-          expose: true
-          name_top: SramCtrlMainRaclPolicySelRangesRamNum
-        }
         inst_name: sram_ctrl_main
         index: -1
       }

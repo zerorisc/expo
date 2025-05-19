@@ -175,7 +175,7 @@ class cip_base_vseq #(
   virtual task tl_access(input bit [BUS_AW-1:0]  addr,
                          input bit               write,
                          inout bit [BUS_DW-1:0]  data,
-                         input uint             tl_access_timeout_ns = default_spinwait_timeout_ns,
+                         input uint              tl_access_timeout_ns = cfg.tl_access_timeout_ns,
                          input bit [BUS_DBW-1:0] mask = '1,
                          input bit               check_rsp = 1'b1,
                          input bit               exp_err_rsp = 1'b0,
@@ -201,7 +201,7 @@ class cip_base_vseq #(
       inout bit [BUS_DW-1:0]  data,
       output bit              completed,
       output bit              saw_err,
-      input uint              tl_access_timeout_ns = default_spinwait_timeout_ns,
+      input uint              tl_access_timeout_ns = cfg.tl_access_timeout_ns,
       input bit [BUS_DBW-1:0] mask = '1,
       input bit               check_rsp = 1'b1,
       input bit               exp_err_rsp = 1'b0,
@@ -231,23 +231,24 @@ class cip_base_vseq #(
     end
   endtask
 
-  virtual task tl_access_sub(input bit [BUS_AW-1:0]  addr,
-                             input bit               write,
-                             inout bit [BUS_DW-1:0]  data,
-                             output bit              completed,
-                             output bit              saw_err,
-                             output                  cip_tl_seq_item rsp,
-                             input                   uint tl_access_timeout_ns = default_spinwait_timeout_ns,
-                             input bit [BUS_DBW-1:0] mask = '1,
-                             input bit               check_rsp = 1'b1,
-                             input bit               exp_err_rsp = 1'b0,
-                             input bit [BUS_DW-1:0]  exp_data = 0,
-                             input bit [BUS_DW-1:0]  compare_mask = '1,
-                             input bit               check_exp_data = 1'b0,
-                             input int               req_abort_pct = 0,
-                             input                   mubi4_t instr_type = MuBi4False,
-                                                     tl_sequencer tl_sequencer_h = p_sequencer.tl_sequencer_h,
-                             input                   tl_intg_err_e tl_intg_err_type = TlIntgErrNone);
+  virtual task tl_access_sub(
+      input bit [BUS_AW-1:0]  addr,
+      input bit               write,
+      inout bit [BUS_DW-1:0]  data,
+      output bit              completed,
+      output bit              saw_err,
+      output                  cip_tl_seq_item rsp,
+      input                   uint tl_access_timeout_ns = cfg.tl_access_timeout_ns,
+      input bit [BUS_DBW-1:0] mask = '1,
+      input bit               check_rsp = 1'b1,
+      input bit               exp_err_rsp = 1'b0,
+      input bit [BUS_DW-1:0]  exp_data = 0,
+      input bit [BUS_DW-1:0]  compare_mask = '1,
+      input bit               check_exp_data = 1'b0,
+      input int               req_abort_pct = 0,
+      input                   mubi4_t instr_type = MuBi4False,
+      tl_sequencer            tl_sequencer_h = p_sequencer.tl_sequencer_h,
+      input                   tl_intg_err_e tl_intg_err_type = TlIntgErrNone);
 
     cip_tl_host_single_seq tl_seq;
     `uvm_create_on(tl_seq, tl_sequencer_h)
@@ -669,12 +670,32 @@ class cip_base_vseq #(
     end
   endtask
 
+  // Blocks if there's a ping in-flight
+  task wait_until_ping_is_finished(alert_esc_agent_cfg alert_agent_cfg);
+
+    if (alert_agent_cfg.vif.in_ping_st()) begin
+      // There's a 2-cycles sampling delay in the monitor, so if the VIF has already seen the ping.
+      // Wait for it. Otherwise there may be scenarios where the `active_ping` is not yet set
+      // in the monitor due to the 2-cycle delay. Which causes issues predicting the value in
+      // `fatal_alert_cause`
+      wait (alert_agent_cfg.active_ping == 1);
+    end
+    wait (alert_agent_cfg.active_ping == 0);
+  endtask // wait_until_ping_is_finished
+
+
   // if alerts are triggered continuously, there are 6 cycles gap between 2 alerts. 2-3 cycles for
   // clock domain crossing, 2 for pauses, 1 for idle state.
   // So use 7 cycle for default max_wait_cycle.
   virtual task wait_alert_trigger(string alert_name, int max_wait_cycle = 7, bit wait_complete = 0);
-    `DV_SPINWAIT_EXIT(while (!cfg.m_alert_agent_cfgs[alert_name].vif.is_alert_handshaking())
-                      cfg.clk_rst_vif.wait_clks(1);,
+
+    // wait until ping finishes before the dv_spinwait in case
+    // m_alert_agent_cfgs[alert_name].vif.is_alert_handshaking() is true due to a ping
+    wait_until_ping_is_finished(cfg.m_alert_agent_cfgs[alert_name]);
+    `DV_SPINWAIT_EXIT(while (!cfg.m_alert_agent_cfgs[alert_name].vif.is_alert_handshaking()) begin
+                        cfg.clk_rst_vif.wait_clks(1);
+                        wait_until_ping_is_finished(cfg.m_alert_agent_cfgs[alert_name]);
+                      end,
                       // another thread to wait for given cycles. If timeout, report an error.
                       cfg.clk_rst_vif.wait_clks(max_wait_cycle);
                       `uvm_error(`gfn, $sformatf("expect alert:%0s to fire", alert_name)))

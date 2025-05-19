@@ -51,10 +51,13 @@ module ${module_instance_name}
 % if racl_support:
   parameter bit                             EnableRacl             = 1'b0,
   parameter bit                             RaclErrorRsp           = EnableRacl,
-  parameter top_racl_pkg::racl_policy_sel_t RaclPolicySelVec[${module_instance_name}_reg_pkg::NumRegs] = 
-    '{${module_instance_name}_reg_pkg::NumRegs{0}},
+  parameter top_racl_pkg::racl_policy_sel_t
+    RaclPolicySelVecCfg[${module_instance_name}_reg_pkg::NumRegsCfg] =
+      '{${module_instance_name}_reg_pkg::NumRegsCfg{0}},
 % endif
-  parameter logic [tlul_pkg::RsvdWidth-1:0] TlulHostUserRsvdBits   = 0
+  parameter logic [tlul_pkg::RsvdWidth-1:0] TlulHostUserRsvdBits   = 0,
+  parameter logic [31:0]            CsrMvendorId                   = 32'b0,
+  parameter logic [31:0]            CsrMimpId                      = 32'b0
 ) (
   // Clock and Reset
   input  logic        clk_i,
@@ -431,7 +434,9 @@ module ${module_instance_name}
     .DmBaseAddr                  ( DmBaseAddr               ),
     .DmAddrMask                  ( DmAddrMask               ),
     .DmHaltAddr                  ( DmHaltAddr               ),
-    .DmExceptionAddr             ( DmExceptionAddr          )
+    .DmExceptionAddr             ( DmExceptionAddr          ),
+    .CsrMvendorId                ( CsrMvendorId             ),
+    .CsrMimpId                   ( CsrMimpId                )
   ) u_core (
     .clk_i              (ibex_top_clk_i),
     .rst_ni,
@@ -733,8 +738,8 @@ module ${module_instance_name}
   ${module_instance_name}_cfg_reg_top #(
     .EnableRacl(EnableRacl),
     .RaclErrorRsp(RaclErrorRsp),
-    .RaclPolicySelVec(RaclPolicySelVec)
-  ) u_reg_wrap (
+    .RaclPolicySelVec(RaclPolicySelVecCfg)
+  ) u_reg_cfg (
 % else:
   ${module_instance_name}_cfg_reg_top u_reg_cfg (
 % endif

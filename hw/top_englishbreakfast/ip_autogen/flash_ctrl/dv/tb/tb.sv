@@ -7,7 +7,7 @@ module tb;
   import uvm_pkg::*;
   import top_pkg::*;
   import dv_utils_pkg::*;
-  import flash_ctrl_pkg::*;
+  import flash_ctrl_top_specific_pkg::*;
   import flash_ctrl_env_pkg::*;
   import flash_ctrl_test_pkg::*;
   import flash_ctrl_bkdr_util_pkg::flash_ctrl_bkdr_util;
@@ -39,6 +39,8 @@ module tb;
   wire intr_op_done;
   wire intr_err;
   wire [NUM_MAX_INTERRUPTS-1:0] interrupts;
+
+  ast_pkg::ast_obs_ctrl_t obs_ctrl;
 
   // interfaces
   clk_rst_if clk_rst_if (
@@ -74,7 +76,7 @@ module tb;
   `define FLASH_DEVICE_HIER tb.dut.u_eflash.u_flash
   assign fpp_if.req = `FLASH_DEVICE_HIER.flash_req_i;
   assign fpp_if.rsp = `FLASH_DEVICE_HIER.flash_rsp_o;
-  for (genvar i = 0; i < flash_ctrl_pkg::NumBanks; i++) begin : gen_bank_loop
+  for (genvar i = 0; i < flash_ctrl_top_specific_pkg::NumBanks; i++) begin : gen_bank_loop
     assign fpp_if.rreq[i] = tb.dut.u_eflash.gen_flash_cores[i].u_core.u_rd.req_i;
     assign fpp_if.rdy[i] = tb.dut.u_eflash.gen_flash_cores[i].u_core.u_rd.rdy_o;
 
@@ -197,7 +199,12 @@ module tb;
     .intr_op_done_o   (intr_op_done),
     .intr_corr_err_o  (intr_err),
     .alert_rx_i       (alert_rx),
-    .alert_tx_o       (alert_tx)
+    .alert_tx_o       (alert_tx),
+
+    // Observability
+    .obs_ctrl_i(obs_ctrl),
+    .fla_obs_o (        )
+
   );
 
   // Create edge in flash_power_down_h_i, whenever reset is asserted
@@ -258,7 +265,7 @@ module tb;
                  "u_info_mem.gen_generic.u_impl_generic.mem"}, i, j)
 
   if (`PRIM_DEFAULT_IMPL == prim_pkg::ImplGeneric) begin : gen_generic
-    for (genvar i = 0; i < flash_ctrl_pkg::NumBanks; i++) begin : gen_each_bank
+    for (genvar i = 0; i < flash_ctrl_top_specific_pkg::NumBanks; i++) begin : gen_each_bank
       flash_dv_part_e part = part.first();
 
       initial begin
@@ -275,7 +282,7 @@ module tb;
         part = part.next();
       end
 
-      for (genvar j = 0; j < flash_ctrl_pkg::InfoTypes; j++) begin : gen_each_info_type
+      for (genvar j = 0; j < flash_ctrl_top_specific_pkg::InfoTypes; j++) begin : gen_each_info_type
         initial begin
           flash_ctrl_bkdr_util m_mem_bkdr_util;
           m_mem_bkdr_util = new(

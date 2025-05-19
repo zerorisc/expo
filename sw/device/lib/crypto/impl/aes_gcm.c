@@ -9,7 +9,9 @@
 #include "sw/device/lib/base/math.h"
 #include "sw/device/lib/base/memory.h"
 #include "sw/device/lib/crypto/drivers/aes.h"
+#include "sw/device/lib/crypto/drivers/entropy.h"
 #include "sw/device/lib/crypto/drivers/keymgr.h"
+#include "sw/device/lib/crypto/drivers/rv_core_ibex.h"
 #include "sw/device/lib/crypto/impl/aes_gcm/aes_gcm.h"
 #include "sw/device/lib/crypto/impl/aes_gcm/ghash.h"
 #include "sw/device/lib/crypto/impl/integrity.h"
@@ -240,6 +242,9 @@ otcrypto_status_t otcrypto_aes_gcm_encrypt(const otcrypto_blinded_key_t *key,
     return OTCRYPTO_BAD_ARGS;
   }
 
+  // Ensure entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
+
   // Conditionally check for null pointers in data buffers that may be
   // 0-length.
   if ((aad.len != 0 && aad.data == NULL) ||
@@ -290,6 +295,9 @@ otcrypto_status_t otcrypto_aes_gcm_decrypt(
     return OTCRYPTO_BAD_ARGS;
   }
 
+  // Ensure entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
+
   // Construct the AES key.
   aes_key_t aes_key;
   HARDENED_TRY(aes_gcm_key_construct(key, &aes_key));
@@ -320,6 +328,9 @@ otcrypto_status_t otcrypto_aes_gcm_encrypt_init(
     return OTCRYPTO_BAD_ARGS;
   }
 
+  // Ensure entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
+
   // Construct the AES key.
   aes_key_t aes_key;
   HARDENED_TRY(aes_gcm_key_construct(key, &aes_key));
@@ -342,6 +353,9 @@ otcrypto_status_t otcrypto_aes_gcm_decrypt_init(
     return OTCRYPTO_BAD_ARGS;
   }
 
+  // Ensure entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
+
   // Construct the AES key.
   aes_key_t aes_key;
   HARDENED_TRY(aes_gcm_key_construct(key, &aes_key));
@@ -362,6 +376,9 @@ otcrypto_status_t otcrypto_aes_gcm_update_aad(otcrypto_aes_gcm_context_t *ctx,
   if (ctx == NULL || aad.data == NULL) {
     return OTCRYPTO_BAD_ARGS;
   }
+
+  // Ensure entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
 
   if (aad.len == 0) {
     // Nothing to do.
@@ -390,6 +407,9 @@ otcrypto_status_t otcrypto_aes_gcm_update_encrypted_data(
     return OTCRYPTO_BAD_ARGS;
   }
   *output_bytes_written = 0;
+
+  // Ensure entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
 
   if (input.len == 0) {
     // Nothing to do.
@@ -437,6 +457,9 @@ otcrypto_status_t otcrypto_aes_gcm_encrypt_final(
   }
   *ciphertext_bytes_written = 0;
 
+  // Ensure entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
+
   // Check the tag length.
   HARDENED_TRY(aes_gcm_check_tag_length(auth_tag.len, tag_len));
 
@@ -476,6 +499,9 @@ otcrypto_status_t otcrypto_aes_gcm_decrypt_final(
   }
   *plaintext_bytes_written = 0;
   *success = kHardenedBoolFalse;
+
+  // Entropy complex needs to be initialized for `memshred`.
+  HARDENED_TRY(entropy_complex_check());
 
   // Check the tag length.
   HARDENED_TRY(aes_gcm_check_tag_length(auth_tag.len, tag_len));

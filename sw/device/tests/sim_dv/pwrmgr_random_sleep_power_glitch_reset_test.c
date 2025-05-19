@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "dt/dt_adc_ctrl.h"
 #include "sw/device/lib/base/abs_mmio.h"
 #include "sw/device/lib/base/math.h"
 #include "sw/device/lib/base/mmio.h"
@@ -48,6 +49,28 @@ static dif_alert_handler_t alert_handler;
 static dif_aon_timer_t aon_timer;
 static dif_pwrmgr_t pwrmgr;
 static dif_rstmgr_t rstmgr;
+
+static const dt_adc_ctrl_t kAdcCtrlDt = 0;
+static_assert(kDtAdcCtrlCount == 1, "this test expects an adc_ctrl");
+static const dt_rstmgr_t kRstmgrDt = 0;
+static_assert(kDtRstmgrCount == 1, "this test expects a rstmgr");
+static const dt_pwrmgr_t kPwrmgrDt = 0;
+static_assert(kDtPwrmgrCount == 1, "this test expects a pwrmgr");
+static const dt_aon_timer_t kAonTimerDt = 0;
+static_assert(kDtAonTimerCount == 1, "this test expects an aon_timer");
+static const dt_rv_plic_t kRvPlicDt = 0;
+static_assert(kDtRvPlicCount >= 1, "this test expects at least one rv_plic");
+static const dt_flash_ctrl_t kFlashCtrlDt = 0;
+static_assert(kDtFlashCtrlCount >= 1,
+              "this test expects at least one flash_ctrl");
+static const dt_alert_handler_t kAlertHandlerDt = 0;
+static_assert(kDtAlertHandlerCount == 1,
+              "this library expects exactly one alert_handler");
+
+dif_pwrmgr_request_sources_t aon_timer_wakeup_sources;
+dif_pwrmgr_request_sources_t adc_ctrl_wakeup_sources;
+dif_pwrmgr_request_sources_t all_wakeup_sources;
+dif_pwrmgr_request_sources_t wdog_reset_sources;
 
 /**
  * Program the alert handler to escalate on alerts upto phase 2 (i.e. reset) but
@@ -132,34 +155,39 @@ void ottf_external_isr(uint32_t *exc_info) {
  */
 void init_peripherals(void) {
   // Initialize pwrmgr.
-  CHECK_DIF_OK(dif_pwrmgr_init(
-      mmio_region_from_addr(TOP_EARLGREY_PWRMGR_AON_BASE_ADDR), &pwrmgr));
+  CHECK_DIF_OK(dif_pwrmgr_init_from_dt(kPwrmgrDt, &pwrmgr));
 
   // Initialize rstmgr to check the reset reason.
-  CHECK_DIF_OK(dif_rstmgr_init(
-      mmio_region_from_addr(TOP_EARLGREY_RSTMGR_AON_BASE_ADDR), &rstmgr));
+  CHECK_DIF_OK(dif_rstmgr_init_from_dt(kRstmgrDt, &rstmgr));
 
   // Initialize aon timer to use the wdog.
-  CHECK_DIF_OK(dif_aon_timer_init(
-      mmio_region_from_addr(TOP_EARLGREY_AON_TIMER_AON_BASE_ADDR), &aon_timer));
+  CHECK_DIF_OK(dif_aon_timer_init_from_dt(kAonTimerDt, &aon_timer));
+  CHECK_DIF_OK(dif_pwrmgr_find_request_source(
+      &pwrmgr, kDifPwrmgrReqTypeWakeup, dt_aon_timer_instance_id(kAonTimerDt),
+      kDtAonTimerWakeupWkupReq, &aon_timer_wakeup_sources));
 
   // Initialize flash_ctrl
-  CHECK_DIF_OK(dif_flash_ctrl_init_state(
-      &flash_ctrl,
-      mmio_region_from_addr(TOP_EARLGREY_FLASH_CTRL_CORE_BASE_ADDR)));
+  CHECK_DIF_OK(dif_flash_ctrl_init_state_from_dt(&flash_ctrl, kFlashCtrlDt));
 
   // Initialize plic.
-  CHECK_DIF_OK(dif_rv_plic_init(
-      mmio_region_from_addr(TOP_EARLGREY_RV_PLIC_BASE_ADDR), &plic));
+  CHECK_DIF_OK(dif_rv_plic_init_from_dt(kRvPlicDt, &plic));
 
   rv_plic_testutils_irq_range_enable(
       &plic, kPlicTarget, kTopEarlgreyPlicIrqIdAonTimerAonWkupTimerExpired,
       kTopEarlgreyPlicIrqIdAonTimerAonWdogTimerBark);
 
   // Initialize alert handler.
-  CHECK_DIF_OK(dif_alert_handler_init(
-      mmio_region_from_addr(TOP_EARLGREY_ALERT_HANDLER_BASE_ADDR),
-      &alert_handler));
+  CHECK_DIF_OK(dif_alert_handler_init_from_dt(kAlertHandlerDt, &alert_handler));
+
+  // Other wakeups.
+  CHECK_DIF_OK(dif_pwrmgr_find_request_source(
+      &pwrmgr, kDifPwrmgrReqTypeWakeup, dt_adc_ctrl_instance_id(kAdcCtrlDt),
+      kDtAdcCtrlWakeupWkupReq, &adc_ctrl_wakeup_sources));
+  CHECK_DIF_OK(dif_pwrmgr_find_request_source(
+      &pwrmgr, kDifPwrmgrReqTypeReset, dt_aon_timer_instance_id(kDtAonTimerAon),
+      kDtAonTimerResetReqAonTimer, &wdog_reset_sources));
+  CHECK_DIF_OK(dif_pwrmgr_get_all_request_sources(
+      &pwrmgr, kDifPwrmgrReqTypeWakeup, &all_wakeup_sources));
 }
 
 /**
@@ -251,8 +279,8 @@ static void config_escalate(dif_aon_timer_t *aon_timer,
 
 static void low_power_glitch_reset(const dif_pwrmgr_t *pwrmgr) {
   // Program the pwrmgr to go to deep sleep state (clocks off).
-  CHECK_STATUS_OK(pwrmgr_testutils_enable_low_power(
-      pwrmgr, kDifPwrmgrWakeupRequestSourceFive, 0));
+  CHECK_STATUS_OK(
+      pwrmgr_testutils_enable_low_power(pwrmgr, aon_timer_wakeup_sources, 0));
   // Enter in low power mode.
   wait_for_interrupt();
 }
@@ -265,7 +293,7 @@ static void normal_sleep_glitch_reset(const dif_pwrmgr_t *pwrmgr) {
            kDifPwrmgrDomainOptionIoClockInLowPower |
            kDifPwrmgrDomainOptionMainPowerInLowPower;
   CHECK_STATUS_OK(pwrmgr_testutils_enable_low_power(
-      pwrmgr, kDifPwrmgrWakeupRequestSourceFive, config));
+      pwrmgr, aon_timer_wakeup_sources, config));
   // Enter in low power mode.
   wait_for_interrupt();
 }
@@ -296,9 +324,8 @@ static void config_wdog(const dif_aon_timer_t *aon_timer,
   CHECK_STATUS_OK(aon_timer_testutils_watchdog_config(aon_timer, bark_cycles,
                                                       bite_cycles, false));
   // Set wdog as a reset source.
-  CHECK_DIF_OK(dif_pwrmgr_set_request_sources(pwrmgr, kDifPwrmgrReqTypeReset,
-                                              kDifPwrmgrResetRequestSourceTwo,
-                                              kDifToggleEnabled));
+  CHECK_DIF_OK(dif_pwrmgr_set_request_sources(
+      pwrmgr, kDifPwrmgrReqTypeReset, wdog_reset_sources, kDifToggleEnabled));
 }
 
 /**
@@ -314,8 +341,8 @@ static void sleep_wdog_bite_test(const dif_aon_timer_t *aon_timer,
 static void low_power_wdog(const dif_pwrmgr_t *pwrmgr) {
   // Program the pwrmgr to go to deep sleep state (clocks off).
   // Enter in low power mode.
-  CHECK_STATUS_OK(pwrmgr_testutils_enable_low_power(
-      pwrmgr, kDifPwrmgrWakeupRequestSourceTwo, 0));
+  CHECK_STATUS_OK(
+      pwrmgr_testutils_enable_low_power(pwrmgr, adc_ctrl_wakeup_sources, 0));
   LOG_INFO("Low power set for watch dog");
   wait_for_interrupt();
   // If we arrive here the test must fail.
@@ -332,24 +359,19 @@ static void normal_sleep_wdog(const dif_pwrmgr_t *pwrmgr) {
 
   // Enter in low power mode.
   CHECK_STATUS_OK(pwrmgr_testutils_enable_low_power(
-      pwrmgr, kDifPwrmgrWakeupRequestSourceTwo, config));
+      pwrmgr, adc_ctrl_wakeup_sources, config));
   LOG_INFO("Normal sleep set for watchdog");
   wait_for_interrupt();
 }
 
 static void low_power_por(const dif_pwrmgr_t *pwrmgr) {
   // Set por as a reset source.
-  CHECK_DIF_OK(dif_pwrmgr_set_request_sources(pwrmgr, kDifPwrmgrReqTypeReset,
-                                              kDifPwrmgrResetRequestSourceTwo,
-                                              kDifToggleEnabled));
+  CHECK_DIF_OK(dif_pwrmgr_set_request_sources(
+      pwrmgr, kDifPwrmgrReqTypeReset, wdog_reset_sources, kDifToggleEnabled));
 
   // Program the pwrmgr to go to deep sleep state (clocks off).
-  CHECK_STATUS_OK(pwrmgr_testutils_enable_low_power(
-      pwrmgr,
-      (kDifPwrmgrWakeupRequestSourceOne | kDifPwrmgrWakeupRequestSourceTwo |
-       kDifPwrmgrWakeupRequestSourceThree | kDifPwrmgrWakeupRequestSourceFour |
-       kDifPwrmgrWakeupRequestSourceFive | kDifPwrmgrWakeupRequestSourceSix),
-      0));
+  CHECK_STATUS_OK(
+      pwrmgr_testutils_enable_low_power(pwrmgr, all_wakeup_sources, 0));
   // Enter in low power mode.
   wait_for_interrupt();
   // If we arrive here the test must fail.
@@ -358,9 +380,8 @@ static void low_power_por(const dif_pwrmgr_t *pwrmgr) {
 
 static void normal_sleep_por(const dif_pwrmgr_t *pwrmgr) {
   // Set por as a reset source.
-  CHECK_DIF_OK(dif_pwrmgr_set_request_sources(pwrmgr, kDifPwrmgrReqTypeReset,
-                                              kDifPwrmgrResetRequestSourceTwo,
-                                              kDifToggleEnabled));
+  CHECK_DIF_OK(dif_pwrmgr_set_request_sources(
+      pwrmgr, kDifPwrmgrReqTypeReset, wdog_reset_sources, kDifToggleEnabled));
 
   // Place device into low power and immediately wake.
   dif_pwrmgr_domain_config_t config;
@@ -370,12 +391,8 @@ static void normal_sleep_por(const dif_pwrmgr_t *pwrmgr) {
            kDifPwrmgrDomainOptionMainPowerInLowPower;
 
   // Program the pwrmgr to go to swallow sleep state (clocks on).
-  CHECK_STATUS_OK(pwrmgr_testutils_enable_low_power(
-      pwrmgr,
-      (kDifPwrmgrWakeupRequestSourceOne | kDifPwrmgrWakeupRequestSourceTwo |
-       kDifPwrmgrWakeupRequestSourceThree | kDifPwrmgrWakeupRequestSourceFour |
-       kDifPwrmgrWakeupRequestSourceFive | kDifPwrmgrWakeupRequestSourceSix),
-      config));
+  CHECK_STATUS_OK(
+      pwrmgr_testutils_enable_low_power(pwrmgr, all_wakeup_sources, config));
   // Enter in low power mode.
   wait_for_interrupt();
 }

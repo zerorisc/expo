@@ -6,13 +6,12 @@
 
 <%
 from collections import OrderedDict
+from ipgen.clkmgr_gen import config_clk_meas, get_all_srcs, get_rg_srcs
 from topgen.lib import Name
 all_derived_srcs = list(sorted(set([dc['src']['name']
                                     for dc in derived_clks.values()])))
-all_srcs = src_clks.copy()
-all_srcs.update(derived_clks)
-rg_srcs = list(sorted({sig['src_name'] for sig
-                       in typed_clocks['rg_clks'].values()}))
+all_srcs = get_all_srcs(src_clks, derived_clks)
+rg_srcs = get_rg_srcs(typed_clocks)
 %>\
 
 `include "prim_assert.sv"
@@ -361,7 +360,7 @@ rg_srcs = list(sorted({sig['src_name'] for sig
   typedef enum logic [${(len(rg_srcs) + 1).bit_length() - 1}:0] {
     BaseIdx,
 % for src in rg_srcs:
-    Clk${Name.from_snake_case(src).as_camel_case()}Idx,
+    Clk${Name.to_camel_case(src)}Idx,
 % endfor
     CalibRdyLastIdx
   } clkmgr_calib_idx_e;
@@ -388,18 +387,14 @@ rg_srcs = list(sorted({sig['src_name'] for sig
       hw2reg.measure_ctrl_regwen.d = 1'b1;
     end
   end
-<% aon_freq = src_clks['aon']['freq'] %>\
 % for i, src in enumerate(rg_srcs):
 <%
- freq = all_srcs[src]['freq']
- # One bit margin, same bit width as in the reg top
- bit_width = int(freq / aon_freq).bit_length() + 1
- cnt = 2**bit_width
- sel_idx = f"Clk{Name.from_snake_case(src).as_camel_case()}Idx"
+ width, ref_cnt, _ = config_clk_meas(src, all_srcs)
+ sel_idx = f"Clk{Name.to_camel_case(src)}Idx"
 %>
   clkmgr_meas_chk #(
-    .Cnt(${cnt}),
-    .RefCnt(1)
+    .Cnt(${2**width}),
+    .RefCnt(${ref_cnt})
   ) u_${src}_meas (
     .clk_i,
     .rst_ni,
@@ -503,8 +498,7 @@ rg_srcs = list(sorted({sig['src_name'] for sig
 
   logic [${len(typed_clocks['hint_clks'])-1}:0] idle_cnt_err;
 % for clk, sig in typed_clocks['hint_clks'].items():
-<%assert_name = Name.from_snake_case(clk)
-%>
+
   clkmgr_trans #(
 % if clk == "clk_main_kmac":
     .FpgaBufGlobal(1'b1) // KMAC is getting too big for a single clock region.
@@ -535,7 +529,7 @@ rg_srcs = list(sorted({sig['src_name'] for sig
     .reg_cnt_err_o(idle_cnt_err[${hint_names[clk]}])
   );
   `ASSERT_PRIM_COUNT_ERROR_TRIGGER_ALERT(
-    ${assert_name.as_camel_case()}CountCheck_A,
+    ${Name.to_camel_case(clk)}CountCheck_A,
     u_${clk}_trans.u_idle_cnt,
     alert_tx_o[1])
 % endfor
