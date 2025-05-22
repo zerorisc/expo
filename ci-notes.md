@@ -1,4 +1,12 @@
-# Notes on bringing up CI
+# Local Github Runner Bringup Notes
+
+Notes for bringing up a local github runner, so you're not relying on github actions
+cloud instances/GCP to run things. Also allows for integration with Vivado directly
+to hardware since it is running on a local server.
+
+The basic setup is an Ubuntu machine with LXD, running a virtual machine. The LXD
+machine has a bridged network connection so that it has full network connectivity,
+and "resourced up" (10 core / 32G RAM / 300G limits).
 
 ## Bazel install
 
