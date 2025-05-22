@@ -8,6 +8,7 @@ The basic setup is an Ubuntu machine with LXD, running a virtual machine. The LX
 machine has a bridged network connection so that it has full network connectivity,
 and "resourced up" (10 core / 32G RAM / 300G limits).
 
+
 ## Bazel install
 
 Bazel has to be installed from source because ubuntu doesn't have a suitably late version:
