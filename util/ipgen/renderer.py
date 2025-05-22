@@ -285,7 +285,7 @@ class IpBlockRenderer(IpTemplateRendererBase):
                 time.sleep(0.2)
             except OSError as e:
                 msg = (f'Cannot move staging directory {staging_dir} to '
-                    f'{output_dir}.')
+                       f'{output_dir}.')
                 raise TemplateRenderError(msg).with_traceback(e.__traceback__)
 
         if do_overwrite:
