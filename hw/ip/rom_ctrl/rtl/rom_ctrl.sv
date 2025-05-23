@@ -477,18 +477,18 @@ module rom_ctrl
 
   // Assertions to check that we've wired up our alert bits correctly
   if (!SecDisableScrambling) begin : gen_asserts_with_scrambling
-    `ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT(CompareFsmAlert_A,
-                                         gen_fsm_scramble_enabled.
-                                         u_checker_fsm.u_compare.u_state_regs,
-                                         alert_tx_o[AlertFatal])
+    `ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT_IN(CompareFsmAlert_A,
+                                            gen_fsm_scramble_enabled.
+                                            u_checker_fsm.u_compare.u_state_regs,
+                                            gen_alert_tx[AlertFatal].u_alert_sender.alert_req_i)
     `ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT(CheckerFsmAlert_A,
                                          gen_fsm_scramble_enabled.
                                          u_checker_fsm.u_state_regs,
                                          alert_tx_o[AlertFatal])
-    `ASSERT_PRIM_COUNT_ERROR_TRIGGER_ALERT(CompareAddrCtrCheck_A,
-                                           gen_fsm_scramble_enabled.
-                                           u_checker_fsm.u_compare.u_prim_count_addr,
-                                           alert_tx_o[AlertFatal])
+    `ASSERT_PRIM_COUNT_ERROR_TRIGGER_ALERT_IN(CompareAddrCtrCheck_A,
+                                              gen_fsm_scramble_enabled.
+                                              u_checker_fsm.u_compare.u_prim_count_addr,
+                                              gen_alert_tx[AlertFatal].u_alert_sender.alert_req_i)
   end
 
   // The pwrmgr_data_o output (the "done" and "good" signals) should have a known value when out of
@@ -524,23 +524,25 @@ module rom_ctrl
   `ASSERT(KeymgrValidChk_A, keymgr_data_o.valid |=> keymgr_data_o.valid,
           clk_i, !rst_ni || internal_alert)
 
-  // Check that rom_tl_o.d_valid is not asserted unless pwrmgr_data_o.done is asseterd.
-  // This check ensures that all tl accesses are blocked until rom check is completed. You might
-  // think we could check for a_ready, but that doesn't work because the TL to SRAM adapter has a
-  // 1-entry cache that accepts the transaction (but doesn't reply)
-  `ASSERT(TlAccessChk_A,
-          (pwrmgr_data_o.done == prim_mubi_pkg::MuBi4False) |->
-          (!rom_tl_o.d_valid || (rom_tl_o.d_valid && rom_tl_o.d_error)))
+  // It should not be possible to read from the ROM unless the check has finished, implying that
+  // pwrmgr_data_o.done is MuBi4True.
+  //
+  // This precise statement is a bit tricky, because pwrmgr_data_o.done can revert back to
+  // MuBi4False (because of an injected error or unexpected message from KMAC) and the response fifo
+  // might supply data after that happens. To avoid this problem, we actually look at the
+  // bus_rom_rvalid signal, which is a validity bit for data coming back from the ROM that will be
+  // supplied to the TileLink interface.
+  `ASSERT(NoReadsBeforeDone_A,
+          pwrmgr_data_o.done != prim_mubi_pkg::MuBi4True -> !bus_rom_rvalid)
 
   // Check that whenever there is an alert triggered and FSM state is Invalid, there is no response
   // to read requests.
   if (!SecDisableScrambling) begin : gen_fsm_scramble_enabled_asserts
 
     `ASSERT(InvalidStateTerminal_A,
-            gen_fsm_scramble_enabled.u_checker_fsm.state_d == rom_ctrl_pkg::Invalid |=>
-            gen_fsm_scramble_enabled.u_checker_fsm.state_d == rom_ctrl_pkg::Invalid)
+            ##1 !$fell(gen_fsm_scramble_enabled.u_checker_fsm.state_d == rom_ctrl_pkg::Invalid))
     `ASSERT(BusLocalEscChk_A,
-            gen_fsm_scramble_enabled.u_checker_fsm.state_d == rom_ctrl_pkg::Invalid |->
+            gen_fsm_scramble_enabled.u_checker_fsm.state_d == rom_ctrl_pkg::Invalid |=>
             !bus_rom_rvalid)
   end
 
