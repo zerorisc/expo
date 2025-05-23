@@ -1,0 +1,22 @@
+CAPI=2:
+# (c) Copyright CrossBar, Inc. 2025.
+# This file is licensed under the [CERN-OHL-W-2.0].
+# SPDX-License-Identifier: CERN-OHL-W-2.0
+
+name: "crossbar:daric2_constants:top_pkg"
+description: "Toplevel-wide constants for Daric2"
+virtual:
+  - crossbar:virtual_constants:top_pkg
+
+filesets:
+  files_rtl:
+    depend:
+      - lowrisc:prim:util
+    files:
+      - rtl/top_pkg.sv
+    file_type: systemVerilogSource
+
+targets:
+  default:
+    filesets:
+      - files_rtl

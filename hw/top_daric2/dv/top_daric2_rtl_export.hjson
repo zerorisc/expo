@@ -1,0 +1,22 @@
+// (c) Copyright CrossBar, Inc. 2025.
+// This file is licensed under the [CERN-OHL-W-2.0].
+// SPDX-License-Identifier: CERN-OHL-W-2.0
+{
+  // This is a cfg hjson group for DV simulations. It includes ALL individual DV simulation
+  // cfgs of the IPs and the full chip used in top_darjeeling. This enables the common
+  // regression sets to be run in one shot.
+  name: top_daric2_rtl_export
+
+  import_cfgs: [// Project wide common cfg file
+                "{proj_root}/hw/data/common_project_cfg.hjson"]
+
+  flow: sim
+
+  rel_path: "hw/top_daric2/dv/summary"
+
+  // Maintain alphabetical order below.
+  use_cfgs: [
+             // Top level.
+             "{proj_root}/hw/top_daric2/dv/chip_export_cfg.hjson",
+            ]
+}
