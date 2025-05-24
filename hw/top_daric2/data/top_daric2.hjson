@@ -503,7 +503,7 @@
         hart: "0x30460000",
       },
       attr: "ipgen",
-    },    
+    },
     { name: "aon_timer_aon",
       type: "aon_timer",
       clock_srcs: {clk_i: "io_div4", clk_aon_i: "aon"},

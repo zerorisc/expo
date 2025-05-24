@@ -109,7 +109,7 @@
     // The ibex instruction fetch port does NOT have access to these
     // peripherals.
     main:  [
-      "uart0", 
+      "uart0",
       "gpio",
       "rv_timer",
       "pwrmgr_aon", "rstmgr_aon", "clkmgr_aon", "pinmux_aon",
