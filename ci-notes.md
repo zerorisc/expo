@@ -114,15 +114,15 @@ creates output files in `$OT_ROOT/scratch/win-tweaks/chip_darjeeling_asic-sim-vc
 
 This version of the invocation seems to create 'padring' primitives which is probably closer to what we're looking for.
 
-`python3 ./util/dvsim/dvsim.py ./hw/top_daric2/dv/top_daric2_rtl_export.hjson`
+`python3 ./util/dvsim/dvsim.py ./hw/top_denarius/dv/top_denarius_rtl_export.hjson`
 
 
 Commands that are working now:
 
 This generates all the autogen stuff:
-python3 ./util/topgen.py --clear-cache -t ./hw/top_daric2/data/top_daric2.hjson -o ./hw/top_daric2/
+python3 ./util/topgen.py --clear-cache -t ./hw/top_denarius/data/top_denarius.hjson -o ./hw/top_denarius/
 
 This generates the include list in build/<design>:
 
 export OT_ROOT=/mnt/f/code/expo
-fusesoc --cores-root=$OT_ROOT run --target=sim --setup crossbar:systems:top_daric2:0.1
+fusesoc --cores-root=$OT_ROOT run --target=sim --setup crossbar:systems:top_denarius:0.1

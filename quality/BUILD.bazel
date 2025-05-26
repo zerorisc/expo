@@ -79,7 +79,7 @@ licence_test(
         "hw/ip/kmac/pre_sca/alma/cpp/verilator_tb_keccak_2share.cpp",
 
         # Crossbar files. Uses CERN OHL.
-        "hw/top_daric2/**",
+        "hw/top_denarius/**",
     ],
     licence = """
     Copyright lowRISC contributors (OpenTitan project).
