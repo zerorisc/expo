@@ -1,0 +1,620 @@
+// Copyright lowRISC contributors (OpenTitan project).
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+{
+  // Name of the sim cfg - typically same as the name of the DUT.
+  name: chip
+
+  // Top level dut name (sv module).
+  dut: chip_denarius_asic
+
+  // The name of the top level of this chip configuration.
+  top_chip: top_denarius
+
+  // Top level testbench name (sv module).
+  tb: tb
+
+  // Default simulator used to sign off.
+  tool: vcs
+
+  // Fusesoc core file used for building the file list.
+  fusesoc_core: crossbar:dv:top_denarius_chip_export:0.1
+
+  // Testplan hjson file, excluding the connectivity tests.
+  testplan: "{proj_root}/hw/{top_chip}/data/chip_testplan.hjson:-conn:-no_dv"
+
+  // RAL spec - used to generate the RAL model.
+  ral_spec: "{proj_root}/hw/{top_chip}/data/{top_chip}.hjson"
+
+  // Add additional tops for simulation.
+  sim_tops: ["clkmgr_bind",
+             "pwrmgr_bind",
+             "rstmgr_bind",
+             "sec_cm_prim_onehot_check_bind",
+             "sec_cm_prim_sparse_fsm_flop_bind",
+             "{top_chip}_error_injection_ifs_bind",
+             "{top_chip}_bind",
+             "xbar_dbg_bind",
+             "xbar_main_bind",
+             "xbar_peri_bind"]
+
+  top_dv_path: "{proj_root}/hw/{top_chip}/dv"
+  top_autogen_path: "{proj_root}/hw/{top_chip}/ip_autogen"
+
+  // Import additional common sim cfg files.
+  import_cfgs: [// Project wide common sim cfg file
+                "{proj_root}/hw/dv/tools/dvsim/common_sim_cfg.hjson",
+                // Common CIP test lists
+                // Enable C compilation of AES model for DPI-C
+                "{proj_root}/hw/ip/aes/model/aes_model_sim_opts.hjson",
+
+                "{proj_root}/hw/ip/tlul/generic_dv/xbar_tests.hjson",
+                // Config files to get the correct flags for otbn_memutil and otbn_tracer
+                "{proj_root}/hw/dv/verilator/memutil_dpi_scrambled_opts.hjson",
+                "{proj_root}/hw/ip/otbn/dv/memutil/otbn_memutil_sim_opts.hjson",
+                "{proj_root}/hw/ip/otbn/dv/tracer/otbn_tracer_sim_opts.hjson",
+                // This defines the design_level: "top" key
+//                "{proj_root}/hw/{top_chip}/data/chip_cfg.hjson",
+                "{top_dv_path}/chip_smoketests.hjson",
+                "{top_dv_path}/chip_rom_tests.hjson",
+                ]
+
+  // Override existing project defaults to supply chip-specific values.
+  overrides: [
+    // Chip level design is markedly different from our Comportable IPs (and so
+    // is our coverage goals). The coverage goals also differ between 'default'
+    // and the 'cover_reg_top' (used by common tests) builds. We override the
+    // variables below to swap the coverage cfg files used for the Comportable
+    // IPs with chip-specific ones. See `doc/ug/dv_methodology.md` for more
+    // details.
+
+    // Used by all chip level functional test. Collects coverage on the IO
+    // boundary of all pre-verified IPs and full coverage on non-pre-verified
+    // IPs. See `hw/dv/tools/dvsim/common_sim_cfg.hjson` for the default value.
+    {
+      name: default_vcs_cov_cfg_file
+      value: "-cm_hier {top_dv_path}/cov/chip_cover.cfg+{top_dv_path}/autogen/xbar_tgl_excl.cfg+{top_dv_path}/autogen/rstmgr_tgl_excl.cfg+{top_dv_path}/cov/clkmgr_tgl_excl.cfg+{top_dv_path}/cov/pwrmgr_tgl_excl.cfg -cm_fsmcfg {top_dv_path}/cov/chip_fsm.cfg"
+    }
+    // Used by 'cover_reg_top' only builds - we only cover the *_reg_top of
+    // the non-pre-verified modules at the chip level. See
+    // `hw/dv/tools/dvsim/common_sim_cfg.hjson` for the default value.
+    {
+      name: cover_reg_top_vcs_cov_cfg_file
+      value: "-cm_hier {top_dv_path}/cov/chip_cover_reg_top.cfg+{top_dv_path}/autogen/xbar_tgl_excl.cfg"
+    }
+    {
+      name: xbar_build_mode_vcs_cov_cfg_file
+      value: "-cm_hier {top_dv_path}/cov/chip_cover_reg_top.cfg+{top_dv_path}/autogen/xbar_tgl_excl.cfg"
+    }
+    // Used by the UNR flow.
+    {
+      name: vcs_unr_cfg_file
+      value: "{top_dv_path}/cov/unr.cfg"
+    }
+
+    // Used for xprop config.
+    {
+      name: vcs_xprop_cfg_file
+      value: "{top_dv_path}/vcs_xprop.cfg"
+    }
+    // The jtag agent requires the data and bytenable widths to be increased.
+    {
+      name: tl_dw
+      value: 64
+    }
+    {
+      name: tl_dbw
+      value: 8
+    }
+  ]
+
+  // exclusion files
+  vcs_cov_excl_files: ["{top_dv_path}/cov/chip_top_unr_tied_off.el",
+                       "{top_dv_path}/cov/conn_ast_mem_cfg.el",
+                       "{top_dv_path}/cov/conn_flash_ctrl_ast_obs_test_volt.el",
+                       "{top_dv_path}/cov/conn_otp_ctrl_ast_obs_ext_volt.el",
+                       "{top_dv_path}/cov/edn1_unr_tied_off_ports.el",
+                       "{top_dv_path}/cov/lc_ctrl_hw_rev_tied_off.el",
+                       "{top_dv_path}/cov/pinmux_pad_attr.el",
+                       "{top_dv_path}/cov/plic_le_i_tied_off.el",
+                       "{top_dv_path}/cov/plic_ip_wr_en_tied_off.el",
+                       "{top_dv_path}/cov/rom_ctrl_kmac_app_tied_off_data_strb_bits.el",
+                       "{top_dv_path}/cov/spi_host_device_unr_tied_off.el"
+                       ]
+
+  // Map build mode specific cov file to default
+  pad_ctrl_test_mode_vcs_cov_cfg_file: "-cm_hier {top_dv_path}/cov/chip_cover.cfg+{top_dv_path}/autogen/xbar_tgl_excl.cfg+{top_dv_path}/autogen/rstmgr_tgl_excl.cfg+{top_dv_path}/cov/clkmgr_tgl_excl.cfg+{top_dv_path}/cov/pwrmgr_tgl_excl.cfg -cm_fsmcfg {top_dv_path}/cov/chip_fsm.cfg"
+  pad_ctrl_test_mode_xcelium_cov_cfg_file: "{dv_root}/tools/xcelium/cover.ccf"
+
+  // Default iterations for all tests - each test entry can override this.
+  reseed: 3
+
+  // exports: [
+  //   Uncomment if using manufacturer tests / test hooks that live somewhere
+  //   else on your system, outside of $REPO_TOP. See
+  //   sw/device/tests/closed_source/README.md for more details.
+  //   {MANUFACTURER_HOOKS_DIR: "/path/to/manufacturer_hooks_dir"},
+  //   Uncomment if you are using the `--data-perm` OTP image generation flag,
+  //   when building OTP images with Bazel.
+  //   {BAZEL_OTP_DATA_PERM_FLAG: "[15:0],[23:16]"},
+  // ]
+
+  // Default UVM test and seq class name.
+  uvm_test: chip_base_test
+  uvm_test_seq: chip_sw_base_vseq
+  sw_build_device: sim_dv
+
+  // Add a default software build option to indicates that this is denarius.
+  sw_build_opts: ["--//hw/top=denarius"]
+
+  build_opts: [
+    // Add a default build option to indicate it is a top-level DV testbench.
+    "+define+TOP_LEVEL_DV",
+
+    // Ensure that the RISC-V JTAG agent uses DMI rather than direct TL-UL;
+    // this is required by the JTAG mailbox interface.
+    "+define+USE_DMI_INTERFACE"
+  ]
+
+  // Add build modes.
+  build_modes: [
+    {
+      name: en_ibex_tracer
+      build_opts: ["+define+RVFI=1"]
+    }
+    // Build mode that configures a testbench in a manner suitable for pad
+    // testing. For example, the testbench may need to have different agents
+    // or interfaces connected to the pads for marked tests.
+    {
+      name: pad_ctrl_test_mode
+      build_opts: ["+define+PADTEST"]
+    }
+    // Sim mode that enables build randomization. See the `build_seed` mode
+    // defined in `hw/dv/tools/dvsim/common_modes.hjson` for more details.
+    {
+      name: build_seed
+      pre_build_cmds: [
+        // TODO: find where in run phase we are using this pkg. It fails during ibex TLUL integrity
+        // check.
+        // '''cd {proj_root} && ./util/topgen.py -t {ral_spec} \
+        //        -o hw/{top_chip} --rnd_cnst_seed {seed}
+        // ''',
+        // Generate LC encoding
+        "cd {proj_root} && ./util/design/gen-lc-state-enc.py --seed {seed}",
+        // Generate OTP memory map and scrambling constants keys.
+        "cd {proj_root} && ./util/design/gen-otp-mmap.py --seed {seed}",
+        // Use eval_cmd to save build_seed in a file and reuse that file during run phase.
+        // Create the build directory first because eval_cmd runs before actual build phase command
+        // execution.
+        '''{eval_cmd} mkdir -p {build_dir}; echo {seed} > {build_seed_file_path}; \
+           echo "echo create file {build_seed_file_path}"
+        '''
+      ]
+      is_sim_mode: 1
+    }
+    // Build mode that disables rom integrity checks, so use it only for
+    // test development.
+    // DO NOT USE FOR NIGHTLY
+    {
+      name: fast_sim_build_dev
+      build_opts: ["+define+DISABLE_ROM_INTEGRITY_CHECK"]
+      is_sim_mode: 1
+    }
+    // This fast sim mode adds AST runtime plusargs from the fast_sim run
+    // mode on top of disabling rom integrity checks. It is the fastest way
+    // to run a test.
+    // DO NOT USE FOR NIGHTLY
+    {
+      name: fast_sim_dev
+      en_build_modes: ["fast_sim_build_dev"]
+      run_opts: ["+accelerate_cold_power_up_time=3",
+                 "+accelerate_regulators_power_up_time=2"]
+      is_sim_mode: 1
+    }
+    // TODO: VCS does not support MDAs in constfiles. Most RTL ports in OpenTitan are structs, so
+    // this method currently does not work for our needs. Revisit later.
+    // {
+    //   name: vcs_cov
+    //   build_opts: ["-cm_constfile {top_dv_path}/cov/constfile.txt"]
+    //   is_sim_mode: 1
+    // }
+    {
+      name: cover_reg_top
+    }
+  ]
+
+  // Add options needed to compile against otbn_memutil, otbn_tracer,
+  // memutil_dpi_scrambled, and AES C model
+  en_build_modes: [// "{tool}_otbn_memutil_build_opts",
+                   // "{tool}_otbn_tracer_build_opts",
+                   // "{tool}_memutil_dpi_scrambled_build_opts",
+                   // "{tool}_aes_model_build_opts"
+                   ]
+
+  // Setup for generating OTP images.
+  gen_otp_images_cfg_dir: "{proj_root}/hw/{top_chip}/data/otp"
+  gen_otp_images_cmd: "{proj_root}/util/design/gen-otp-img.py"
+  gen_otp_images_cmd_opts: ["--quiet",
+                            "--img-seed {seed}",
+                            // Only provide `--otp-seed` argument if the file to store build_seed
+                            // is found. Set this option at the end of the list to avoid `eval_cmd`
+                            // take other options as eval_cmd.
+                            '''{eval_cmd} file=`echo {build_seed_file_path}`; \
+                               if [ -f $file ]; then \
+                                 while read line; do \
+                                   echo "--otp-seed $line --lc-seed $line"; \
+                                 done < $file; \
+                               fi ''']
+
+  run_opts: ["+cdc_instrumentation_enabled=1"]
+
+  // Add run modes.
+  run_modes: [
+    // Generates OTP images with different LC states with canonical values,
+    // pseudo-randomized with the same test seed.
+    {
+      name: gen_otp_images_mode
+      pre_run_cmds: [
+        '''{gen_otp_images_cmd} \
+              --mmap-def {gen_otp_images_cfg_dir}/otp_ctrl_mmap.hjson \
+              --img-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_raw.hjson \
+              --out {run_dir}/otp_ctrl_img_raw.vmem \
+              {gen_otp_images_cmd_opts}
+        ''',
+        '''{gen_otp_images_cmd} \
+              --mmap-def {gen_otp_images_cfg_dir}/otp_ctrl_mmap.hjson \
+              --img-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_test_unlocked0.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_hw_cfg.hjson \
+              --out {run_dir}/otp_ctrl_img_test_unlocked0.vmem \
+              {gen_otp_images_cmd_opts}
+        ''',
+        '''{gen_otp_images_cmd} \
+              --mmap-def {gen_otp_images_cfg_dir}/otp_ctrl_mmap.hjson \
+              --img-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_test_unlocked1.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_hw_cfg.hjson \
+              --out {run_dir}/otp_ctrl_img_test_unlocked1.vmem \
+              {gen_otp_images_cmd_opts}
+        ''',
+        '''{gen_otp_images_cmd} \
+              --mmap-def {gen_otp_images_cfg_dir}/otp_ctrl_mmap.hjson \
+              --img-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_test_unlocked2.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_hw_cfg.hjson \
+              --out {run_dir}/otp_ctrl_img_test_unlocked2.vmem \
+              {gen_otp_images_cmd_opts}
+        ''',
+        '''{gen_otp_images_cmd} \
+              --mmap-def {gen_otp_images_cfg_dir}/otp_ctrl_mmap.hjson \
+              --img-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_test_locked0.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_hw_cfg.hjson \
+              --out {run_dir}/otp_ctrl_img_test_locked0.vmem \
+              {gen_otp_images_cmd_opts}
+        ''',
+        '''{gen_otp_images_cmd} \
+              --mmap-def {gen_otp_images_cfg_dir}/otp_ctrl_mmap.hjson \
+              --img-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_test_locked1.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_hw_cfg.hjson \
+              --out {run_dir}/otp_ctrl_img_test_locked1.vmem \
+              {gen_otp_images_cmd_opts}
+        ''',
+        '''{gen_otp_images_cmd} \
+              --mmap-def {gen_otp_images_cfg_dir}/otp_ctrl_mmap.hjson \
+              --img-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_dev.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_creator_sw_cfg.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_owner_sw_cfg.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_hw_cfg.hjson \
+              --out {run_dir}/otp_ctrl_img_dev.vmem \
+              {gen_otp_images_cmd_opts}
+        ''',
+        '''{gen_otp_images_cmd} \
+              --mmap-def {gen_otp_images_cfg_dir}/otp_ctrl_mmap.hjson \
+              --img-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_prod.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_creator_sw_cfg.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_owner_sw_cfg.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_hw_cfg.hjson \
+              --out {run_dir}/otp_ctrl_img_prod.vmem \
+              {gen_otp_images_cmd_opts}
+        ''',
+        '''{gen_otp_images_cmd} \
+              --mmap-def {gen_otp_images_cfg_dir}/otp_ctrl_mmap.hjson \
+              --img-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_rma.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_creator_sw_cfg.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_owner_sw_cfg.hjson \
+              --add-cfg {gen_otp_images_cfg_dir}/otp_ctrl_img_hw_cfg.hjson \
+              --out {run_dir}/otp_ctrl_img_rma.vmem \
+              {gen_otp_images_cmd_opts}
+        ''',
+      ]
+    }
+    // fast_sim mode enables public faster simulation via AST plusargs.
+    // This may be okay to use for public regressions, with the possible
+    // exception of a handful of AST tests.
+    {
+      name: fast_sim
+      run_opts: ["+accelerate_cold_power_up_time=3",
+                 "+accelerate_regulators_power_up_time=2"]
+    }
+    {
+      name: sw_test_mode_common
+      run_opts: ["+sw_build_device={sw_build_device}",
+                 // Format SW image names (which are Bazel labels concatenated with an index
+                 // and/or flags, see below) into output file names separated by commas to feed into
+                 // +sw_images plusarg. For example, if the input list of SW images is
+                 // ["//sw/device/tests:uart_tx_rx_test:6",
+                 //  "//sw/device/lib/testing/test_rom:test_rom:0"], then the output of this eval_cmd
+                 // will be: "uart_tx_rx_test:6,test_rom:0".
+                 '''+sw_images={eval_cmd} \
+                 reformatted_sw_images=; \
+                 for image in {sw_images}; do \
+                   reformatted_sw_images="$reformatted_sw_images `echo $image | cut -d: -f2-`"; \
+                 done; \
+                 echo $reformatted_sw_images | sed -E 's/\s+/,/g' ''']
+      en_run_modes: ["gen_otp_images_mode"]
+    }
+    {
+      name: sw_test_mode_test_rom
+      sw_images: ["//sw/device/lib/testing/test_rom:test_rom:0"]
+      en_run_modes: ["sw_test_mode_common"]
+    }
+    {
+      name: sw_test_mode_rom_with_fake_keys
+      sw_images: ["//sw/device/silicon_creator/rom:rom_with_fake_keys:0"]
+      en_run_modes: ["sw_test_mode_common"]
+    }
+    {
+      name: sw_test_mode_base_rom_with_fake_keys
+      sw_images: ["//sw/device/silicon_creator/rom:base_rom_with_fake_keys:0"]
+      en_run_modes: ["sw_test_mode_common"]
+    }
+    {
+      name: sw_test_mode_rom_with_real_keys
+      sw_images: ["//sw/device/silicon_creator/rom:rom_with_real_keys:0"]
+      en_run_modes: ["sw_test_mode_common"]
+    }
+    {
+      name: stub_cpu_mode
+      // Note that the chip_base_vseq will preload a random ROM image with valid ECC and digest
+      // so that the ROM check can succeed even if no ROM image is built and supplied via Bazel.
+      en_run_modes: ["gen_otp_images_mode"]
+      run_opts: ["+stub_cpu=1"]
+    }
+    {
+      // Append stub cpu mode to csr_tests_mode.
+      name: csr_tests_mode
+      en_run_modes: ["stub_cpu_mode"]
+    }
+    {
+      // Append stub cpu mode to mem_tests_mode.
+      name: mem_tests_mode
+      en_run_modes: ["stub_cpu_mode"]
+      reseed: 20
+    }
+    {
+      name: strap_tests_mode
+      en_run_modes: ["sw_test_mode_common"]
+      // The tests using this mode only require the ROM init check to succeed.
+      // The example_test_from_rom test is sufficient.
+      sw_images: ["//sw/device/tests:example_test_from_rom:0:test_in_rom"]
+      run_opts: ["+create_jtag_riscv_map=1"]
+      reseed: 5
+    }
+    {
+      name: xbar_run_mode
+      en_run_modes: ["gen_otp_images_mode"]
+      run_opts: ["+xbar_mode=1"]
+      reseed: 100
+    }
+  ]
+
+  // List of test specifications.
+  //
+  // If you are adding a test that has been generated from a Bazel
+  // `opentitan_functest` macro, you can specify the test using its Bazel label
+  // followed by an index separated with a ':', which is used by the testbench
+  // to know what type of image is it:
+  // - 0 for Boot ROM,
+  // - 1 for SW test (loaded in flash),
+  // - 2 for OTBN test, and
+  // - 3 for OTP.
+  // This allows an arbitrary number of SW images to be supplied to the TB.
+  //
+  // For example, if the Bazel label for a test is:
+  // `//sw/device/tests:example_test_from_flash`, then you would specify this as
+  // `//sw/device/tests:example_test_from_flash:1`.
+  //
+  // To calculate the value of `+sw_test_timeout_ns` run dvsim by:
+  // $ util/dvsim/dvsim.py hw/{top_chip}/dv/{top_chip}_sim_cfgs.hjson \
+  //       -i TEST_NAME --fixed-seed=1
+  // Run this a few times and take the worst case runtime, then  increase this
+  // value by 20% and use the relationship that 5 minutes of runtime is roughly
+  // 4 milliseconds of timeout.
+  tests: [
+    {
+      // Reused from hw/dv/tools/dvsim/tests/csr_tests.hjson.
+      name: "chip_csr_bit_bash"
+      // Don't test over 200 randomly picked CSRs at a time.
+      run_opts: ["+test_timeout_ns=120_000_000", "+num_test_csrs=200"]
+      run_timeout_mins: 180
+    }
+    {
+      // Reused from hw/dv/tools/dvsim/tests/csr_tests.hjson.
+      name: "chip_csr_aliasing"
+      run_timeout_mins: 180
+      run_opts: ["+test_timeout_ns=120_000_000"]
+    }
+    {
+      // Reused from hw/dv/tools/dvsim/tests/csr_tests.hjson.
+      name: "chip_same_csr_outstanding"
+      run_timeout_mins: 120
+      run_opts: ["+test_timeout_ns=120_000_000"]
+    }
+    {
+      name: chip_sw_example_rom
+      uvm_test_seq: chip_sw_base_vseq
+      sw_images: ["//sw/device/tests:example_test_from_rom:0:test_in_rom"]
+      en_run_modes: ["sw_test_mode_common"]
+    }
+    {
+      name: chip_sw_example_manufacturer
+      uvm_test_seq: chip_sw_base_vseq
+      sw_images: ["@manufacturer_test_hooks//:example_test:6:new_rules"]
+      en_run_modes: ["sw_test_mode_test_rom"]
+    }
+    {
+      name: chip_sw_example_concurrency
+      uvm_test_seq: chip_sw_base_vseq
+      sw_images: ["//sw/device/tests:example_concurrency_test:6:new_rules"]
+      en_run_modes: ["sw_test_mode_test_rom"]
+    }
+    {
+      name: chip_sw_all_escalation_resets
+      uvm_test_seq: chip_sw_all_escalation_resets_vseq
+      sw_images: ["//sw/device/tests/sim_dv:all_escalation_resets_test:6:new_rules"]
+      en_run_modes: ["sw_test_mode_test_rom"]
+      run_opts: ["+bypass_alert_ready_to_end_check=1"]
+      reseed: 100
+    }
+    {
+      name: chip_sw_rstmgr_rst_cnsty_escalation
+      uvm_test_seq: chip_sw_rstmgr_cnsty_fault_vseq
+      sw_images: ["//sw/device/tests/sim_dv:all_escalation_resets_test:6:new_rules"]
+      en_run_modes: ["sw_test_mode_test_rom"]
+      run_opts: ["+bypass_alert_ready_to_end_check=1"]
+    }
+    {
+      name: chip_sw_data_integrity_escalation
+      uvm_test_seq: chip_sw_data_integrity_vseq
+      sw_images: ["//sw/device/tests/sim_dv:data_integrity_escalation_reset_test:6:new_rules"]
+      en_run_modes: ["sw_test_mode_test_rom"]
+      run_opts: ["+bypass_alert_ready_to_end_check=1"]
+      reseed: 6
+    }
+    {
+      name: chip_sw_uart_rand_baudrate
+      uvm_test_seq: chip_sw_uart_rand_baudrate_vseq
+      sw_images: ["//sw/device/tests:uart_tx_rx_test:6:new_rules"]
+      en_run_modes: ["sw_test_mode_test_rom"]
+      run_opts: ["+sw_test_timeout_ns=80_000_000"]
+      run_timeout_mins: 120
+      reseed: 20
+    }
+    {
+      name: chip_sw_uart_tx_rx_alt_clk_freq
+      uvm_test_seq: chip_sw_uart_rand_baudrate_vseq
+      sw_images: ["//sw/device/tests:uart_tx_rx_test:6:new_rules"]
+      en_run_modes: ["sw_test_mode_test_rom"]
+      run_opts: ["+sw_test_timeout_ns=80_000_000",
+                 "+chip_clock_source=ChipClockSourceExternal96Mhz"]
+      run_timeout_mins: 120
+      reseed: 5
+    }
+    {
+      name: chip_sw_uart_tx_rx_alt_clk_freq_low_speed
+      uvm_test_seq: chip_sw_uart_rand_baudrate_vseq
+      sw_images: ["//sw/device/tests:uart_tx_rx_test:6:new_rules"]
+      en_run_modes: ["sw_test_mode_test_rom"]
+      run_opts: ["+sw_test_timeout_ns=80_000_000",
+                 "+chip_clock_source=ChipClockSourceExternal48Mhz"]
+      reseed: 5
+    }
+  ]
+
+  // List of regressions.
+  regressions: [
+    {
+      name: scrap
+      tests: ["chip_sw_lc_ctrl_raw_to_scrap",
+              "chip_sw_lc_ctrl_rma_to_scrap",
+              "chip_sw_lc_ctrl_test_locked0_to_scrap",
+              "chip_sw_lc_ctrl_rand_to_scrap"
+             ]
+    }
+    {
+      name: smoke
+      tests: [// "chip_sw_spi_device_pass_through",
+              "chip_sw_example_concurrency",
+              // TODO(#26733): fix these tests for Darjeeling or select more appropriate ones.
+              //"xbar_smoke",
+              //"chip_sw_uart_tx_rx",
+              //"chip_sw_spi_host_tx_rx",
+              //"chip_sw_i2c_host_tx_rx",
+              //"chip_sw_i2c_device_tx_rx",
+              //"chip_plic_all_irqs",
+              //"chip_sw_example_rom",
+              //"chip_sw_example_manufacturer",
+              // TODO: add this test after enabling HW verification:
+              //"rom_e2e_smoke",
+             ]
+    }
+    {
+      name: jitter
+      tests: ["chip_sw_clkmgr_jitter",
+              "chip_sw_otbn_ecdsa_op_irq_jitter_en",
+              "chip_sw_aes_enc_jitter_en",
+              "chip_sw_hmac_enc_jitter_en",
+              "chip_sw_keymgr_key_derivation_jitter_en",
+              "chip_sw_kmac_mode_kmac_jitter_en",
+              "chip_sw_sram_ctrl_scrambled_access_jitter_en"]
+    }
+    {
+      name: jitter_reduced_freq
+      tests: ["chip_sw_clkmgr_jitter_reduced_freq",
+              "chip_sw_otbn_ecdsa_op_irq_jitter_en_reduced_freq",
+              "chip_sw_aes_enc_jitter_en_reduced_freq",
+              "chip_sw_hmac_enc_jitter_en_reduced_freq",
+              "chip_sw_keymgr_key_derivation_jitter_en_reduced_freq",
+              "chip_sw_kmac_mode_kmac_jitter_en_reduced_freq",
+              "chip_sw_sram_ctrl_scrambled_access_jitter_en_reduced_freq",
+              "chip_sw_csrng_edn_concurrency_reduced_freq"]
+    }
+    {
+      name: xcelium_ci_0
+      tests: ["chip_rv_dm_lc_disabled",
+              "chip_sw_rstmgr_sw_rst",
+              "chip_sw_hmac_enc",
+              "chip_sw_clkmgr_jitter",
+              "chip_sw_rom_ctrl_integrity_check",
+              "chip_sw_kmac_idle",
+              "chip_sw_lc_ctrl_rand_to_scrap"
+              "chip_sw_sleep_pin_mio_dio_val",
+              // TODO(#26733): uncomment when these run for Darjeeling.
+              // "chip_plic_all_irqs",
+              // "chip_sw_kmac_app_rom",
+              // "chip_sw_aes_entropy",
+              // "chip_sw_kmac_mode_cshake",
+              // "chip_sw_kmac_mode_kmac",
+              // "chip_sw_kmac_mode_kmac_jitter_en",
+              // "chip_sw_power_virus",
+              // TODO: uncomment when these run with Xcelium.
+              // "chip_sw_lc_walkthrough_dev",
+              // "chip_sw_lc_walkthrough_prod",
+              // "chip_sw_lc_walkthrough_prodend",
+              // "chip_sw_lc_walkthrough_rma",
+              // "chip_sw_lc_walkthrough_testunlocks",
+              "chip_prim_tl_access"]
+    }
+    {
+      name: xcelium_ci_1
+      tests: ["chip_sw_rv_core_ibex_address_translation",
+              "chip_sw_rv_timer_irq",
+              "chip_sw_aes_enc",
+              "chip_sw_csrng_kat_test",
+              // TODO(#26733): uncomment when these run for Darjeeling.
+              // "chip_sw_aes_enc_jitter_en",
+              // "chip_sw_sram_ctrl_scrambled_access",
+              // "chip_rv_dm_ndm_reset_req",
+              // "chip_sw_rstmgr_sw_req",
+              // "chip_sw_pwrmgr_sleep_disabled",
+              // "base_rom_e2e_smoke",
+              "chip_sw_aes_idle",
+              // TODO: uncomment when these run with Xcelium.
+              // "chip_sw_pwrmgr_main_power_glitch_reset",
+              // "chip_sw_pwrmgr_deep_sleep_power_glitch_reset",
+              // "chip_sw_pwrmgr_sleep_power_glitch_reset",
+              "chip_sw_csrng_kat_test",
+              // TODO(opentitan-integrated/#332): enable this test again once ROM has been
+              // refactored to work without embedded flash.
+              // "rom_e2e_smoke"
+              ]
+    }
+  ]
+}
