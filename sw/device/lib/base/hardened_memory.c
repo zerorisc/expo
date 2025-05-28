@@ -1,3 +1,7 @@
+// Copyright zeroRISC Inc.
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright lowRISC contributors (OpenTitan project).
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
@@ -176,4 +180,82 @@ hardened_bool_t hardened_memeq(const uint32_t *lhs, const uint32_t *rhs,
 
   HARDENED_CHECK_NE(ones, UINT32_MAX);
   return kHardenedBoolFalse;
+}
+
+void hardened_mmio_write(uint32_t dest, const uint32_t *src, size_t word_len) {
+  random_order_t order;
+  random_order_init(&order, word_len);
+
+  size_t count = 0;
+  size_t expected_count = random_order_len(&order);
+
+  // The primary difference from `hardened_memcpy` is that the destination
+  // pointer is volatile.
+  uintptr_t src_addr = (uintptr_t)src;
+  volatile uintptr_t dest_addr = (volatile uintptr_t)dest;
+
+  uint32_t decoys[8];
+  uintptr_t decoy_addr = (uintptr_t)&decoys;
+
+  size_t byte_len = word_len * sizeof(uint32_t);
+  for (; launderw(count) < expected_count; count = launderw(count) + 1) {
+    size_t byte_idx = launderw(random_order_advance(&order)) * sizeof(uint32_t);
+
+    barrierw(byte_idx);
+
+    uintptr_t srcp = src_addr + byte_idx;
+    volatile uintptr_t destp = dest_addr + byte_idx;
+    uintptr_t decoy1 = decoy_addr + (byte_idx % sizeof(decoys));
+    volatile uintptr_t decoy2 =
+        decoy_addr +
+        ((byte_idx + (sizeof(decoys) / 2) + sizeof(uint32_t)) % sizeof(decoys));
+
+    void *src = (void *)launderw(
+        ct_cmovw(ct_sltuw(launderw(byte_idx), byte_len), srcp, decoy1));
+    volatile void *dest = (volatile void *)launderw(
+        ct_cmovw(ct_sltuw(launderw(byte_idx), byte_len), destp, decoy2));
+
+    *((volatile uint32_t *)dest) = read_32(src);
+  }
+  RANDOM_ORDER_HARDENED_CHECK_DONE(order);
+  HARDENED_CHECK_EQ(count, expected_count);
+}
+
+void hardened_mmio_read(uint32_t *dest, uint32_t src, size_t word_len) {
+  random_order_t order;
+  random_order_init(&order, word_len);
+
+  size_t count = 0;
+  size_t expected_count = random_order_len(&order);
+
+  // The primary difference from `hardened_memcpy` is that the source pointer
+  // is volatile.
+  volatile uintptr_t src_addr = (volatile uintptr_t)src;
+  uintptr_t dest_addr = (uintptr_t)dest;
+
+  uint32_t decoys[8];
+  uintptr_t decoy_addr = (uintptr_t)&decoys;
+
+  size_t byte_len = word_len * sizeof(uint32_t);
+  for (; launderw(count) < expected_count; count = launderw(count) + 1) {
+    size_t byte_idx = launderw(random_order_advance(&order)) * sizeof(uint32_t);
+
+    barrierw(byte_idx);
+
+    volatile uintptr_t srcp = src_addr + byte_idx;
+    uintptr_t destp = dest_addr + byte_idx;
+    volatile uintptr_t decoy1 = decoy_addr + (byte_idx % sizeof(decoys));
+    uintptr_t decoy2 =
+        decoy_addr +
+        ((byte_idx + (sizeof(decoys) / 2) + sizeof(uint32_t)) % sizeof(decoys));
+
+    volatile void *src = (volatile void *)launderw(
+        ct_cmovw(ct_sltuw(launderw(byte_idx), byte_len), srcp, decoy1));
+    void *dest = (void *)launderw(
+        ct_cmovw(ct_sltuw(launderw(byte_idx), byte_len), destp, decoy2));
+
+    write_32(*((volatile uint32_t *)src), dest);
+  }
+  RANDOM_ORDER_HARDENED_CHECK_DONE(order);
+  HARDENED_CHECK_EQ(count, expected_count);
 }
