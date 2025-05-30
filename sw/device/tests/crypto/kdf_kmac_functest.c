@@ -6,7 +6,6 @@
 #include "sw/device/lib/crypto/drivers/kmac.h"
 #include "sw/device/lib/crypto/impl/integrity.h"
 #include "sw/device/lib/crypto/include/datatypes.h"
-#include "sw/device/lib/crypto/include/hash.h"
 #include "sw/device/lib/crypto/include/key_transport.h"
 #include "sw/device/lib/crypto/include/kmac_kdf.h"
 #include "sw/device/lib/runtime/log.h"
@@ -37,6 +36,7 @@ static status_t run_test_vector(void) {
               // The following key_mode is a dummy placeholder. It does not
               // necessarily match the `key_length`.
               .key_mode = kOtcryptoKeyModeKdfKmac128,
+              .version = kOtcryptoLibVersion1,
               .key_length = km_num_words * sizeof(uint32_t),
               .hw_backed = kHardenedBoolFalse,
               .security_level = kOtcryptoKeySecurityLevelLow,
@@ -50,7 +50,7 @@ static status_t run_test_vector(void) {
   current_test_vector->key_derivation_key.checksum =
       integrity_blinded_checksum(&current_test_vector->key_derivation_key);
 
-  TRY(otcrypto_kmac_kdf(current_test_vector->key_derivation_key,
+  TRY(otcrypto_kmac_kdf(&current_test_vector->key_derivation_key,
                         current_test_vector->label,
                         current_test_vector->context, &output_key_material));
 
@@ -61,7 +61,7 @@ static status_t run_test_vector(void) {
   uint32_t km_share0[km_num_words];
   uint32_t km_share1[km_num_words];
   TRY(otcrypto_export_blinded_key(
-      output_key_material,
+      &output_key_material,
       (otcrypto_word32_buf_t){.data = km_share0, .len = ARRAYSIZE(km_share0)},
       (otcrypto_word32_buf_t){.data = km_share1, .len = ARRAYSIZE(km_share1)}));
 

@@ -34,12 +34,15 @@ OT_ASSERT_ENUM_VALUE(kAesCipherModeCtr, (uint32_t)kOtcryptoAesModeCtr);
  * function is only for basic AES modes; do not use for AES-GCM or AES-KWP keys
  * since they will fail the mode check.
  *
+ * Re-masks the key after checking its integrity. The caller should ensure the
+ * entropy complex is up before calling this function.
+ *
  * @param blinded_key Blinded key struct.
  * @param aes_mode Block cipher mode.
  * @param[out] aes_key Destination AES key struct.
  * @return Result of the operation.
  */
-static status_t aes_key_construct(const otcrypto_blinded_key_t *blinded_key,
+static status_t aes_key_construct(otcrypto_blinded_key_t *blinded_key,
                                   const otcrypto_aes_mode_t aes_mode,
                                   aes_key_t *aes_key) {
   // Key integrity check.
@@ -59,6 +62,9 @@ static status_t aes_key_construct(const otcrypto_blinded_key_t *blinded_key,
     aes_key->key_shares[0] = NULL;
     aes_key->key_shares[1] = NULL;
   } else if (blinded_key->config.hw_backed == kHardenedBoolFalse) {
+    // Remask the key.
+    HARDENED_TRY(keyblob_remask(blinded_key));
+
     // Get pointers to the individual shares.
     uint32_t *share0;
     uint32_t *share1;
@@ -191,6 +197,9 @@ static status_t num_padded_blocks_get(size_t plaintext_len,
 /**
  * Return the block at index i for the given input and padding mode.
  *
+ * Uses hardening primitives internally that consume entropy; check the entropy
+ * complex is up before calling.
+ *
  * @param input Input data buffer.
  * @param padding Padding mode.
  * @param index Block index.
@@ -207,6 +216,9 @@ static status_t get_block(otcrypto_const_byte_buf_t input,
   // The index should never be more than `num_full_blocks` + 1, even including
   // padding.
   HARDENED_CHECK_LE(index, num_full_blocks + 1);
+
+  // Randomize the destination buffer.
+  hardened_memshred(block->data, ARRAYSIZE(block->data));
 
   if (launder32(index) < num_full_blocks) {
     HARDENED_CHECK_LT(index, num_full_blocks);
@@ -239,7 +251,7 @@ otcrypto_status_t otcrypto_aes_padded_plaintext_length(
   return OTCRYPTO_OK;
 }
 
-otcrypto_status_t otcrypto_aes(const otcrypto_blinded_key_t *key,
+otcrypto_status_t otcrypto_aes(otcrypto_blinded_key_t *key,
                                otcrypto_word32_buf_t iv,
                                otcrypto_aes_mode_t aes_mode,
                                otcrypto_aes_operation_t aes_operation,
@@ -346,7 +358,7 @@ otcrypto_status_t otcrypto_aes(const otcrypto_blinded_key_t *key,
   // cipher.
   for (i = 0; launder32(i) < block_offset; ++i) {
     HARDENED_TRY(get_block(cipher_input, aes_padding, i, &block_in));
-    TRY(aes_update(/*dest=*/NULL, &block_in));
+    HARDENED_TRY(aes_update(/*dest=*/NULL, &block_in));
   }
   // Check that the loop ran for the correct number of iterations.
   HARDENED_CHECK_EQ(i, block_offset);
@@ -355,7 +367,8 @@ otcrypto_status_t otcrypto_aes(const otcrypto_blinded_key_t *key,
   // output buffer.
   for (i = block_offset; launder32(i) < input_nblocks; ++i) {
     HARDENED_TRY(get_block(cipher_input, aes_padding, i, &block_in));
-    TRY(aes_update(&block_out, &block_in));
+    hardened_memshred(block_out.data, ARRAYSIZE(block_out.data));
+    HARDENED_TRY(aes_update(&block_out, &block_in));
     // TODO(#17711) Change to `hardened_memcpy`.
     memcpy(&cipher_output.data[(i - block_offset) * kAesBlockNumBytes],
            block_out.data, kAesBlockNumBytes);
@@ -382,10 +395,6 @@ otcrypto_status_t otcrypto_aes(const otcrypto_blinded_key_t *key,
     hardened_memcpy(iv.data, aes_iv.data, kAesBlockNumWords);
   }
 
-  // If the key was sideloaded, clear it.
-  if (key->config.hw_backed == kHardenedBoolTrue) {
-    HARDENED_TRY(keymgr_sideload_clear_aes());
-  }
-
-  return OTCRYPTO_OK;
+  // In case the key was sideloaded, clear it.
+  return keymgr_sideload_clear_aes();
 }

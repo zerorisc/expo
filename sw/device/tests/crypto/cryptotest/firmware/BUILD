@@ -56,6 +56,7 @@ cc_library(
         "//sw/device/lib/base:status",
         "//sw/device/lib/crypto/impl:ecc_p256",
         "//sw/device/lib/crypto/impl:ecc_p384",
+        "//sw/device/lib/crypto/impl:integrity",
         "//sw/device/lib/crypto/impl:key_transport",
         "//sw/device/lib/crypto/include:datatypes",
         "//sw/device/lib/runtime:log",
@@ -93,9 +94,10 @@ cc_library(
         "//sw/device/lib/base:memory",
         "//sw/device/lib/base:status",
         "//sw/device/lib/crypto/drivers:kmac",
-        "//sw/device/lib/crypto/impl:hash",
         "//sw/device/lib/crypto/impl:integrity",
         "//sw/device/lib/crypto/impl:keyblob",
+        "//sw/device/lib/crypto/impl:sha2",
+        "//sw/device/lib/crypto/impl:sha3",
         "//sw/device/lib/crypto/include:datatypes",
         "//sw/device/lib/runtime:log",
         "//sw/device/lib/testing/test_framework:ujson_ottf",
@@ -113,7 +115,7 @@ cc_library(
         "//sw/device/lib/base:status",
         "//sw/device/lib/crypto/impl:hmac",
         "//sw/device/lib/crypto/impl:integrity",
-        "//sw/device/lib/crypto/impl:keyblob",
+        "//sw/device/lib/crypto/impl:key_transport",
         "//sw/device/lib/runtime:log",
         "//sw/device/lib/testing/test_framework:ujson_ottf",
         "//sw/device/lib/ujson",
@@ -147,7 +149,7 @@ cc_library(
         "//sw/device/lib/base:memory",
         "//sw/device/lib/base:status",
         "//sw/device/lib/crypto/impl:integrity",
-        "//sw/device/lib/crypto/impl:keyblob",
+        "//sw/device/lib/crypto/impl:key_transport",
         "//sw/device/lib/crypto/impl:kmac",
         "//sw/device/lib/crypto/include:datatypes",
         "//sw/device/lib/runtime:log",
@@ -188,17 +190,5 @@ opentitan_binary(
         "//hw/top_earlgrey:fpga_cw340",
         "//hw/top_earlgrey:silicon_owner_sival_rom_ext",
     ],
-    deps = FIRMWARE_DEPS,
-)
-
-opentitan_test(
-    name = "chip_pen_test",
-    srcs = [":firmware.c"],
-    exec_env = {
-        "//hw/top_earlgrey:silicon_owner_sival_rom_ext": "silicon_owner",
-    },
-    silicon_owner = silicon_params(
-        tags = ["broken"],
-    ),
     deps = FIRMWARE_DEPS,
 )
