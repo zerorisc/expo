@@ -18,16 +18,16 @@ OTBN_DECLARE_APP_SYMBOLS(run_p256);  // The OTBN P-256 app.
 static const otbn_app_t kOtbnAppP256 = OTBN_APP_T_INIT(run_p256);
 
 // Declare offsets for input and output buffers.
-OTBN_DECLARE_SYMBOL_ADDR(run_p256, mode);  // Mode of operation.
-OTBN_DECLARE_SYMBOL_ADDR(run_p256, msg);   // ECDSA message digest.
-OTBN_DECLARE_SYMBOL_ADDR(run_p256, r);     // ECDSA signature scalar R.
-OTBN_DECLARE_SYMBOL_ADDR(run_p256, s);     // ECDSA signature scalar S.
-OTBN_DECLARE_SYMBOL_ADDR(run_p256, x);     // Public key x-coordinate.
-OTBN_DECLARE_SYMBOL_ADDR(run_p256, y);     // Public key y-coordinate.
-OTBN_DECLARE_SYMBOL_ADDR(run_p256, d0);    // Private key scalar d (share 0).
-OTBN_DECLARE_SYMBOL_ADDR(run_p256, d1);    // Private key scalar d (share 1).
-OTBN_DECLARE_SYMBOL_ADDR(run_p256, x_r);   // ECDSA verification result.
-OTBN_DECLARE_SYMBOL_ADDR(run_p256, ok);    // Status code.
+OTBN_DECLARE_SYMBOL_ADDR(run_p256, mode);   // Mode of operation.
+OTBN_DECLARE_SYMBOL_ADDR(run_p256, msg);    // ECDSA message digest.
+OTBN_DECLARE_SYMBOL_ADDR(run_p256, r);      // ECDSA signature scalar R.
+OTBN_DECLARE_SYMBOL_ADDR(run_p256, s);      // ECDSA signature scalar S.
+OTBN_DECLARE_SYMBOL_ADDR(run_p256, x);      // Public key x-coordinate.
+OTBN_DECLARE_SYMBOL_ADDR(run_p256, y);      // Public key y-coordinate.
+OTBN_DECLARE_SYMBOL_ADDR(run_p256, d0_io);  // Private key scalar d (share 0).
+OTBN_DECLARE_SYMBOL_ADDR(run_p256, d1_io);  // Private key scalar d (share 1).
+OTBN_DECLARE_SYMBOL_ADDR(run_p256, x_r);    // ECDSA verification result.
+OTBN_DECLARE_SYMBOL_ADDR(run_p256, ok);     // Status code.
 
 static const otbn_addr_t kOtbnVarMode = OTBN_ADDR_T_INIT(run_p256, mode);
 static const otbn_addr_t kOtbnVarMsg = OTBN_ADDR_T_INIT(run_p256, msg);
@@ -35,8 +35,8 @@ static const otbn_addr_t kOtbnVarR = OTBN_ADDR_T_INIT(run_p256, r);
 static const otbn_addr_t kOtbnVarS = OTBN_ADDR_T_INIT(run_p256, s);
 static const otbn_addr_t kOtbnVarX = OTBN_ADDR_T_INIT(run_p256, x);
 static const otbn_addr_t kOtbnVarY = OTBN_ADDR_T_INIT(run_p256, y);
-static const otbn_addr_t kOtbnVarD0 = OTBN_ADDR_T_INIT(run_p256, d0);
-static const otbn_addr_t kOtbnVarD1 = OTBN_ADDR_T_INIT(run_p256, d1);
+static const otbn_addr_t kOtbnVarD0 = OTBN_ADDR_T_INIT(run_p256, d0_io);
+static const otbn_addr_t kOtbnVarD1 = OTBN_ADDR_T_INIT(run_p256, d1_io);
 static const otbn_addr_t kOtbnVarXr = OTBN_ADDR_T_INIT(run_p256, x_r);
 static const otbn_addr_t kOtbnVarOk = OTBN_ADDR_T_INIT(run_p256, ok);
 
@@ -92,10 +92,8 @@ static status_t p256_masked_scalar_write(const p256_masked_scalar_t *src,
   // cause an error.
   HARDENED_TRY(otbn_dmem_set(kMaskedScalarPaddingWords, 0,
                              share0_addr + kP256MaskedScalarShareBytes));
-  HARDENED_TRY(otbn_dmem_set(kMaskedScalarPaddingWords, 0,
-                             share1_addr + kP256MaskedScalarShareBytes));
-
-  return OTCRYPTO_OK;
+  return otbn_dmem_set(kMaskedScalarPaddingWords, 0,
+                       share1_addr + kP256MaskedScalarShareBytes);
 }
 
 status_t p256_keygen_start(void) {
@@ -138,9 +136,7 @@ status_t p256_keygen_finalize(p256_masked_scalar_t *private_key,
   HARDENED_TRY(otbn_dmem_read(kP256CoordWords, kOtbnVarY, public_key->y));
 
   // Wipe DMEM.
-  HARDENED_TRY(otbn_dmem_sec_wipe());
-
-  return OTCRYPTO_OK;
+  return otbn_dmem_sec_wipe();
 }
 
 status_t p256_sideload_keygen_finalize(p256_point_t *public_key) {
@@ -152,9 +148,7 @@ status_t p256_sideload_keygen_finalize(p256_point_t *public_key) {
   HARDENED_TRY(otbn_dmem_read(kP256CoordWords, kOtbnVarY, public_key->y));
 
   // Wipe DMEM.
-  HARDENED_TRY(otbn_dmem_sec_wipe());
-
-  return OTCRYPTO_OK;
+  return otbn_dmem_sec_wipe();
 }
 
 /**
@@ -227,9 +221,7 @@ status_t p256_ecdsa_sign_finalize(p256_ecdsa_signature_t *result) {
   HARDENED_TRY(otbn_dmem_read(kP256ScalarWords, kOtbnVarS, result->s));
 
   // Wipe DMEM.
-  HARDENED_TRY(otbn_dmem_sec_wipe());
-
-  return OTCRYPTO_OK;
+  return otbn_dmem_sec_wipe();
 }
 
 status_t p256_ecdsa_verify_start(const p256_ecdsa_signature_t *signature,
@@ -282,9 +274,7 @@ status_t p256_ecdsa_verify_finalize(const p256_ecdsa_signature_t *signature,
   *result = hardened_memeq(x_r, signature->r, kP256ScalarWords);
 
   // Wipe DMEM.
-  HARDENED_TRY(otbn_dmem_sec_wipe());
-
-  return OTCRYPTO_OK;
+  return otbn_dmem_sec_wipe();
 }
 
 status_t p256_ecdh_start(const p256_masked_scalar_t *private_key,
@@ -326,9 +316,7 @@ status_t p256_ecdh_finalize(p256_ecdh_shared_key_t *shared_key) {
   HARDENED_TRY(otbn_dmem_read(kP256CoordWords, kOtbnVarY, shared_key->share1));
 
   // Wipe DMEM.
-  HARDENED_TRY(otbn_dmem_sec_wipe());
-
-  return OTCRYPTO_OK;
+  return otbn_dmem_sec_wipe();
 }
 
 status_t p256_sideload_ecdh_start(const p256_point_t *public_key) {

@@ -19,6 +19,7 @@ use opentitanlib::io::uart::Uart;
 use opentitanlib::test_utils::init::InitializeTest;
 use opentitanlib::test_utils::rpc::{ConsoleRecv, ConsoleSend};
 use opentitanlib::uart::console::UartConsole;
+use pentest_lib::filter_response_common;
 
 #[derive(Debug, Parser)]
 struct Opts {
@@ -44,13 +45,10 @@ struct FiIbexTestCase {
 }
 
 fn filter_response(response: serde_json::Value) -> serde_json::Map<String, serde_json::Value> {
-    let mut map: serde_json::Map<String, serde_json::Value> = response.as_object().unwrap().clone();
-    // Depending on the device configuration, alerts can sometimes fire.
-    map.remove("alerts");
-    map.remove("ast_alerts");
-    map.remove("err_status");
-    // Device ID is different for each device.
-    map.remove("device_id");
+    // Filter common items.
+    let response_common_filtered = filter_response_common(response.clone());
+    // Filter test-specifc items.
+    let mut map: serde_json::Map<String, serde_json::Value> = response_common_filtered.clone();
     // Register file dump could change.
     map.remove("registers");
     map
@@ -112,7 +110,6 @@ fn test_fi_ibex(opts: &Opts, transport: &TransportWrapper) -> Result<()> {
     let mut test_counter = 0u32;
     let mut fail_counter = 0u32;
     let test_vector_files = &opts.fi_ibex_json;
-    // File wird noch nicht richtig geparsed.
     for file in test_vector_files {
         let raw_json = fs::read_to_string(file)?;
         let fi_ibex_tests: Vec<FiIbexTestCase> = serde_json::from_str(&raw_json)?;
