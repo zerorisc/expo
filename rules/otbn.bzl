@@ -28,6 +28,7 @@ def _otbn_assemble_sources(ctx, additional_srcs = []):
                       [ctx.executable._otbn_as]),
             env = {
                 "RV32_TOOL_AS": ctx.executable._riscv32_as.path,
+                "RV32_TOOL_GCC": ctx.executable._riscv32_gcc.path,
             },
             arguments = copts + ["-o", obj.path, src.path] + ctx.attr.args,
             executable = ctx.executable._otbn_as,
@@ -95,6 +96,7 @@ def _otbn_binary(ctx, additional_srcs = []):
         env = {
             "RV32_TOOL_AS": ctx.executable._riscv32_as.path,
             "RV32_TOOL_AR": ctx.executable._riscv32_ar.path,
+            "RV32_TOOL_GCC": ctx.executable._riscv32_gcc.path,
             "RV32_TOOL_LD": ctx.executable._riscv32_ld.path,
             "RV32_TOOL_OBJCOPY": ctx.executable._riscv32_objcopy.path,
         },
@@ -285,6 +287,12 @@ otbn_library = rv_rule(
             executable = True,
             cfg = "exec",
         ),
+        "_riscv32_gcc": attr.label(
+            default = Label("@lowrisc_rv32imcb_toolchain//:bin/riscv32-unknown-elf-gcc"),
+            allow_single_file = True,
+            executable = True,
+            cfg = "exec",
+        ),
         "_otbn_as": attr.label(
             default = "//hw/ip/otbn/util:otbn_as",
             executable = True,
@@ -316,6 +324,12 @@ otbn_binary = rv_rule(
         ),
         "_riscv32_ld": attr.label(
             default = Label("@lowrisc_rv32imcb_toolchain//:bin/riscv32-unknown-elf-ld"),
+            allow_single_file = True,
+            executable = True,
+            cfg = "exec",
+        ),
+        "_riscv32_gcc": attr.label(
+            default = Label("@lowrisc_rv32imcb_toolchain//:bin/riscv32-unknown-elf-gcc"),
             allow_single_file = True,
             executable = True,
             cfg = "exec",
@@ -362,6 +376,12 @@ otbn_sim_test = rv_rule(
         ),
         "_riscv32_as": attr.label(
             default = Label("@lowrisc_rv32imcb_toolchain//:bin/riscv32-unknown-elf-as"),
+            allow_single_file = True,
+            executable = True,
+            cfg = "exec",
+        ),
+        "_riscv32_gcc": attr.label(
+            default = Label("@lowrisc_rv32imcb_toolchain//:bin/riscv32-unknown-elf-gcc"),
             allow_single_file = True,
             executable = True,
             cfg = "exec",
@@ -422,6 +442,12 @@ otbn_autogen_sim_test = rv_rule(
         ),
         "_riscv32_as": attr.label(
             default = Label("@lowrisc_rv32imcb_toolchain//:bin/riscv32-unknown-elf-as"),
+            allow_single_file = True,
+            executable = True,
+            cfg = "exec",
+        ),
+        "_riscv32_gcc": attr.label(
+            default = Label("@lowrisc_rv32imcb_toolchain//:bin/riscv32-unknown-elf-gcc"),
             allow_single_file = True,
             executable = True,
             cfg = "exec",
