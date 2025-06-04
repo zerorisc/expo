@@ -2,11 +2,15 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
-
-
 load("//rules:otbn.bzl", "otbn_binary", "otbn_library")
 
 package(default_visibility = ["//visibility:public"])
+
+NAME_BY_SEC_LEVEL = {
+    2: "kyber512",
+    3: "kyber768",
+    4: "kyber1024",
+}
 
 otbn_library(
     name = "kyber_ntt",
@@ -41,35 +45,36 @@ otbn_library(
     srcs = [
         "kyber_cbd_isaext.s",
     ],
-) 
-
-otbn_library(
-    name = "kyber_poly",
-    srcs = [
-        "kyber_poly.s",
-    ]
 )
+
+[
+    otbn_library(
+        name = name + "_poly",
+        srcs = [
+            "kyber_poly.s",
+        ],
+        copts = ["-DKYBER_K=" + str(sec_level)],
+    )
+    for sec_level, name in NAME_BY_SEC_LEVEL.items()
+]
 
 otbn_library(
     name = "kyber_poly_gen_matrix",
     srcs = [
         "kyber_poly_gen_matrix.s",
-    ]
+    ],
 )
 
-otbn_library(
-    name = "kyber_packing",
-    srcs = [
-        "kyber_packing.s",
-    ]
-)
-
-otbn_library(
-    name = "kyber_kem",
-    srcs = [
-        "kyber_kem.s",
-    ]
-)
+[
+    otbn_library(
+        name = name + "_packing",
+        srcs = [
+            "kyber_packing.s",
+        ],
+        copts = ["-DKYBER_K=" + str(sec_level)],
+    )
+    for sec_level, name in NAME_BY_SEC_LEVEL.items()
+]
 
 otbn_library(
     name = "kyber_base_ntt",
@@ -99,47 +104,60 @@ otbn_library(
     ],
 )
 
-otbn_library(
-    name = "kyber_base_poly",
-    srcs = [
-        "kyber_base_poly.s",
-    ],
-)
+[
+    otbn_library(
+        name = name + "_base_poly",
+        srcs = [
+            "kyber_base_poly.s",
+        ],
+        copts = ["-DKYBER_K=" + str(sec_level)],
+    )
+    for sec_level, name in NAME_BY_SEC_LEVEL.items()
+]
 
-otbn_library(
-    name = "kyber_base_packing",
-    srcs = [
-        "kyber_base_packing.s",
-    ],
-)
+[
+    otbn_library(
+        name = name + "_base_packing",
+        srcs = [
+            "kyber_base_packing.s",
+        ],
+        copts = ["-DKYBER_K=" + str(sec_level)],
+    )
+    for sec_level, name in NAME_BY_SEC_LEVEL.items()
+]
 
-otbn_library(
-    name = "kyber_base_kem",
-    srcs = [
-        "kyber_base_kem.s",
-    ]
-)
+[
+    otbn_library(
+        name = name + "_mlkem",
+        srcs = [
+            "kyber_mlkem.s",
+        ],
+        copts = ["-DKYBER_K=" + str(sec_level)],
+    )
+    for sec_level, name in NAME_BY_SEC_LEVEL.items()
+]
 
-otbn_library(
-    name = "kyber_mlkem",
-    srcs = [
-        "kyber_mlkem.s",
-    ]
-)
+[
+    otbn_library(
+        name = name + "_base_mlkem",
+        srcs = [
+            "kyber_base_mlkem.s",
+        ],
+        copts = ["-DKYBER_K=" + str(sec_level)],
+    )
+    for sec_level, name in NAME_BY_SEC_LEVEL.items()
+]
 
-otbn_library(
-    name = "kyber_base_mlkem",
-    srcs = [
-        "kyber_base_mlkem.s",
-    ]
-)
-
-otbn_library(
-    name = "kyber_plain_mlkem",
-    srcs = [
-        "kyber_plain_mlkem.s",
-    ]
-)
+[
+    otbn_library(
+        name = name + "_plain_mlkem",
+        srcs = [
+            "kyber_plain_mlkem.s",
+        ],
+        copts = ["-DKYBER_K=" + str(sec_level)],
+    )
+    for sec_level, name in NAME_BY_SEC_LEVEL.items()
+]
 
 otbn_library(
     name = "kyber_plain_poly_gen_matrix",
@@ -148,16 +166,13 @@ otbn_library(
     ],
 )
 
-otbn_library(
-    name = "kyber_plain_poly",
-    srcs = [
-        "kyber_plain_poly.s",
-    ],
-)
-
-otbn_library(
-    name = "symmetric",
-    srcs = [
-        "symmetric.s", 
-    ],
-)
+[
+    otbn_library(
+        name = name + "_plain_poly",
+        srcs = [
+            "kyber_plain_poly.s",
+        ],
+        copts = ["-DKYBER_K=" + str(sec_level)],
+    )
+    for sec_level, name in NAME_BY_SEC_LEVEL.items()
+]
