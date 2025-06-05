@@ -4,9 +4,7 @@
 # Modified by Authors of "Towards ML-KEM & ML-DSA on OpenTitan" (https://eprint.iacr.org/2024/1192).
 # Copyright "Towards ML-KEM & ML-DSA on OpenTitan" Authors.
 
-
-from collections import Counter, defaultdict
-import typing
+from collections import Counter
 from typing import Dict, List, Optional, Tuple
 import re
 
@@ -26,14 +24,13 @@ class ExecutionStats:
         self.program = program
 
         self.stall_count = 0
-        self.insn_histo = Counter()  # type: typing.Counter[str]
-        self.func_calls = []  # type: List[Dict[str, int]]
-        self.loops = []  # type: List[Dict[str, int]]
-        self.func_instrs = {}
+        self.insn_histo: Counter[str] = Counter()
+        self.func_calls: List[Dict[str, int]] = []
+        self.loops: List[Dict[str, int]] = []
 
         # Histogram indexed by the length of the (extended) basic block.
-        self.basic_block_histo = Counter()  # type: typing.Counter[int]
-        self.ext_basic_block_histo = Counter()  # type: typing.Counter[int]
+        self.basic_block_histo: Counter[int] = Counter()
+        self.ext_basic_block_histo: Counter[int] = Counter()
 
         self._current_basic_block_len = 0
         self._current_ext_basic_block_len = 0
@@ -322,8 +319,6 @@ class ExecutionStatAnalyzer:
             return "No functions were called.\n"
 
         out = ""
-        self.func_calls = {}
-        # TODO: Add the start address as function?
 
         # Build function call graphs and a call site index
         # caller-indexed == forward, callee-indexed == reverse
@@ -331,9 +326,9 @@ class ExecutionStatAnalyzer:
         # The call graphs are on function granularity; the call sites
         # dictionary is indexed by the called function, but uses the call site
         # as value.
-        callgraph = {}  # type: Dict[int, typing.Counter[int]]
-        rev_callgraph = {}  # type: Dict[int, typing.Counter[int]]
-        rev_callsites = {}  # type: Dict[int, typing.Counter[int]]
+        callgraph: Dict[int, Counter[int]] = {}  # type
+        rev_callgraph: Dict[int, Counter[int]] = {}
+        rev_callsites: Dict[int, Counter[int]] = {}
         for c in self._stats.func_calls:
             if c['caller_func'] not in callgraph:
                 callgraph[c['caller_func']] = Counter()
