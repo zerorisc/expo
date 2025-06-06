@@ -266,27 +266,26 @@ module ${module_instance_name}
   logic log_first_deny;
   assign log_first_deny = deny_cnt_incr & (deny_cnt == 0);
 
-  // Clear log information when clearing the interrupt or when clearing the log manually via the
-  // writing of a 1 to the log_clear bit.
-  logic intr_state_cleared, clear_log;
-  assign clear_log = intr_state_cleared |
-                     (reg2hw.log_config.log_clear.qe & reg2hw.log_config.log_clear.q);
+  // Clear log information when clearing the log manually via the writing of a 1 to the
+  // log_clear bit.
+  logic clear_log;
+  assign clear_log = (reg2hw.log_config.log_clear.qe & reg2hw.log_config.log_clear.q);
 
   prim_count #(
     .Width(DenyCountWidth)
   ) u_deny_count (
-    .clk_i              ( clk_i              ),
-    .rst_ni             ( rst_ni             ),
-    .clr_i              ( clear_log          ),
-    .set_i              ( 1'b0               ),
-    .set_cnt_i          ( '0                 ),
-    .incr_en_i          ( deny_cnt_incr      ),
-    .decr_en_i          ( 1'b0               ),
-    .step_i             ( DenyCountWidth'(1) ),
-    .commit_i           ( 1'b1               ),
-    .cnt_o              ( deny_cnt           ),
-    .cnt_after_commit_o (                    ),
-    .err_o              ( deny_cnt_error     )
+    .clk_i              ( clk_i                          ),
+    .rst_ni             ( rst_ni                         ),
+    .clr_i              ( 1'b0                           ),
+    .set_i              ( clear_log                      ),
+    .set_cnt_i          ( DenyCountWidth'(deny_cnt_incr) ),
+    .incr_en_i          ( deny_cnt_incr                  ),
+    .decr_en_i          ( 1'b0                           ),
+    .step_i             ( DenyCountWidth'(1)             ),
+    .commit_i           ( 1'b1                           ),
+    .cnt_o              ( deny_cnt                       ),
+    .cnt_after_commit_o (                                ),
+    .err_o              ( deny_cnt_error                 )
   );
 
   // Log count is transparently mirrored. Clearing happens on the counter.
@@ -334,41 +333,24 @@ module ${module_instance_name}
   // Interrupt Notification Logic
   //////////////////////////////////////////////////////////////////////////////
 
-  logic deny_cnt_threshold_reached_d, deny_cnt_threshold_reached_event;
-
-  // Create a threshold event when the deny counter reaches the configured threshold
-  assign deny_cnt_threshold_reached_d = deny_cnt > reg2hw.log_config.deny_cnt_threshold.q;
-  prim_edge_detector u_edge_threshold_reached (
-    .clk_i             ( clk_i                            ),
-    .rst_ni            ( rst_ni                           ),
-    .d_i               ( deny_cnt_threshold_reached_d     ),
-    .q_sync_o          (                                  ),
-    .q_posedge_pulse_o ( deny_cnt_threshold_reached_event ),
-    .q_negedge_pulse_o (                                  )
-  );
-
-  prim_edge_detector u_edge_intr_state (
-    .clk_i             ( clk_i               ),
-    .rst_ni            ( rst_ni              ),
-    .d_i               ( reg2hw.intr_state.q ),
-    .q_sync_o          (                     ),
-    .q_posedge_pulse_o (                     ),
-    .q_negedge_pulse_o ( intr_state_cleared  )
-  );
+  // Create the IRQ condition when the deny counter is above the configured threshold.
+  logic deny_cnt_threshold_reached;
+  assign deny_cnt_threshold_reached = deny_cnt > reg2hw.log_config.deny_cnt_threshold.q;
 
   prim_intr_hw #(
-    .Width(1)
+    .Width ( 1        ),
+    .IntrT ( "Status" )
   ) u_intr_range_check_deny (
-    .clk_i                  ( clk_i                            ),
-    .rst_ni                 ( rst_ni                           ),
-    .event_intr_i           ( deny_cnt_threshold_reached_event ),
-    .reg2hw_intr_enable_q_i ( reg2hw.intr_enable.q             ),
-    .reg2hw_intr_test_q_i   ( reg2hw.intr_test.q               ),
-    .reg2hw_intr_test_qe_i  ( reg2hw.intr_test.qe              ),
-    .reg2hw_intr_state_q_i  ( reg2hw.intr_state.q              ),
-    .hw2reg_intr_state_de_o ( hw2reg.intr_state.de             ),
-    .hw2reg_intr_state_d_o  ( hw2reg.intr_state.d              ),
-    .intr_o                 ( intr_deny_cnt_reached_o          )
+    .clk_i                  ( clk_i                      ),
+    .rst_ni                 ( rst_ni                     ),
+    .event_intr_i           ( deny_cnt_threshold_reached ),
+    .reg2hw_intr_enable_q_i ( reg2hw.intr_enable.q       ),
+    .reg2hw_intr_test_q_i   ( reg2hw.intr_test.q         ),
+    .reg2hw_intr_test_qe_i  ( reg2hw.intr_test.qe        ),
+    .reg2hw_intr_state_q_i  ( reg2hw.intr_state.q        ),
+    .hw2reg_intr_state_de_o ( hw2reg.intr_state.de       ),
+    .hw2reg_intr_state_d_o  ( hw2reg.intr_state.d        ),
+    .intr_o                 ( intr_deny_cnt_reached_o    )
   );
 
   //////////////////////////////////////////////////////////////////////////////

@@ -23,7 +23,6 @@ fusesoc_build(
         "//hw:dv_common_files",
         "//hw:rtl_files",
         "//hw:verilator_files",
-        "//hw/ip:verilator_files",
     ],
     cores = [
         "//hw:cores",
@@ -31,7 +30,7 @@ fusesoc_build(
     data = ["//hw/ip/otbn:rtl_files"],
     make_options = ":make_options",
     output_groups = {
-        "binary": ["sim-verilator/Vchip_englishbreakfast_verilator"],
+        "binary": ["lowrisc_systems_chip_englishbreakfast_verilator_0.1/sim-verilator/Vchip_englishbreakfast_verilator"],
     },
     systems = ["lowrisc:systems:chip_englishbreakfast_verilator"],
     tags = [
