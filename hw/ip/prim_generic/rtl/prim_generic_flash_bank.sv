@@ -153,9 +153,10 @@ module prim_generic_flash_bank #(
   assign ack_o = ack & !init_busy_o;
 
   prim_fifo_sync #(
-    .Width   ($bits(cmd_payload_t)),
-    .Pass    (0),
-    .Depth   (2)
+    .Width       ($bits(cmd_payload_t)),
+    .Pass        (0),
+    .Depth       (2),
+    .NeverClears (1'b1)
   ) u_cmd_fifo (
     .clk_i,
     .rst_ni,
@@ -458,4 +459,4 @@ module prim_generic_flash_bank #(
   logic unused_he;
   assign unused_he = he_i;
 
-endmodule // prim_generic_flash
+endmodule // prim_generic_flash_bank

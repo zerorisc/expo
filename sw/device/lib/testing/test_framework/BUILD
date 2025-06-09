@@ -17,6 +17,14 @@ load("@bazel_skylib//lib:dicts.bzl", "dicts")
 
 package(default_visibility = ["//visibility:public"])
 
+filegroup(
+    name = "doc_files",
+    srcs = glob([
+        "**/*.md",
+        "**/*.svg",
+    ]),
+)
+
 cc_library(
     name = "coverage_none",
     srcs = ["coverage_none.c"],

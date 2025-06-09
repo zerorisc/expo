@@ -64,6 +64,8 @@ function void ac_range_check_scoreboard::build_phase(uvm_phase phase);
   dut_cfg               = ac_range_check_dut_cfg::type_id::create("dut_cfg");
   predict               = ac_range_check_predictor::type_id::create("predict", this);
   predict.dut_cfg       = dut_cfg;
+  predict.cov           = cov;
+  predict.env_cfg       = cfg;
   exp_tl_filt_ev        = new();
   exp_tl_unfilt_ev      = new();
   tl_unfilt_d_chan_fifo = new("tl_unfilt_d_chan_fifo", this);
@@ -359,8 +361,18 @@ function void ac_range_check_scoreboard::check_phase(uvm_phase phase);
   // things when the ran test is related to the CSR checks in particular.
   if (cfg.en_scb) begin
     if (a_chan_matching_cnt == 0) begin
-      `uvm_error(`gfn, {"No matching transaction found, it can be because all the TL accesses have",
-                        " been filtered. Please check your DUT configuration and your sequence."})
+      // TODO: Needs a coversation if this check makes sense.
+      // Downgrading this to an info. If all input TL transaction for some reason get
+      // filtered, the block has legally done its job. Cannot downgrade this to a warning as all
+      // warnings are also treated as errors.
+
+      // There is a legal scenario where all range indexes are disabled and bypass is also disabled,
+      // then all TLUL transactions are DENIED and will never see a_chan_matching_cnt > 0
+      // `uvm_info(`gfn, {"No matching transaction found, it can be because all the TL accesses ",
+      //    "have been filtered. Please check your DUT configuration and your sequence."}, UVM_LOW)
+
+      `uvm_error(`gfn, {"No matching transaction found, it can be because all the TL accesses ",
+                "have been filtered. Please check your DUT configuration and your sequence."})
     end
 
     if (d_chan_matching_cnt != predict.all_unfilt_a_chan_cnt) begin
