@@ -149,11 +149,12 @@ status_t handle_ibex_pentest_init(ujson_t *uj) {
   // Disable the instruction cache and dummy instructions for SCA.
   penetrationtest_device_info_t uj_output;
   TRY(pentest_configure_cpu(
-      uj_data.icache_disable, uj_data.dummy_instr_disable,
-      uj_data.enable_jittery_clock, uj_data.enable_sram_readback,
-      &uj_output.clock_jitter_locked, &uj_output.clock_jitter_en,
-      &uj_output.sram_main_readback_locked, &uj_output.sram_ret_readback_locked,
-      &uj_output.sram_main_readback_en, &uj_output.sram_ret_readback_en));
+      uj_data.enable_icache, &uj_output.icache_en, uj_data.enable_dummy_instr,
+      &uj_output.dummy_instr_en, uj_data.enable_jittery_clock,
+      uj_data.enable_sram_readback, &uj_output.clock_jitter_locked,
+      &uj_output.clock_jitter_en, &uj_output.sram_main_readback_locked,
+      &uj_output.sram_ret_readback_locked, &uj_output.sram_main_readback_en,
+      &uj_output.sram_ret_readback_en));
 
   // Key manager not initialized for the handle_ibex_sca_key_sideloading test.
   key_manager_init = false;
@@ -191,7 +192,7 @@ static status_t trigger_ibex_sca_combi_operations(uint32_t value1,
   if (trigger & kCombiOpsTriggerXor) {
     init_registers(value1, value2, 0, 0, 0, 0);
 
-    pentest_set_trigger_high();
+    PENTEST_ASM_TRIGGER_HIGH
     asm volatile(NOP30
                  "xor x13, x5, x12\n"
                  "xor x14, x5, x12\n"
@@ -205,14 +206,14 @@ static status_t trigger_ibex_sca_combi_operations(uint32_t value1,
                  "xor x31, x5, x12\n" NOP30
                  :
                  : "r"(&value1), "r"(&value2));
-    pentest_set_trigger_low();
+    PENTEST_ASM_TRIGGER_LOW
     asm volatile("sw x13, (%0)" ::"r"(&result[0]));
   }
 
   if (trigger & kCombiOpsTriggerAdd) {
     init_registers(value1, value2, 0, 0, 0, 0);
 
-    pentest_set_trigger_high();
+    PENTEST_ASM_TRIGGER_HIGH
     asm volatile(NOP30
                  "add x13, x5, x12\n"
                  "add x14, x5, x12\n"
@@ -226,14 +227,14 @@ static status_t trigger_ibex_sca_combi_operations(uint32_t value1,
                  "add x31, x5, x12\n" NOP30
                  :
                  : "r"(&value1), "r"(&value2));
-    pentest_set_trigger_low();
+    PENTEST_ASM_TRIGGER_LOW
     asm volatile("sw x13, (%0)" ::"r"(&result[1]));
   }
 
   if (trigger & kCombiOpsTriggerSub) {
     init_registers(value1, value2, 0, 0, 0, 0);
 
-    pentest_set_trigger_high();
+    PENTEST_ASM_TRIGGER_HIGH
     asm volatile(NOP30
                  "sub x13, x5, x12\n"
                  "sub x14, x5, x12\n"
@@ -247,14 +248,14 @@ static status_t trigger_ibex_sca_combi_operations(uint32_t value1,
                  "sub x31, x5, x12\n" NOP30
                  :
                  : "r"(&value1), "r"(&value2));
-    pentest_set_trigger_low();
+    PENTEST_ASM_TRIGGER_LOW
     asm volatile("sw x13, (%0)" ::"r"(&result[2]));
   }
 
   if (trigger & kCombiOpsTriggerShift) {
     init_registers(value1, value2, 0, 0, 0, 0);
 
-    pentest_set_trigger_high();
+    PENTEST_ASM_TRIGGER_HIGH
     asm volatile(NOP30
                  "rol x13, x5, x12\n"
                  "rol x14, x5, x12\n"
@@ -268,14 +269,14 @@ static status_t trigger_ibex_sca_combi_operations(uint32_t value1,
                  "rol x31, x5, x12\n" NOP30
                  :
                  : "r"(&value1), "r"(&value2));
-    pentest_set_trigger_low();
+    PENTEST_ASM_TRIGGER_LOW
     asm volatile("sw x13, (%0)" ::"r"(&result[3]));
   }
 
   if (trigger & kCombiOpsTriggerMul) {
     init_registers(value1, value2, 0, 0, 0, 0);
 
-    pentest_set_trigger_high();
+    PENTEST_ASM_TRIGGER_HIGH
     asm volatile(NOP30
                  "mul x13, x5, x12\n"
                  "mul x14, x5, x12\n"
@@ -289,14 +290,14 @@ static status_t trigger_ibex_sca_combi_operations(uint32_t value1,
                  "mul x31, x5, x12\n" NOP30
                  :
                  : "r"(&value1), "r"(&value2));
-    pentest_set_trigger_low();
+    PENTEST_ASM_TRIGGER_LOW
     asm volatile("sw x13, (%0)" ::"r"(&result[4]));
   }
 
   if (trigger & kCombiOpsTriggerDiv) {
     init_registers(value1, value2, 0, 0, 0, 0);
 
-    pentest_set_trigger_high();
+    PENTEST_ASM_TRIGGER_HIGH
     asm volatile(NOP30
                  "div x13, x5, x12\n"
                  "div x14, x5, x12\n"
@@ -310,14 +311,14 @@ static status_t trigger_ibex_sca_combi_operations(uint32_t value1,
                  "div x31, x5, x12\n" NOP30
                  :
                  : "r"(&value1), "r"(&value2));
-    pentest_set_trigger_low();
+    PENTEST_ASM_TRIGGER_LOW
     asm volatile("sw x13, (%0)" ::"r"(&result[5]));
   }
 
   if (trigger & kCombiOpsTriggerLw) {
     init_registers(value1, value2, 0, 0, 0, 0);
 
-    pentest_set_trigger_high();
+    PENTEST_ASM_TRIGGER_HIGH
     asm volatile(NOP30
                  "lw x13, (%0)\n"
                  "lw x14, (%0)\n"
@@ -331,14 +332,14 @@ static status_t trigger_ibex_sca_combi_operations(uint32_t value1,
                  "lw x31, (%0)\n" NOP30
                  :
                  : "r"(&value1), "r"(&value2));
-    pentest_set_trigger_low();
+    PENTEST_ASM_TRIGGER_LOW
     result[6] = value1;
   }
 
   if (trigger & kCombiOpsTriggerSw) {
     init_registers(value1, value2, 0, 0, 0, 0);
 
-    pentest_set_trigger_high();
+    PENTEST_ASM_TRIGGER_HIGH
     asm volatile(NOP30
                  "sw x5, (%0)\n"
                  "sw x5, (%0)\n"
@@ -352,14 +353,14 @@ static status_t trigger_ibex_sca_combi_operations(uint32_t value1,
                  "sw x5, (%0)\n" NOP30
                  :
                  : "r"(&value1), "r"(&value2));
-    pentest_set_trigger_low();
+    PENTEST_ASM_TRIGGER_LOW
     result[7] = value1;
   }
 
   if (trigger & kCombiOpsTriggerCp) {
     init_registers(value1, value2, 0, 0, 0, 0);
 
-    pentest_set_trigger_high();
+    PENTEST_ASM_TRIGGER_HIGH
     asm volatile(NOP30
                  "sw x5, (%1)\n"
                  "sw x12, (%0)\n"
@@ -373,7 +374,7 @@ static status_t trigger_ibex_sca_combi_operations(uint32_t value1,
                  "sw x12, (%0)\n" NOP30
                  :
                  : "r"(&value1), "r"(&value2));
-    pentest_set_trigger_low();
+    PENTEST_ASM_TRIGGER_LOW
     result[8] = value1;
   }
 
