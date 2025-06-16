@@ -1,0 +1,107 @@
+# Copyright lowRISC contributors (OpenTitan project).
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+name: zeroRISC VCU118 FPGA CI Demonstration
+on: [push]
+
+# This tells GitHub to cancel workflows associated with branches that are
+# force-pushed over, in favor of the workflow created for its replacement.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Job that downloads the built UART Yes bitstream and runs it on the VCU118
+  # FPGA.
+  vcu118-uart-yes:
+    name: Run UART Yes bitstream on VCU118 FPGA
+    # The value here specifies the type of runner to use. The
+    # `zerorisc-fpga-vcu118` environment provides access to a VCU118 FPGA and
+    # its attached HyperDebug board.
+    #
+    # For technical reasons, the environment name must be specified under the
+    # `group` subfield, rather than `runs-on: environment-name`.
+    runs-on:
+      group: zerorisc-fpga-vcu118
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-env
+        with:
+          # The entry here instructs `prepare-env` to run
+          # FPGA-specific setup steps, such as adding the Vivado Lab binary
+          # directory to the $GITHUB_PATH .
+          fpga: vcu118
+      - name: Show environment
+        run: ./ci/scripts/show-env.sh
+      - name: Program bitstream to the VCU118
+        run: |
+          # Uncompress the bitstream archive.
+          tar -xzf uart_yes_synthesis.tar.gz
+          # Program the bitstream.
+          ./util/fpga/program_vcu118.sh uart_yes.bit
+      - name: Check for Yes output on UART
+        run: |
+          SUCCESS=false
+          # Check each USB TTY file until we find one that prints a bunch of
+          # `y` characters.
+          for tty in $(ls /dev/vcu118-*); do
+              echo "Checking ${tty}:"
+              # Dump 1 second of UART output to a file.
+              timeout 1 cat $tty > yes.out || true
+              # For comparison, create a file with 1024 `y` characters.
+              yes | head -n 1024 > temp.out
+              tr -d '\n' < temp.out > expected.out
+              # Compare the first 1024 bytes of the UART output with the
+              # expected.
+              head -c 1024 yes.out > actual.out
+              # If we find the output, print it.
+              if cmp -s expected.out actual.out; then
+                echo "Found output on ${tty}:"
+                cat yes.out
+                SUCCESS=true
+                break;
+              fi
+          done;
+          $SUCCESS
+
+  # Job that runs a prebuilt OpenTitan Earlgrey Hello World bitstream on the
+  # VCU118 FPGA.
+  vcu118-earlgrey-hello:
+    name: Run Earlgrey Hello World bitstream on VCU118 FPGA
+    runs-on:
+      group: zerorisc-fpga-vcu118
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-env
+        with:
+          fpga: vcu118
+      - name: Show environment
+        run: ./ci/scripts/show-env.sh
+      - name: Program bitstream to the VCU118
+        run: |
+          # Uncompress the bitstream archive.
+          tar -xzf earlgrey_vcu118.tar.gz
+          # Program the bitstream.
+          ./util/fpga/program_vcu118.sh earlgrey_vcu118.bit
+      - name: Display UART Output
+        run: |
+          # Check each USB TTY file for the OpenTitan UART output.
+          for tty in $(ls /dev/vcu118-*); do
+              echo "Output from ${tty}:"
+              timeout 5 cat $tty || true
+          done;
+          for tty in $(ls /dev/hyperdebug-*); do
+              echo "Output from ${tty}:"
+              timeout 5 cat $tty || true
+          done;
