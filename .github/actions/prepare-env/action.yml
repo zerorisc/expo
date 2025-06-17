@@ -110,50 +110,50 @@ runs:
         echo "${{ inputs.verible-path }}/bin" >> "$GITHUB_PATH"
       shell: bash
 
-    # Log into Google Cloud using workload_identity_provider.
-    - id: auth
-      name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@71fee32a0bb7e97b4d33d548e7d957010649d8fa # v2.1.3
-      with:
-        workload_identity_provider: projects/456088206277/locations/global/workloadIdentityPools/github-actions-pool/providers/${{ github.event.repository.name }}
-        service_account: ${{ github.event.repository.name }}-gh-actions-sa@bazel-cache-78ffec40.iam.gserviceaccount.com
+    ## Log into Google Cloud using workload_identity_provider.
+    #- id: auth
+    #  name: Authenticate to Google Cloud
+    #  uses: google-github-actions/auth@71fee32a0bb7e97b4d33d548e7d957010649d8fa # v2.1.3
+    #  with:
+    #    workload_identity_provider: projects/456088206277/locations/global/workloadIdentityPools/github-actions-pool/providers/${{ github.event.repository.name }}
+    #    service_account: ${{ github.event.repository.name }}-gh-actions-sa@bazel-cache-78ffec40.iam.gserviceaccount.com
 
 
-    # The above action creates a credential file in workspace and it doesn't provide a way to configure
-    # it. This influences with a few scripts that assume clean workspace, and introduce security risk
-    # that it may be exposed when uploading to buckets.
-    - name: Move Google credentials out from workspace
-      run: |
-        SOURCE=${{ steps.auth.outputs.credentials_file_path }}
-        TARGET=${{ runner.temp }}/$(basename "$SOURCE")
-        mv $SOURCE $TARGET
-        echo "CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=$TARGET" >> $GITHUB_ENV
-        echo "GOOGLE_APPLICATION_CREDENTIALS=$TARGET" >> $GITHUB_ENV
-        echo "GOOGLE_GHA_CREDS_PATH=$TARGET" >> $GITHUB_ENV
-      shell: bash
+    ## The above action creates a credential file in workspace and it doesn't provide a way to configure
+    ## it. This influences with a few scripts that assume clean workspace, and introduce security risk
+    ## that it may be exposed when uploading to buckets.
+    #- name: Move Google credentials out from workspace
+    #  run: |
+    #    SOURCE=${{ steps.auth.outputs.credentials_file_path }}
+    #    TARGET=${{ runner.temp }}/$(basename "$SOURCE")
+    #    mv $SOURCE $TARGET
+    #    echo "CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=$TARGET" >> $GITHUB_ENV
+    #    echo "GOOGLE_APPLICATION_CREDENTIALS=$TARGET" >> $GITHUB_ENV
+    #    echo "GOOGLE_GHA_CREDS_PATH=$TARGET" >> $GITHUB_ENV
+    #  shell: bash
 
-    - uses: google-github-actions/setup-gcloud@v2
-      if: github.event_name != 'pull_request'
+    #- uses: google-github-actions/setup-gcloud@v2
+    #  if: github.event_name != 'pull_request'
 
-    - name: Generate ci.bazelrc
-      run: ci/gen-ci-bazelrc.sh $GOOGLE_GHA_CREDS_PATH
-      shell: bash
+    #- name: Generate ci.bazelrc
+    #  run: ci/gen-ci-bazelrc.sh $GOOGLE_GHA_CREDS_PATH
+    #  shell: bash
 
-    - name: Configure ~/.bazelrc
-      if: inputs.configure-bazel == 'true'
-      run: |
-        # Inject the OS version into a parameter used in the action key computation to
-        # avoid collisions between different operating systems in the caches.
-        # See #14695 for more information.
-        echo "build --remote_default_exec_properties=OSVersion=\"$(lsb_release -ds)\"" >> ~/.bazelrc
+    #- name: Configure ~/.bazelrc
+    #  if: inputs.configure-bazel == 'true'
+    #  run: |
+    #    # Inject the OS version into a parameter used in the action key computation to
+    #    # avoid collisions between different operating systems in the caches.
+    #    # See #14695 for more information.
+    #    echo "build --remote_default_exec_properties=OSVersion=\"$(lsb_release -ds)\"" >> ~/.bazelrc
 
-        if ${{ github.event_name != 'pull_request' }}; then
-          echo "Will upload to the cache." >&2
-        else
-          echo "Download from cache only." >&2
-          echo "build --remote_upload_local_results=false" >> ~/.bazelrc
-        fi
-      shell: bash
+    #    if ${{ github.event_name != 'pull_request' }}; then
+    #      echo "Will upload to the cache." >&2
+    #    else
+    #      echo "Download from cache only." >&2
+    #      echo "build --remote_upload_local_results=false" >> ~/.bazelrc
+    #    fi
+    #  shell: bash
 
     - name: Install merge-junit
       run: |
