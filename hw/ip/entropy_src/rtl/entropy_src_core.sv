@@ -6,8 +6,12 @@
 //
 
 module entropy_src_core import entropy_src_pkg::*; #(
-  parameter int EsFifoDepth = 4,
-  parameter int DistrFifoDepth = 2
+  parameter int RngBusWidth       = 4,
+  parameter int RngBusBitSelWidth = 2,
+  parameter int EsFifoDepth       = 4,
+  parameter int DistrFifoDepth    = 2,
+  parameter int BucketHtDataWidth = 4,
+  parameter int NumBucketHtInst   = prim_util_pkg::ceil_div(RngBusWidth, BucketHtDataWidth)
 ) (
   input logic clk_i,
   input logic rst_ni,
@@ -27,16 +31,20 @@ module entropy_src_core import entropy_src_pkg::*; #(
   output entropy_src_hw_if_rsp_t entropy_src_hw_if_o,
 
   // RNG Interface
-  output entropy_src_rng_req_t entropy_src_rng_o,
-  input  entropy_src_rng_rsp_t entropy_src_rng_i,
+  output logic                   entropy_src_rng_enable_o,
+  input  logic                   entropy_src_rng_valid_i,
+  input  logic [RngBusWidth-1:0] entropy_src_rng_bits_i,
 
   // CSRNG Interface
   output cs_aes_halt_req_t cs_aes_halt_o,
   input  cs_aes_halt_rsp_t cs_aes_halt_i,
 
   // External Health Test Interface
-  output entropy_src_xht_req_t entropy_src_xht_o,
-  input  entropy_src_xht_rsp_t entropy_src_xht_i,
+  output logic                      entropy_src_xht_valid_o,
+  output [RngBusWidth-1:0]          entropy_src_xht_bits_o,
+  output [RngBusBitSelWidth-1:0]    entropy_src_xht_bit_sel_o,
+  output entropy_src_xht_meta_req_t entropy_src_xht_meta_o,
+  input  entropy_src_xht_meta_rsp_t entropy_src_xht_meta_i,
 
   output logic           recov_alert_test_o,
   output logic           fatal_alert_test_o,
@@ -58,7 +66,6 @@ module entropy_src_core import entropy_src_pkg::*; #(
 
   localparam int EsFifoDepthW = prim_util_pkg::vbits(EsFifoDepth);
   localparam int PostHTWidth = 32;
-  localparam int RngBusWidth = 4;
   localparam int HalfRegWidth = 16;
   localparam int FullRegWidth = 32;
   localparam int EighthRegWidth = 4;
@@ -108,7 +115,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
   logic       rng_bit_en;
   logic       rng_bit_enable_pfe;
   logic       rng_bit_enable_pfa;
-  logic [1:0] rng_bit_sel;
+  logic [RngBusBitSelWidth-1:0] rng_bit_sel;
   logic       rng_enable_q, rng_enable_d;
   logic       entropy_data_reg_en_pfe;
   logic       entropy_data_reg_en_pfa;
@@ -117,8 +124,6 @@ module entropy_src_core import entropy_src_pkg::*; #(
   logic       event_es_health_test_failed;
   logic       event_es_observe_fifo_ready;
   logic       event_es_fatal_err;
-  logic       es_rng_src_valid;
-  logic [RngBusWidth-1:0] es_rng_bus;
 
   logic [RngBusWidth-1:0] sfifo_esrng_wdata;
   logic [RngBusWidth-1:0] sfifo_esrng_rdata;
@@ -281,14 +286,16 @@ module entropy_src_core import entropy_src_pkg::*; #(
   logic [HalfRegWidth-1:0] bucket_bypass_threshold_oneway;
   logic                    bucket_bypass_threshold_wr;
   logic [HalfRegWidth-1:0] bucket_threshold;
-  logic [HalfRegWidth-1:0] bucket_event_cnt;
+  logic [NumBucketHtInst-1:0][HalfRegWidth-1:0] bucket_event_cnt;
+  logic [HalfRegWidth-1:0] bucket_event_cnt_combined;
   logic [HalfRegWidth-1:0] bucket_event_hwm_fips;
   logic [HalfRegWidth-1:0] bucket_event_hwm_bypass;
   logic [FullRegWidth-1:0] bucket_total_fails;
-  logic [EighthRegWidth-1:0] bucket_fail_count;
-  logic                     bucket_fail_pulse;
-  logic                     bucket_fails_cntr_err;
-  logic                     bucket_alert_cntr_err;
+  logic [EighthRegWidth-1:0]  bucket_fail_count;
+  logic [NumBucketHtInst-1:0] bucket_fail_pulse;
+  logic [prim_util_pkg::vbits(NumBucketHtInst)-1:0] bucket_fail_pulse_step;
+  logic                      bucket_fails_cntr_err;
+  logic                      bucket_alert_cntr_err;
 
   logic [HalfRegWidth-1:0] markov_hi_fips_threshold;
   logic [HalfRegWidth-1:0] markov_hi_fips_threshold_oneway;
@@ -442,7 +449,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
   logic                    repcnt_cntr_err;
   logic                    repcnts_cntr_err;
   logic                    adaptp_cntr_err;
-  logic                    bucket_cntr_err;
+  logic [NumBucketHtInst-1:0] bucket_cntr_err;
   logic                    markov_cntr_err;
   logic                    es_cntr_err;
   logic                    es_cntr_err_sum;
@@ -807,11 +814,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
   assign rng_enable_d = es_enable_fo[1] &&
                         es_delayed_enable;
 
-  assign entropy_src_rng_o.rng_enable = rng_enable_q;
-
-  assign es_rng_src_valid = entropy_src_rng_i.rng_valid;
-  assign es_rng_bus = entropy_src_rng_i.rng_b;
-
+  assign entropy_src_rng_enable_o = rng_enable_q;
 
   //--------------------------------------------
   // instantiate interrupt hardware primitives
@@ -1074,11 +1077,11 @@ module entropy_src_core import entropy_src_pkg::*; #(
   // fifo controls
   // We can't handle any backpressure at this point. Unless the ENTROPY_SRC block is turned off,
   // the input coming from the noise source / RNG needs to be accepted without dropping samples.
-  assign sfifo_esrng_push = es_enable_fo[5] && es_delayed_enable && es_rng_src_valid &&
+  assign sfifo_esrng_push = es_enable_fo[5] && es_delayed_enable && entropy_src_rng_valid_i &&
                             rng_enable_q;
 
   assign sfifo_esrng_clr   = ~es_delayed_enable;
-  assign sfifo_esrng_wdata = es_rng_bus;
+  assign sfifo_esrng_wdata = entropy_src_rng_bits_i;
   // We can't apply any backpressure at this point. Every sample is presented to the health tests
   // for exactly one clock cycle. If the receiving FIFO is full, the sample is dropped but the
   // health tests are still performed and the results accumulated.
@@ -1199,7 +1202,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
   // bypass or boot-time mode.
   `ASSERT(EsBootTimeHtWindowSizeSupported_A,
       main_sm_enable && es_bypass_mode && !fw_ov_mode_entropy_insert
-      |-> health_test_bypass_window == HalfRegWidth'(SeedLen/4))
+      |-> health_test_bypass_window == HalfRegWidth'(SeedLen/RngBusWidth))
 
   //------------------------------
   // repcnt one-way thresholds
@@ -1596,7 +1599,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
           repcnt_cntr_err ||
           repcnts_cntr_err ||
           adaptp_cntr_err ||
-          bucket_cntr_err ||
+          (|bucket_cntr_err) ||
           markov_cntr_err ||
           repcnt_fails_cntr_err ||
           repcnt_alert_cntr_err ||
@@ -1674,6 +1677,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (health_test_clr),
     .event_i             (repcnt_fail_pulse),
+    .step_i              (FullRegWidth'(1)),
     .value_o             (repcnt_total_fails),
     .err_o               (repcnt_fails_cntr_err)
   );
@@ -1735,6 +1739,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (health_test_clr),
     .event_i             (repcnts_fail_pulse),
+    .step_i              (FullRegWidth'(1)),
     .value_o             (repcnts_total_fails),
     .err_o               (repcnts_fails_cntr_err)
   );
@@ -1804,6 +1809,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (health_test_clr),
     .event_i             (adaptp_hi_fail_pulse),
+    .step_i              (FullRegWidth'(1)),
     .value_o             (adaptp_hi_total_fails),
     .err_o               (adaptp_hi_fails_cntr_err)
   );
@@ -1846,6 +1852,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (health_test_clr),
     .event_i             (adaptp_lo_fail_pulse),
+    .step_i              (FullRegWidth'(1)),
     .value_o             (adaptp_lo_total_fails),
     .err_o               (adaptp_lo_fails_cntr_err)
   );
@@ -1859,22 +1866,47 @@ module entropy_src_core import entropy_src_pkg::*; #(
   // bucket test
   //--------------------------------------------
 
-  // SEC_CM: RNG.BKGN_CHK
-  entropy_src_bucket_ht #(
-    .RegWidth(HalfRegWidth),
-    .RngBusWidth(RngBusWidth)
-  ) u_entropy_src_bucket_ht (
+  for (genvar i = 0; i < NumBucketHtInst; i++) begin : gen_health_test
+    // SEC_CM: RNG.BKGN_CHK
+    entropy_src_bucket_ht #(
+      .RegWidth(HalfRegWidth),
+      .RngBusWidth(BucketHtDataWidth)
+    ) u_entropy_src_bucket_ht (
+      .clk_i               (clk_i),
+      .rst_ni              (rst_ni),
+      .entropy_bit_i       (health_test_esbus[i*BucketHtDataWidth+:BucketHtDataWidth]),
+      .entropy_bit_vld_i   (health_test_esbus_vld),
+      .clear_i             (health_test_clr),
+      .active_i            (bucket_active),
+      .thresh_i            (bucket_threshold),
+      .window_wrap_pulse_i (health_test_done_pulse),
+      .test_cnt_o          (bucket_event_cnt[i]),
+      .test_fail_pulse_o   (bucket_fail_pulse[i]),
+      .count_err_o         (bucket_cntr_err[i])
+    );
+  end
+
+  // Add all partial errors to be consumed by the watermark registers
+  always_comb begin
+    bucket_event_cnt_combined = 0;
+    bucket_fail_pulse_step    = 0;
+    for (int i = 0; i < NumBucketHtInst; i++) begin
+      bucket_event_cnt_combined += bucket_event_cnt[i];
+      bucket_fail_pulse_step    += bucket_fail_pulse[i];
+    end
+  end
+
+  // SEC_CM: CTR.REDUN
+  entropy_src_cntr_reg #(
+    .RegWidth(FullRegWidth)
+  ) u_entropy_src_cntr_reg_bucket (
     .clk_i               (clk_i),
     .rst_ni              (rst_ni),
-    .entropy_bit_i       (health_test_esbus),
-    .entropy_bit_vld_i   (health_test_esbus_vld),
     .clear_i             (health_test_clr),
-    .active_i            (bucket_active),
-    .thresh_i            (bucket_threshold),
-    .window_wrap_pulse_i (health_test_done_pulse),
-    .test_cnt_o          (bucket_event_cnt),
-    .test_fail_pulse_o   (bucket_fail_pulse),
-    .count_err_o         (bucket_cntr_err)
+    .event_i             (|bucket_fail_pulse),
+    .step_i              (FullRegWidth'(bucket_fail_pulse_step)),
+    .value_o             (bucket_total_fails),
+    .err_o               (bucket_fails_cntr_err)
   );
 
   entropy_src_watermark_reg #(
@@ -1885,7 +1917,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (health_test_clr),
     .event_i             (health_test_done_pulse && !es_bypass_mode),
-    .value_i             (bucket_event_cnt),
+    .value_i             (bucket_event_cnt_combined),
     .value_o             (bucket_event_hwm_fips)
   );
 
@@ -1897,21 +1929,10 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (health_test_clr),
     .event_i             (health_test_done_pulse && es_bypass_mode),
-    .value_i             (bucket_event_cnt),
+    .value_i             (bucket_event_cnt_combined),
     .value_o             (bucket_event_hwm_bypass)
   );
 
-  // SEC_CM: CTR.REDUN
-  entropy_src_cntr_reg #(
-    .RegWidth(FullRegWidth)
-  ) u_entropy_src_cntr_reg_bucket (
-    .clk_i               (clk_i),
-    .rst_ni              (rst_ni),
-    .clear_i             (health_test_clr),
-    .event_i             (bucket_fail_pulse),
-    .value_o             (bucket_total_fails),
-    .err_o               (bucket_fails_cntr_err)
-  );
 
   assign hw2reg.bucket_hi_watermarks.fips_watermark.d = bucket_event_hwm_fips;
   assign hw2reg.bucket_hi_watermarks.bypass_watermark.d = bucket_event_hwm_bypass;
@@ -1978,6 +1999,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (health_test_clr),
     .event_i             (markov_hi_fail_pulse),
+    .step_i              (FullRegWidth'(1)),
     .value_o             (markov_hi_total_fails),
     .err_o               (markov_hi_fails_cntr_err)
   );
@@ -2019,6 +2041,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (health_test_clr),
     .event_i             (markov_lo_fail_pulse),
+    .step_i              (FullRegWidth'(1)),
     .value_o             (markov_lo_total_fails),
     .err_o               (markov_lo_fails_cntr_err)
   );
@@ -2033,23 +2056,23 @@ module entropy_src_core import entropy_src_pkg::*; #(
   //--------------------------------------------
 
   // set outputs to external health test
-  assign entropy_src_xht_o.entropy_bit = health_test_esbus;
-  assign entropy_src_xht_o.entropy_bit_valid = health_test_esbus_vld;
-  assign entropy_src_xht_o.rng_bit_en = rng_bit_en;
-  assign entropy_src_xht_o.rng_bit_sel = rng_bit_sel;
-  assign entropy_src_xht_o.clear = health_test_clr;
-  assign entropy_src_xht_o.active = extht_active;
-  assign entropy_src_xht_o.thresh_hi = extht_hi_threshold;
-  assign entropy_src_xht_o.thresh_lo = extht_lo_threshold;
-  assign entropy_src_xht_o.window_wrap_pulse = health_test_done_pulse;
-  assign entropy_src_xht_o.health_test_window = health_test_window_scaled;
-  assign entropy_src_xht_o.threshold_scope = threshold_scope;
+  assign entropy_src_xht_valid_o = health_test_esbus_vld;
+  assign entropy_src_xht_bits_o = health_test_esbus;
+  assign entropy_src_xht_bit_sel_o = rng_bit_sel;
+  assign entropy_src_xht_meta_o.rng_bit_en = rng_bit_en;
+  assign entropy_src_xht_meta_o.clear = health_test_clr;
+  assign entropy_src_xht_meta_o.active = extht_active;
+  assign entropy_src_xht_meta_o.thresh_hi = extht_hi_threshold;
+  assign entropy_src_xht_meta_o.thresh_lo = extht_lo_threshold;
+  assign entropy_src_xht_meta_o.window_wrap_pulse = health_test_done_pulse;
+  assign entropy_src_xht_meta_o.health_test_window = health_test_window_scaled;
+  assign entropy_src_xht_meta_o.threshold_scope = threshold_scope;
   // get inputs from external health test
-  assign extht_event_cnt_hi = entropy_src_xht_i.test_cnt_hi;
-  assign extht_event_cnt_lo = entropy_src_xht_i.test_cnt_lo;
-  assign extht_hi_fail_pulse = entropy_src_xht_i.test_fail_hi_pulse;
-  assign extht_lo_fail_pulse = entropy_src_xht_i.test_fail_lo_pulse;
-  assign extht_cont_test = entropy_src_xht_i.continuous_test;
+  assign extht_event_cnt_hi = entropy_src_xht_meta_i.test_cnt_hi;
+  assign extht_event_cnt_lo = entropy_src_xht_meta_i.test_cnt_lo;
+  assign extht_hi_fail_pulse = entropy_src_xht_meta_i.test_fail_hi_pulse;
+  assign extht_lo_fail_pulse = entropy_src_xht_meta_i.test_fail_lo_pulse;
+  assign extht_cont_test = entropy_src_xht_meta_i.continuous_test;
 
   entropy_src_watermark_reg #(
     .RegWidth(HalfRegWidth),
@@ -2083,6 +2106,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (health_test_clr),
     .event_i             (extht_hi_fail_pulse),
+    .step_i              (FullRegWidth'(1)),
     .value_o             (extht_hi_total_fails),
     .err_o               (extht_hi_fails_cntr_err)
   );
@@ -2124,6 +2148,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .clk_i               (clk_i),
     .rst_ni              (rst_ni),
     .clear_i             (health_test_clr),
+    .step_i              (FullRegWidth'(1)),
     .event_i             (extht_lo_fail_pulse),
     .value_o             (extht_lo_total_fails),
     .err_o               (extht_lo_fails_cntr_err)
@@ -2148,6 +2173,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (alert_cntrs_clr),
     .event_i             (any_fail_pulse),
+    .step_i              (HalfRegWidth'(1)),
     .value_o             (any_fail_count),
     .err_o               (any_fails_cntr_err)
   );
@@ -2156,7 +2182,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
          repcnt_fail_pulse ||
          repcnts_fail_pulse ||
          adaptp_hi_fail_pulse || adaptp_lo_fail_pulse ||
-         bucket_fail_pulse ||
+         (|bucket_fail_pulse) ||
          markov_hi_fail_pulse || markov_lo_fail_pulse ||
          extht_hi_fail_pulse || extht_lo_fail_pulse;
 
@@ -2241,6 +2267,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (alert_cntrs_clr),
     .event_i             (repcnt_fail_pulse),
+    .step_i              (EighthRegWidth'(1)),
     .value_o             (repcnt_fail_count),
     .err_o               (repcnt_alert_cntr_err)
   );
@@ -2256,6 +2283,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (alert_cntrs_clr),
     .event_i             (repcnts_fail_pulse),
+    .step_i              (EighthRegWidth'(1)),
     .value_o             (repcnts_fail_count),
     .err_o               (repcnts_alert_cntr_err)
   );
@@ -2271,6 +2299,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (alert_cntrs_clr),
     .event_i             (adaptp_hi_fail_pulse),
+    .step_i              (EighthRegWidth'(1)),
     .value_o             (adaptp_hi_fail_count),
     .err_o               (adaptp_hi_alert_cntr_err)
   );
@@ -2285,6 +2314,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (alert_cntrs_clr),
     .event_i             (adaptp_lo_fail_pulse),
+    .step_i              (EighthRegWidth'(1)),
     .value_o             (adaptp_lo_fail_count),
     .err_o               (adaptp_lo_alert_cntr_err)
   );
@@ -2299,7 +2329,8 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .clk_i               (clk_i),
     .rst_ni              (rst_ni),
     .clear_i             (alert_cntrs_clr),
-    .event_i             (bucket_fail_pulse),
+    .event_i             (|bucket_fail_pulse),
+    .step_i              (EighthRegWidth'(1)),
     .value_o             (bucket_fail_count),
     .err_o               (bucket_alert_cntr_err)
   );
@@ -2316,6 +2347,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (alert_cntrs_clr),
     .event_i             (markov_hi_fail_pulse),
+    .step_i              (EighthRegWidth'(1)),
     .value_o             (markov_hi_fail_count),
     .err_o               (markov_hi_alert_cntr_err)
   );
@@ -2330,6 +2362,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (alert_cntrs_clr),
     .event_i             (markov_lo_fail_pulse),
+    .step_i              (EighthRegWidth'(1)),
     .value_o             (markov_lo_fail_count),
     .err_o               (markov_lo_alert_cntr_err)
   );
@@ -2345,6 +2378,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (alert_cntrs_clr),
     .event_i             (extht_hi_fail_pulse),
+    .step_i              (EighthRegWidth'(1)),
     .value_o             (extht_hi_fail_count),
     .err_o               (extht_hi_alert_cntr_err)
   );
@@ -2359,6 +2393,7 @@ module entropy_src_core import entropy_src_pkg::*; #(
     .rst_ni              (rst_ni),
     .clear_i             (alert_cntrs_clr),
     .event_i             (extht_lo_fail_pulse),
+    .step_i              (EighthRegWidth'(1)),
     .value_o             (extht_lo_fail_count),
     .err_o               (extht_lo_alert_cntr_err)
   );
@@ -2418,7 +2453,13 @@ module entropy_src_core import entropy_src_pkg::*; #(
 
 
   assign rng_bit_en = rng_bit_enable_pfe;
-  assign rng_bit_sel = reg2hw.conf.rng_bit_sel.q;
+  assign rng_bit_sel = reg2hw.conf.rng_bit_sel.q[RngBusBitSelWidth-1:0];
+
+  // If RngBusWidth is less than 256 (8-bit), we have unused bits to read to avoid linting errors
+  if (RngBusBitSelWidth < 8) begin : gen_read_unused_bits
+    logic unused_rng_bit_sel;
+    assign unused_rng_bit_sel = ^reg2hw.conf.rng_bit_sel.q[7:RngBusBitSelWidth];
+  end
 
   prim_packer_fifo #(
     .InW(1),
@@ -2444,12 +2485,16 @@ module entropy_src_core import entropy_src_pkg::*; #(
   assign pfifo_esbit_push = rng_bit_en && sfifo_esrng_not_empty;
   assign pfifo_esbit_clr = ~es_delayed_enable;
   assign pfifo_esbit_pop = rng_bit_en && pfifo_esbit_not_empty && pfifo_postht_not_full;
-  assign pfifo_esbit_wdata =
-         (rng_bit_sel == 2'h0) ? sfifo_esrng_rdata[0] :
-         (rng_bit_sel == 2'h1) ? sfifo_esrng_rdata[1] :
-         (rng_bit_sel == 2'h2) ? sfifo_esrng_rdata[2] :
-         sfifo_esrng_rdata[3];
 
+  always_comb begin
+    pfifo_esbit_wdata = '0;
+
+    for (int i = 0; i < RngBusWidth; i++) begin
+      if (rng_bit_sel == i) begin
+        pfifo_esbit_wdata = sfifo_esrng_rdata[i];
+      end
+    end
+  end
 
   //--------------------------------------------
   // pack tested entropy into 32 bit packer
@@ -3124,11 +3169,11 @@ module entropy_src_core import entropy_src_pkg::*; #(
   logic es_delayed_enable_d, es_delayed_enable_q;
   assign es_delayed_enable_d = es_delayed_enable;
 
-  // Count number of valid bits from RNG input (RNG_BUS_WIDTH wide) while Entropy Source is enabled.
+  // Count number of valid bits from RNG input (RngBusWidth wide) while Entropy Source is enabled.
   logic [63:0] rng_valid_bit_cnt_d, rng_valid_bit_cnt_q;
-  assign rng_valid_bit_cnt_d = entropy_src_rng_i.rng_valid && es_enable_fo[5] &&
+  assign rng_valid_bit_cnt_d = entropy_src_rng_valid_i && es_enable_fo[5] &&
                                es_delayed_enable_q ?
-                               rng_valid_bit_cnt_q + RNG_BUS_WIDTH :
+                               rng_valid_bit_cnt_q + RngBusWidth :
                                rng_valid_bit_cnt_q;
 
   // Count number of bits pushed into esrng FIFO (RngBusWidth wide).
