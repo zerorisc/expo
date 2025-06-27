@@ -7,7 +7,7 @@
 
 /**
  * @file
- * @brief <a href="/hw/ip/uart/doc/">UART</a> Device Interface Functions
+ * @brief <a href="/book/hw/ip/uart/">UART</a> Device Interface Functions
  */
 
 #include <stdint.h>
@@ -140,7 +140,7 @@ typedef enum dif_uart_datapath {
  */
 typedef enum dif_uart_loopback {
   /**
-   * Indicates that outgoing TX bits should be recieved through RX.
+   * Indicates that outgoing TX bits should be received through RX.
    */
   kDifUartLoopbackSystem = 0,
   /**
