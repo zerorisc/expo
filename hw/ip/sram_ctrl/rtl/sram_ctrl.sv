@@ -172,9 +172,9 @@ module sram_ctrl
   logic [otp_ctrl_pkg::SramNonceWidth-1:0] nonce_d, nonce_q;
 
   // tie-off unused nonce bits
-  if (otp_ctrl_pkg::SramNonceWidth > NonceWidth) begin : gen_nonce_tieoff
+  if (otp_ctrl_pkg::SramNonceWidth > LfsrWidth + NonceWidth) begin : gen_nonce_tieoff
     logic unused_nonce;
-    assign unused_nonce = ^nonce_q[otp_ctrl_pkg::SramNonceWidth-1:NonceWidth];
+    assign unused_nonce = ^nonce_q[otp_ctrl_pkg::SramNonceWidth-1:LfsrWidth + NonceWidth];
   end
 
   //////////////////
@@ -451,11 +451,11 @@ module sram_ctrl
   // Initialization LFSR //
   /////////////////////////
 
-  logic [LfsrWidth-1:0] lfsr_out;
+  logic [LfsrOutWidth-1:0] lfsr_out;
   prim_lfsr #(
     .LfsrDw      ( LfsrWidth       ),
     .EntropyDw   ( LfsrWidth       ),
-    .StateOutDw  ( LfsrWidth       ),
+    .StateOutDw  ( LfsrOutWidth    ),
     .DefaultSeed ( RndCnstLfsrSeed ),
     .StatePermEn ( 1'b1            ),
     .StatePerm   ( RndCnstLfsrPerm )

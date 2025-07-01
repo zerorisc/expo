@@ -128,7 +128,6 @@ opentitan_ip_rust_header = rule(
 
 def _opentitan_autogen_dif_gen(ctx):
     outputs = []
-    outdir = "{}/{}".format(ctx.bin_dir.path, ctx.label.package)
     top = ctx.attr.top[OpenTitanTopInfo]
     ip_hjson = opentitan_top_get_ip_attr(top, ctx.attr.ip, "hjson")
 
@@ -146,7 +145,7 @@ def _opentitan_autogen_dif_gen(ctx):
         "--ipcfg",
         ip_hjson.path,
         "--outdir",
-        outdir,
+        outputs[0].dirname,
     ]
 
     ctx.actions.run(
@@ -212,16 +211,17 @@ def opentitan_autogen_dif(name, top, ip, deps = [], target_compatible_with = [])
 
 def _opentitan_top_dt_gen(ctx):
     outputs = []
-    outdir = "{}/{}".format(ctx.bin_dir.path, ctx.label.package)
+    _subdir_ignore = ctx.actions.declare_directory("_ignore_{}".format(ctx.label.name))
+    outdir = _subdir_ignore.dirname
 
     groups = {}
     for group, files in ctx.attr.output_groups.items():
         deps = []
         for file in files:
-            deps.append(ctx.actions.declare_file(file))
+            f = ctx.actions.declare_file(file)
+            deps.append(f)
         outputs.extend(deps)
         groups[group] = depset(deps)
-
     top = ctx.attr.top[OpenTitanTopInfo]
 
     inputs = [top.hjson]
@@ -259,7 +259,7 @@ def _opentitan_top_dt_gen(ctx):
     arguments.extend(ips)
 
     ctx.actions.run(
-        outputs = outputs,
+        outputs = outputs + [_subdir_ignore],
         inputs = inputs,
         arguments = arguments,
         executable = ctx.executable._dttool,
@@ -617,4 +617,40 @@ autogen_cryptotest_header = rule(
             cfg = "exec",
         ),
     },
+)
+
+def _autogen_stamp_include(ctx):
+    """
+    Bazel rule for generating C header containing all stamping variables.
+
+    This rule is instantiated as //rules:autogen_stamp_include.
+    Please see the entry in rules/BUILD for explanation.
+    """
+    output = ctx.actions.declare_file("{}.inc".format(ctx.attr.name))
+
+    if stamping_enabled(ctx):
+        ctx.actions.run_shell(
+            outputs = [output],
+            inputs = [ctx.version_file, ctx.info_file],
+            arguments = [
+                ctx.version_file.path,
+                ctx.info_file.path,
+                output.path,
+            ],
+            command = """
+                cat $1 $2 \
+                | sed -E 's/^(\\w+) (.*)/#define BAZEL_\\1 \\2/' \
+                > $3
+            """,
+        )
+    else:
+        ctx.actions.write(output, "")
+
+    return [
+        DefaultInfo(files = depset([output])),
+    ]
+
+autogen_stamp_include = rule(
+    implementation = _autogen_stamp_include,
+    attrs = stamp_attr(-1, "//rules:stamp_flag"),
 )

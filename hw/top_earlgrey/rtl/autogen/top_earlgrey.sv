@@ -104,6 +104,8 @@ module top_earlgrey #(
   // parameters for csrng
   parameter aes_pkg::sbox_impl_e CsrngSBoxImpl = aes_pkg::SBoxImplCanright,
   // parameters for entropy_src
+  parameter int EntropySrcRngBusWidth = 4,
+  parameter int EntropySrcRngBusBitSelWidth = 2,
   parameter int EntropySrcEsFifoDepth = 3,
   parameter int unsigned EntropySrcDistrFifoDepth = 2,
   parameter bit EntropySrcStub = 0,
@@ -193,8 +195,9 @@ module top_earlgrey #(
   inout   [1:0] flash_test_mode_a_io,
   inout         flash_test_voltage_h_io,
   output logic [7:0] flash_obs_o,
-  output entropy_src_pkg::entropy_src_rng_req_t       es_rng_req_o,
-  input  entropy_src_pkg::entropy_src_rng_rsp_t       es_rng_rsp_i,
+  output logic       es_rng_enable_o,
+  input  logic       es_rng_valid_i,
+  input  logic [EntropySrcRngBusWidth-1:0] es_rng_bit_i,
   output logic       es_rng_fips_o,
   output tlul_pkg::tl_h2d_t       ast_tl_req_o,
   input  tlul_pkg::tl_d2h_t       ast_tl_rsp_i,
@@ -651,6 +654,7 @@ module top_earlgrey #(
   logic       lc_ctrl_strap_en_override;
   lc_ctrl_pkg::lc_tx_t       lc_ctrl_lc_dft_en;
   lc_ctrl_pkg::lc_tx_t       lc_ctrl_lc_nvm_debug_en;
+  lc_ctrl_pkg::lc_tx_t       lc_ctrl_lc_hw_debug_clr;
   lc_ctrl_pkg::lc_tx_t       lc_ctrl_lc_hw_debug_en;
   lc_ctrl_pkg::lc_tx_t       lc_ctrl_lc_cpu_en;
   lc_ctrl_pkg::lc_tx_t       lc_ctrl_lc_keymgr_en;
@@ -1617,6 +1621,7 @@ module top_earlgrey #(
       .lc_raw_test_rma_o(),
       .lc_dft_en_o(lc_ctrl_lc_dft_en),
       .lc_nvm_debug_en_o(lc_ctrl_lc_nvm_debug_en),
+      .lc_hw_debug_clr_o(lc_ctrl_lc_hw_debug_clr),
       .lc_hw_debug_en_o(lc_ctrl_lc_hw_debug_en),
       .lc_cpu_en_o(lc_ctrl_lc_cpu_en),
       .lc_keymgr_en_o(lc_ctrl_lc_keymgr_en),
@@ -2068,6 +2073,7 @@ module top_earlgrey #(
       .alert_rx_i  ( alert_rx[30:30] ),
 
       // Inter-module signals
+      .lc_hw_debug_clr_i(lc_ctrl_lc_hw_debug_clr),
       .lc_hw_debug_en_i(lc_ctrl_lc_hw_debug_en),
       .lc_dft_en_i(lc_ctrl_lc_dft_en),
       .lc_escalate_en_i(lc_ctrl_lc_escalate_en),
@@ -2318,6 +2324,7 @@ module top_earlgrey #(
       .next_dm_addr_i('0),
       .jtag_i(pinmux_aon_rv_jtag_req),
       .jtag_o(pinmux_aon_rv_jtag_rsp),
+      .lc_hw_debug_clr_i(lc_ctrl_lc_hw_debug_clr),
       .lc_hw_debug_en_i(lc_ctrl_lc_hw_debug_en),
       .lc_dft_en_i(lc_ctrl_lc_dft_en),
       .pinmux_hw_debug_en_i(pinmux_aon_pinmux_hw_debug_en),
@@ -2598,6 +2605,8 @@ module top_earlgrey #(
   );
   entropy_src #(
     .AlertAsyncOn(alert_handler_reg_pkg::AsyncOn[54:53]),
+    .RngBusWidth(EntropySrcRngBusWidth),
+    .RngBusBitSelWidth(EntropySrcRngBusBitSelWidth),
     .EsFifoDepth(EntropySrcEsFifoDepth),
     .DistrFifoDepth(EntropySrcDistrFifoDepth),
     .Stub(EntropySrcStub)
@@ -2618,10 +2627,14 @@ module top_earlgrey #(
       .entropy_src_hw_if_o(csrng_entropy_src_hw_if_rsp),
       .cs_aes_halt_o(csrng_cs_aes_halt_req),
       .cs_aes_halt_i(csrng_cs_aes_halt_rsp),
-      .entropy_src_rng_o(es_rng_req_o),
-      .entropy_src_rng_i(es_rng_rsp_i),
-      .entropy_src_xht_o(),
-      .entropy_src_xht_i(entropy_src_pkg::ENTROPY_SRC_XHT_RSP_DEFAULT),
+      .entropy_src_rng_enable_o(es_rng_enable_o),
+      .entropy_src_rng_valid_i(es_rng_valid_i),
+      .entropy_src_rng_bits_i(es_rng_bit_i),
+      .entropy_src_xht_valid_o(),
+      .entropy_src_xht_bits_o(),
+      .entropy_src_xht_bit_sel_o(),
+      .entropy_src_xht_meta_o(),
+      .entropy_src_xht_meta_i(entropy_src_pkg::ENTROPY_SRC_XHT_META_RSP_DEFAULT),
       .otp_en_entropy_src_fw_read_i(prim_mubi_pkg::MuBi8True),
       .otp_en_entropy_src_fw_over_i(prim_mubi_pkg::MuBi8True),
       .rng_fips_o(es_rng_fips_o),

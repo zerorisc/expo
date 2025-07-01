@@ -7,7 +7,7 @@
 
 /**
  * @file
- * @brief <a href="/hw/ip/csrng/doc/">CSRNG</a> Device Interface Functions
+ * @brief <a href="/book/hw/ip/csrng/">CSRNG</a> Device Interface Functions
  */
 
 #include <stdint.h>
@@ -60,7 +60,7 @@ extern "C" {
  * - `dif_csrng_get_output_status()`
  *
  * Please see the following documentation for more information:
- * https://docs.opentitan.org/hw/ip/csrng/doc/
+ * https://opentitan.org/book/hw/ip/csrng/
  *
  * Remaining work:
  *
@@ -141,11 +141,11 @@ typedef enum dif_csrng_error {
    */
   kDifCsrngErrorGenerateCmdCounter,
   /**
-   * Indicates a write to a full FIFO occured.
+   * Indicates a write to a full FIFO occurred.
    */
   kDifCsrngErrorFifoWrite,
   /**
-   * Indicates a read from an empty FIFO occured.
+   * Indicates a read from an empty FIFO occurred.
    */
   kDifCsrngErrorFifoRead,
   /**
