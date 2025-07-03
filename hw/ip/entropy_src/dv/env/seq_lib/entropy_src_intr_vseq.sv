@@ -67,7 +67,7 @@ class entropy_src_intr_vseq extends entropy_src_base_vseq;
     check_interrupts(.interrupts((1 << ObserveFifoReady)), .check_set(1'b1));
   endtask // test_es_observe_fifo_ready
 
-  // This function checks wheter the arrangement of the 16 possible RNG values
+  // This function checks whether the arrangement of the 16 possible RNG values
   // fail the Markov test.
   function bit check_for_markov_failure(rng_val_t rng_arr[16]);
     int transition_cnts[4] = '{0, 0, 0, 0};
@@ -131,7 +131,7 @@ class entropy_src_intr_vseq extends entropy_src_base_vseq;
         m_csrng_pull_seq.num_trans = 1;
         // Set num_invalid_rng_trans to add invalid h_user_data to the RNG agent.
         num_invalid_rng_trans = cfg.dut_cfg.bypass_window_size/`RNG_BUS_WIDTH;
-        // For 1 CSRNG transaction we need 384/4 RNG transactions.
+        // For 1 CSRNG transaction we need 384/`RNG_BUS_WIDTH RNG transactions.
         m_rng_push_seq.num_trans = cfg.dut_cfg.bypass_window_size/`RNG_BUS_WIDTH;
       end
       BootPhaseDone : begin
@@ -143,7 +143,7 @@ class entropy_src_intr_vseq extends entropy_src_base_vseq;
         num_valid_rng_trans = cfg.dut_cfg.bypass_window_size/`RNG_BUS_WIDTH;
         // Set num_invalid_rng_trans to add invalid h_user_data to the RNG agent.
         num_invalid_rng_trans = cfg.dut_cfg.bypass_window_size/`RNG_BUS_WIDTH;
-        // For 2 CSRNG transactions we need 2*384/4 RNG transactions.
+        // For 2 CSRNG transactions we need 2*384/`RNG_BUS_WIDTH RNG transactions.
         m_rng_push_seq.num_trans = 2*cfg.dut_cfg.bypass_window_size/`RNG_BUS_WIDTH;
       end
       StartupFail1  : begin
@@ -153,7 +153,7 @@ class entropy_src_intr_vseq extends entropy_src_base_vseq;
         m_csrng_pull_seq.num_trans = 1;
         // Set num_invalid_rng_trans to add invalid h_user_data to the RNG agent.
         num_invalid_rng_trans = 2*cfg.dut_cfg.fips_window_size/`RNG_BUS_WIDTH;
-        // For 2 CSRNG transactions we need 2*2048/4 RNG transactions.
+        // For 2 CSRNG transactions we need 2*2048/`RNG_BUS_WIDTH RNG transactions.
         m_rng_push_seq.num_trans = 2*cfg.dut_cfg.fips_window_size/`RNG_BUS_WIDTH;
       end
       ContHTRunning : begin
@@ -165,7 +165,7 @@ class entropy_src_intr_vseq extends entropy_src_base_vseq;
         num_valid_rng_trans = 2*cfg.dut_cfg.fips_window_size/`RNG_BUS_WIDTH;
         // Set num_invalid_rng_trans to add invalid h_user_data to the RNG agent.
         num_invalid_rng_trans = cfg.dut_cfg.fips_window_size/`RNG_BUS_WIDTH;
-        // For the 2 CSRNG transactions we need 3*2048/4 RNG transactions.
+        // For the 2 CSRNG transactions we need 3*2048/`RNG_BUS_WIDTH RNG transactions.
         m_rng_push_seq.num_trans = 3*cfg.dut_cfg.fips_window_size/`RNG_BUS_WIDTH;
       end
       default: begin
@@ -186,7 +186,7 @@ class entropy_src_intr_vseq extends entropy_src_base_vseq;
     end
 
     case (cfg.which_ht_fail)
-      repcnt_ht_fail: begin // Repitition count test
+      repcnt_ht_fail: begin // Repetition count test
         // Set a low threshold to introduce ht fails.
         // For our valid inputs a threshold of 10 suffices, since each subsequence of
         // 16 inputs contains all of the numbers 1-16 and since exactly half bits are
@@ -263,11 +263,11 @@ class entropy_src_intr_vseq extends entropy_src_base_vseq;
     // Check if the DUT is in the AlertHang state.
     csr_rd_check(.ptr(ral.main_sm_state.main_sm_state),
                  .compare_value(alert_state));
-    // Check if we can consume entorpy via the entropy_data register.
+    // Check if we can consume entropy via the entropy_data register.
     if (cfg.es_route_sw == MuBi4True) begin
       do_entropy_data_read(.max_bundles(1), .bundles_found(bundles_found));
       `DV_CHECK(!bundles_found)
-    // Check if we can consume entorpy via the CSRNG interface.
+    // Check if we can consume entropy via the CSRNG interface.
     end else begin
       // There should be 1 transaction left for m_csrng_pull_seq.
       `DV_CHECK(cfg.total_seeds_consumed == (m_csrng_pull_seq.num_trans - 1))

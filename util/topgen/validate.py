@@ -64,6 +64,7 @@ top_optional = {
     'exported_clks': ['g', 'clock signal routing rules'],
     'host': ['g', 'list of host-only components in the system'],
     'inter_module': ['g', 'define the signal connections between the modules'],
+    'interrupts': ['g', 'interrupt controller configuration'],
     'interrupt_module': ['l', 'list of the modules that connects to rv_plic'],
     'num_cores': ['pn', "number of computing units"],
     'outgoing_alert': ['g', 'the outgoing alert groups'],
@@ -290,6 +291,8 @@ module_optional = {
         'represent a dict that associates all interfaces with the given '
         'mapping. It is an error to specify both this and racl_mappings.'
     ],
+    'plic': ['s', 'Interrupt controller managing this module'],
+    'targets': ['l', 'Optional list of targets for this PLIC'],
 }
 
 module_added = {
@@ -347,7 +350,7 @@ reset_requests_added = {}
 
 reset_request_required = {
     'name': ['s', 'the reset request name'],
-    'desc': ['s', 'the reset request descrption'],
+    'desc': ['s', 'the reset request description'],
     'module': ['s', 'the reset request source'],
 }
 reset_request_optional = {
@@ -384,10 +387,12 @@ interrupt_required = {
     'intr_type': ['s', 'The IntrType, either Event or Status'],
     'default_val': ['s', 'a string interpreted as boolean'],
     'incoming': ['s', 'a string interpreted as boolean'],
+    'outgoing': ['s', 'boolean (as string) whether interrupt leaves toplevel'],
 }
 interrupt_optional = {
     'desc': ['s', 'the description of the interrupt'],
     'type': ['s', 'should contain "interrupt"'],
+    'plic': ['s', 'controller for this interrupt'],
 }
 interrupt_added = {}
 
@@ -473,7 +478,7 @@ class Target:
 class Flash:
     """Flash class contains information regarding parameter defaults.
        For now, only expose banks / pages_per_bank for user configuration.
-       For now, also enforce power of 2 requiremnt.
+       For now, also enforce power of 2 requirement.
     """
     max_banks = 4
     max_pages_per_bank = 1024

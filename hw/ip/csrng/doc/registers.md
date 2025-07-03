@@ -266,7 +266,7 @@ To check whether a command was successful, wait for [`INTR_STATE.CS_CMD_REQ_DONE
 | 0x1     | INVALID_ACMD        | Request completed with an invalid application command error. This error indicates that the issued application command doesn't represent a valid operation.                                                                                                                 |
 | 0x2     | INVALID_GEN_CMD     | Request completed with an invalid counter DRBG generation command error. This error indicates that CSRNG entropy was generated for a command that is not a Generate command. In this case the entropy should not be considered as valid.                                   |
 | 0x3     | INVALID_CMD_SEQ     | This error indicates that the last command was issued out of sequence. This happens when a command other than Instantiate was issued without sending an Instantiate command first. This can also happen when an Uninstantiate command is sent without instantiating first. |
-| 0x4     | RESEED_CNT_EXCEEDED | This error indicates that the number of generate requests between reseeds exceeded the maximum number allowed (see !!RESEED_INTERVAL). This happens only for Generate commands.                                                                                            |
+| 0x4     | RESEED_CNT_EXCEEDED | This error indicates that the number of generate requests between reseeds exceeded the maximum number allowed (see [`RESEED_INTERVAL`](#reseed_interval)). This happens only for Generate commands.                                                                        |
 
 Other values are reserved.
 
@@ -604,13 +604,13 @@ This bit will stay set until the next reset.
 ### ERR_CODE . FIFO_READ_ERR
 This bit will be set to one when any of the source bits (bits 0 through 15 of this
 this register) are asserted as a result of an error pulse generated from
-any empty FIFO that has recieved a read pulse.
+any empty FIFO that has received a read pulse.
 This bit will stay set until the next reset.
 
 ### ERR_CODE . FIFO_WRITE_ERR
 This bit will be set to one when any of the source bits (bits 0 through 15 of this
 this register) are asserted as a result of an error pulse generated from
-any full FIFO that has been recieved a write pulse.
+any full FIFO that has been received a write pulse.
 This bit will stay set until the next reset.
 
 ### ERR_CODE . CMD_GEN_CNT_ERR

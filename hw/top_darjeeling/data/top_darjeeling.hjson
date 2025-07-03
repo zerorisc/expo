@@ -196,6 +196,13 @@
   // Number of cores: used in rv_plic and timer
   num_cores: "1",
 
+  // Interrupt handler information for the design
+  interrupts: {
+    // Any module with interrupts that doesn't specify plic
+    // will have its interrupts sent here
+    default_plic: "rv_plic"
+  }
+
   // `addr_spaces` names the distinct address spaces present in the device.
   // All hosts in the same address space share the same base addresses for
   // all peripherals, though not every peripheral will be accessible to every
@@ -355,8 +362,8 @@
       clock_srcs: {clk_i: "io_div4"},
       clock_group: "secure",
       reset_connections: {rst_ni: "lc_io_div4"},
-      base_addr: {
-        hart: "0x30140000",
+      base_addrs: {
+        prim: {hart: "0x30140000"},
       },
       param_decl: {
         Width: "otp_ctrl_macro_pkg::OtpWidth",
@@ -699,6 +706,7 @@
         hart: "0x28000000",
       },
       attr: "ipgen",
+      targets: ["rv_core_ibex"]
     },
     { name: "aes",
       type: "aes",

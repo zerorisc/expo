@@ -13,19 +13,22 @@ module otp_macro
   // This determines the maximum number of native words that
   // can be transferred across the interface in one cycle.
   parameter  int    SizeWidth        = 2,
-  // Derived parameters
-  localparam int    AddrWidth        = prim_util_pkg::vbits(Depth),
   // VMEM file to initialize the memory with
   parameter         MemInitFile   = "",
   // Vendor test partition offset and size (both in bytes)
   parameter  int    VendorTestOffset = 0,
-  parameter  int    VendorTestSize   = 0
+  parameter  int    VendorTestSize   = 0,
+  // RACL definitions
+  parameter bit  EnableRacl       = 1'b0,
+  parameter bit  RaclErrorRsp     = 1'b1,
+  parameter top_racl_pkg::racl_policy_sel_t RaclPolicySelVec[otp_macro_reg_pkg::NumRegsPrim] =
+    '{otp_macro_reg_pkg::NumRegsPrim{0}}
 ) (
   input                          clk_i,
   input                          rst_ni,
   // Bus interface
-  input                          tlul_pkg::tl_h2d_t tl_i,
-  output                         tlul_pkg::tl_d2h_t tl_o,
+  input                          tlul_pkg::tl_h2d_t prim_tl_i,
+  output                         tlul_pkg::tl_d2h_t prim_tl_o,
 
   // Lifecycle broadcast inputs
   // SEC_CM: LC_CTRL.INTERSIG.MUBI
@@ -52,6 +55,10 @@ module otp_macro
   input                          otp_ctrl_macro_req_t otp_i,
   output                         otp_ctrl_macro_rsp_t otp_o,
 
+  // RACL interface
+  input  top_racl_pkg::racl_policy_vec_t  racl_policies_i,
+  output top_racl_pkg::racl_error_log_t   racl_error_o,
+
   // DFT config and response port
   input                          otp_cfg_t cfg_i,
   output                         otp_cfg_rsp_t cfg_rsp_o
@@ -60,10 +67,13 @@ module otp_macro
   // SEC_CM: MACRO.MEM.CM
   import prim_mubi_pkg::MuBi4False;
 
-  // This is only restricted by the supported ECC poly further
-  // below, and is straightforward to extend, if needed.
-  localparam int EccWidth = 6;
-  `ASSERT_INIT(SecDecWidth_A, Width == 16)
+  // Use a standard Hamming ECC for OTP, parameterized by Width.
+  // Check that the secded width and type combination is supported.
+  if (!prim_secded_pkg::is_width_valid(prim_secded_pkg::SecdedHamming, Width))
+    $error("Width %0d is not supported for SecdedHamming", Width);
+
+  // The ECC syndrome width is parameterized based on Width.
+  localparam int EccWidth = prim_secded_pkg::get_synd_width(prim_secded_pkg::SecdedHamming, Width);
 
   // Not supported in open-source emulation model.
   pwr_seq_t unused_pwr_seq_h;
@@ -132,8 +142,8 @@ module otp_macro
   ) u_tlul_lc_gate (
     .clk_i,
     .rst_ni,
-    .tl_h2d_i(tl_i),
-    .tl_d2h_o(tl_o),
+    .tl_h2d_i(prim_tl_i),
+    .tl_d2h_o(prim_tl_o),
     .tl_h2d_o(tl_h2d_gated),
     .tl_d2h_i(tl_d2h_gated),
     .lc_en_i (lc_dft_en[0]),
@@ -143,16 +153,22 @@ module otp_macro
     .err_o   (lc_fsm_err)
   );
 
-  otp_macro_reg_pkg::otp_macro_reg2hw_t reg2hw;
-  otp_macro_reg_pkg::otp_macro_hw2reg_t hw2reg;
-  otp_macro_reg_top u_reg_top (
+  otp_macro_reg_pkg::otp_macro_prim_reg2hw_t reg2hw;
+  otp_macro_reg_pkg::otp_macro_prim_hw2reg_t hw2reg;
+  otp_macro_prim_reg_top #(
+    .EnableRacl       ( EnableRacl       ),
+    .RaclErrorRsp     ( RaclErrorRsp     ),
+    .RaclPolicySelVec ( RaclPolicySelVec )
+  ) u_reg_top (
     .clk_i,
     .rst_ni,
     .tl_i      (tl_h2d_gated ),
     .tl_o      (tl_d2h_gated ),
     .reg2hw    (reg2hw    ),
     .hw2reg    (hw2reg    ),
-    .intg_err_o(intg_err  )
+    .intg_err_o(intg_err  ),
+    .racl_policies_i,
+    .racl_error_o
   );
 
   logic unused_reg_sig;
@@ -370,25 +386,22 @@ module otp_macro
   ///////////////////////////////////////////
 
   otp_macro_addr_t addr;
-  assign addr = addr_q + AddrWidth'(cnt_q);
+  assign addr = addr_q + otp_macro_addr_t'(cnt_q);
 
   logic [Width-1:0] rdata_corr;
   logic [Width+EccWidth-1:0] rdata_d, wdata_ecc, rdata_ecc, wdata_rmw;
   logic [2**SizeWidth-1:0][Width-1:0] wdata_q, rdata_reshaped;
   logic [2**SizeWidth-1:0][Width+EccWidth-1:0] rdata_q;
 
-  // Use a standard Hamming ECC for OTP.
-  prim_secded_hamming_22_16_enc u_enc (
-    .data_i(wdata_q[cnt_q]),
-    .data_o(wdata_ecc)
-  );
+  // Instantiate secded encoder and decoder based on parameters.
+`include "prim_secded_inc.svh"
 
-  prim_secded_hamming_22_16_dec u_dec (
-    .data_i     (rdata_ecc),
-    .data_o     (rdata_corr),
-    .syndrome_o ( ),
-    .err_o      (rerror)
-  );
+`SECDED_INST_ENC(prim_secded_pkg::SecdedHamming, Width, u_enc, wdata_q[cnt_q], wdata_ecc)
+
+`SECDED_INST_DEC(prim_secded_pkg::SecdedHamming, Width, u_dec, rdata_ecc, rdata_corr, , rerror)
+
+`undef SECDED_INST_DEC
+`undef SECDED_INST_ENC
 
   assign rdata_d = (read_ecc_on) ? {{EccWidth{1'b0}}, rdata_corr}
                                  : rdata_ecc;
@@ -483,7 +496,7 @@ module otp_macro
   `ASSERT_INIT(VendorTestSizeMatches_A, VendorTestSize == otp_ctrl_reg_pkg::VendorTestSize)
 
   `ASSERT_KNOWN(OtpAstPwrSeqKnown_A, pwr_seq_o)
-  `ASSERT_KNOWN(OtpMacroTlOutKnown_A, tl_o)
+  `ASSERT_KNOWN(OtpMacroTlOutKnown_A, prim_tl_o)
 
   // Assertions for countermeasures inside otp_macro are done in three parts
   // - Assert invalid conditions propagate to otp_o.fatal_alert

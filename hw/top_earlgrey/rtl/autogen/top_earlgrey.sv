@@ -106,8 +106,7 @@ module top_earlgrey #(
   // parameters for entropy_src
   parameter int EntropySrcRngBusWidth = 4,
   parameter int EntropySrcRngBusBitSelWidth = 2,
-  parameter int EntropySrcEsFifoDepth = 3,
-  parameter int unsigned EntropySrcDistrFifoDepth = 2,
+  parameter int EntropySrcHealthTestWindowWidth = 18,
   parameter bit EntropySrcStub = 0,
   // parameters for edn0
   // parameters for edn1
@@ -260,6 +259,9 @@ module top_earlgrey #(
   localparam int SpiHost1NumCS = 1;
   // local parameters for sram_ctrl_ret_aon
   localparam int SramCtrlRetAonOutstanding = 2;
+  // local parameters for entropy_src
+  localparam int EntropySrcEsFifoDepth = 3;
+  localparam int unsigned EntropySrcDistrFifoDepth = 2;
   // local parameters for sram_ctrl_main
   localparam int SramCtrlMainOutstanding = 2;
 
@@ -768,8 +770,8 @@ module top_earlgrey #(
   tlul_pkg::tl_d2h_t       pinmux_aon_tl_rsp;
   tlul_pkg::tl_h2d_t       otp_ctrl_core_tl_req;
   tlul_pkg::tl_d2h_t       otp_ctrl_core_tl_rsp;
-  tlul_pkg::tl_h2d_t       otp_macro_tl_req;
-  tlul_pkg::tl_d2h_t       otp_macro_tl_rsp;
+  tlul_pkg::tl_h2d_t       otp_macro_prim_tl_req;
+  tlul_pkg::tl_d2h_t       otp_macro_prim_tl_rsp;
   tlul_pkg::tl_h2d_t       lc_ctrl_regs_tl_req;
   tlul_pkg::tl_d2h_t       lc_ctrl_regs_tl_rsp;
   tlul_pkg::tl_h2d_t       sensor_ctrl_aon_tl_req;
@@ -1568,8 +1570,10 @@ module top_earlgrey #(
       .otp_o(otp_ctrl_otp_macro_rsp),
       .cfg_i('0),
       .cfg_rsp_o(),
-      .tl_i(otp_macro_tl_req),
-      .tl_o(otp_macro_tl_rsp),
+      .racl_policies_i(top_racl_pkg::RACL_POLICY_VEC_DEFAULT),
+      .racl_error_o(),
+      .prim_tl_i(otp_macro_prim_tl_req),
+      .prim_tl_o(otp_macro_prim_tl_rsp),
       .scanmode_i,
       .scan_rst_ni,
       .scan_en_i,
@@ -2607,6 +2611,7 @@ module top_earlgrey #(
     .AlertAsyncOn(alert_handler_reg_pkg::AsyncOn[54:53]),
     .RngBusWidth(EntropySrcRngBusWidth),
     .RngBusBitSelWidth(EntropySrcRngBusBitSelWidth),
+    .HealthTestWindowWidth(EntropySrcHealthTestWindowWidth),
     .EsFifoDepth(EntropySrcEsFifoDepth),
     .DistrFifoDepth(EntropySrcDistrFifoDepth),
     .Stub(EntropySrcStub)
@@ -2633,6 +2638,7 @@ module top_earlgrey #(
       .entropy_src_xht_valid_o(),
       .entropy_src_xht_bits_o(),
       .entropy_src_xht_bit_sel_o(),
+      .entropy_src_xht_health_test_window_o(),
       .entropy_src_xht_meta_o(),
       .entropy_src_xht_meta_i(entropy_src_pkg::ENTROPY_SRC_XHT_META_RSP_DEFAULT),
       .otp_en_entropy_src_fw_read_i(prim_mubi_pkg::MuBi8True),
@@ -3211,9 +3217,9 @@ module top_earlgrey #(
     .tl_otp_ctrl__core_o(otp_ctrl_core_tl_req),
     .tl_otp_ctrl__core_i(otp_ctrl_core_tl_rsp),
 
-    // port: tl_otp_macro
-    .tl_otp_macro_o(otp_macro_tl_req),
-    .tl_otp_macro_i(otp_macro_tl_rsp),
+    // port: tl_otp_macro__prim
+    .tl_otp_macro__prim_o(otp_macro_prim_tl_req),
+    .tl_otp_macro__prim_i(otp_macro_prim_tl_rsp),
 
     // port: tl_lc_ctrl__regs
     .tl_lc_ctrl__regs_o(lc_ctrl_regs_tl_req),

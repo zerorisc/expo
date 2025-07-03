@@ -10,7 +10,8 @@ from collections import OrderedDict
 from collections.abc import Mapping
 from enum import Enum
 
-from topgen.lib import CEnum, CArrayMapping, Name
+from basegen.lib import Name
+from topgen.lib import CEnum, CArrayMapping
 from reggen.ip_block import IpBlock
 
 import logging
@@ -529,7 +530,7 @@ registers to connect a peripheral to this pad.""",  # noqa:E501
                 self.inst_from_irq_values[name] = module_name
 
     def has_alert_handler(self):
-        # FIXME find a better way then just harcoding this module name
+        # FIXME find a better way then just hardcoding this module name
         return any(module["name"] == "alert_handler" for module in self.top["module"])
 
     def _init_alert_map(self):
@@ -670,7 +671,7 @@ class IpHelper:
         return len(self.ip.alerts) > 0
 
     def has_alert_handler(self):
-        # FIXME find a better way then just harcoding this module name
+        # FIXME find a better way then just hardcoding this module name
         return any(module["name"] == "alert_handler" for module in self.top["module"])
 
     def _init_alerts(self):

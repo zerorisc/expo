@@ -139,22 +139,22 @@ extern "C" {
 #define TOP_DARJEELING_OTP_CTRL_CORE_SIZE_BYTES 0x8000u
 
 /**
- * Peripheral base address for otp_macro in top darjeeling.
+ * Peripheral base address for prim device on otp_macro in top darjeeling.
  *
  * This should be used with #mmio_region_from_addr to access the memory-mapped
  * registers associated with the peripheral (usually via a DIF).
  */
-#define TOP_DARJEELING_OTP_MACRO_BASE_ADDR 0x30140000u
+#define TOP_DARJEELING_OTP_MACRO_PRIM_BASE_ADDR 0x30140000u
 
 /**
- * Peripheral size for otp_macro in top darjeeling.
+ * Peripheral size for prim device on otp_macro in top darjeeling.
  *
  * This is the size (in bytes) of the peripheral's reserved memory area. All
  * memory-mapped registers associated with this peripheral should have an
- * address between #TOP_DARJEELING_OTP_MACRO_BASE_ADDR and
- * `TOP_DARJEELING_OTP_MACRO_BASE_ADDR + TOP_DARJEELING_OTP_MACRO_SIZE_BYTES`.
+ * address between #TOP_DARJEELING_OTP_MACRO_PRIM_BASE_ADDR and
+ * `TOP_DARJEELING_OTP_MACRO_PRIM_BASE_ADDR + TOP_DARJEELING_OTP_MACRO_PRIM_SIZE_BYTES`.
  */
-#define TOP_DARJEELING_OTP_MACRO_SIZE_BYTES 0x20u
+#define TOP_DARJEELING_OTP_MACRO_PRIM_SIZE_BYTES 0x20u
 
 /**
  * Peripheral base address for regs device on lc_ctrl in top darjeeling.
@@ -1259,6 +1259,7 @@ typedef enum top_darjeeling_plic_target {
   kTopDarjeelingPlicTargetIbex0 = 0, /**< Ibex Core 0 */
   kTopDarjeelingPlicTargetLast = 0, /**< \internal Final PLIC target */
 } top_darjeeling_plic_target_t;
+
 
 /**
  * Alert Handler Source Peripheral.

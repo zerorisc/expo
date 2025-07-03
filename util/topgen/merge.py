@@ -103,7 +103,7 @@ def elaborate_instance(instance, block: IpBlock):
             log.warning(f"{mod_name} has security-critical parameter "
                         f"{param.name} not exposed to top")
 
-        # Move special prefixes to the beginnining of the parameter name.
+        # Move special prefixes to the beginning of the parameter name.
         param_prefixes = ["Sec", "RndCnst", "MemSize"]
         name_top = cc_mod_name + param.name
         for prefix in param_prefixes:
@@ -182,7 +182,7 @@ def elaborate_instance(instance, block: IpBlock):
                     # signals of all IPs would reference to that single mangled
                     # parameter. Since parameters are instance dependent, that
                     # would fail. Therefore, copy the parameter first to have
-                    # a unique paramter for that particular signal and
+                    # a unique parameter for that particular signal and
                     # instance, which is safe to mangle.
                     s['width'] = deepcopy(s['width'])
                     s['width'].name_top = p['name_top']
@@ -646,7 +646,7 @@ def extract_clocks(top: ConfigT):
         # Ensure each module has a default case
         export_if = ep.get('clock_reset_export', [])
 
-        # The clock group attribute in an end point sets the defaut
+        # The clock group attribute in an end point sets the default
         # group for every clock in that end point.
         #
         # However, the end point can also override specific clocks to
@@ -678,7 +678,7 @@ def extract_clocks(top: ConfigT):
                     name = "{}_i".format(src_name)
 
                 elif group.unique:
-                    # new unqiue clock name
+                    # new unique clock name
                     name = "{}_{}".format(src_name, ep_name)
 
                 else:
@@ -1075,6 +1075,11 @@ def amend_interrupt(top: ConfigT,
     if "interrupt" not in top or top["interrupt"] == "":
         top["interrupt"] = []
 
+    # Careful, "interrupt*s*"
+    default_plic = None
+    if "interrupts" in top and "default_plic" in top["interrupts"]:
+        default_plic = top["interrupts"]["default_plic"]
+
     interrupts = []
     outgoing_interrupts = defaultdict(list)
     for m in modules + list(chain(*outgoing_modules.values())):
@@ -1096,10 +1101,15 @@ def amend_interrupt(top: ConfigT,
             qual["intr_type"] = signal.intr_type
             qual["default_val"] = signal.default_val
             qual["incoming"] = False
+            plic = ip.get("plic", default_plic)
+            if plic is not None:
+                qual["plic"] = plic
             if "outgoing_interrupt" in ip:
                 outgoing_interrupts[ip["outgoing_interrupt"]].append(qual)
+                qual["outgoing"] = True
             else:
                 interrupts.append(qual)
+                qual["outgoing"] = False
 
     for irqs in top['incoming_interrupt'].values():
         for irq in irqs:
@@ -1110,6 +1120,9 @@ def amend_interrupt(top: ConfigT,
                                 "incoming interrupt")
             qual_irq["incoming"] = True
             qual_irq["width"] = 1
+            # Incoming interrupts are assigned to the default PLIC
+            qual_irq["plic"] = default_plic  # May still be None
+            qual_irq["outgoing"] = False
             interrupts.append(qual_irq)
 
     top["interrupt"] = interrupts

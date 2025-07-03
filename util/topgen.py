@@ -393,29 +393,39 @@ def generate_outgoing_interrupts(top: ConfigT, out_path: Path) -> None:
                         interrupts=interrupts)
 
 
-def _get_rv_plic_params(top: ConfigT) -> ParamsT:
+def _get_rv_plic_params(top: ConfigT, name: str) -> ParamsT:
     """Gets parameters for plic ipgen from top config."""
-    # Get the PLIC instance
-    module = lib.find_module(top["module"], "rv_plic")
+    # Get this PLIC instance
+    module = lib.find_module(top["module"], name, use_base_template_type=False)
 
     # Count number of interrupts
     # Interrupt source 0 is tied to 0 to conform RISC-V PLIC spec.
     # So, total number of interrupts are the number of entries in the list + 1
-    num_srcs = sum(
-        [int(x["width"]) if "width" in x else 1 for x in top["interrupt"]]) + 1
-    num_cores = int(top["num_cores"], 0) if "num_cores" in top else 1
+    num_srcs = 1
+    for intr in top["interrupt"]:
+        if intr.get("plic") == name:
+            num_srcs += int(intr["width"]) if "width" in intr else 1
+
+    num_targets = len(module.get("targets", []))
     uniquified_modules.add_module(module["template_type"], module["type"])
+
+    if num_srcs <= 1:
+        log.warning(f"no interrupts are connected to {name}, is it needed?")
+
+    if num_targets < 1:
+        log.warning(f"{name} specifies no targets, is it needed?")
+
     return {
-        "module_instance_name": module["type"],
+        "module_instance_name": name,
         "src": num_srcs,
-        "target": num_cores,
+        "target": num_targets,
         "prio": 3,
     }
 
 
 def generate_plic(top: ConfigT, module: ConfigT, out_path: Path) -> None:
     log.info("Generating rv_plic with ipgen")
-    params = _get_rv_plic_params(top)
+    params = _get_rv_plic_params(top, module["type"])
     generate_ipgen(top, module, params, out_path)
 
 
@@ -1136,7 +1146,8 @@ def create_ipgen_blocks(topcfg: ConfigT, alias_cfgs: Dict[str, ConfigT],
     multi_instance_ipgens = []
     for inst in topcfg["module"]:
         if lib.is_ipgen(inst):
-            if inst["template_type"] in ipgen_instances:
+            template_type = inst["template_type"]
+            if template_type != "rv_plic" and template_type in ipgen_instances:
                 multi_instance_ipgens.append(inst)
             else:
                 ipgen_instances[inst["template_type"]].append(inst)
@@ -1197,9 +1208,9 @@ def create_ipgen_blocks(topcfg: ConfigT, alias_cfgs: Dict[str, ConfigT],
                         _get_alert_handler_params(topcfg))
     # Add rv_plic
     amend_interrupt(topcfg, name_to_block, allow_missing_blocks=True)
-    if "rv_plic" in ipgen_instances:
-        insert_ip_attrs(ipgen_instances["rv_plic"][0],
-                        _get_rv_plic_params(topcfg))
+    for inst in ipgen_instances.get("rv_plic", []):
+        insert_ip_attrs(inst, _get_rv_plic_params(topcfg, inst["type"]))
+
     return ip_attrs
 
 
@@ -1294,7 +1305,7 @@ def generate_full_ipgens(args: argparse.Namespace, topcfg: ConfigT,
     if not args.no_plic and \
        not args.alert_handler_only and \
        not args.xbar_only:
-        generate_modules("rv_plic", generate_plic, single_instance=True)
+        generate_modules("rv_plic", generate_plic, single_instance=False)
     if args.plic_only:
         sys.exit()
 
@@ -1425,7 +1436,7 @@ def main():
     parser.add_argument(
         "--no-plic",
         action="store_true",
-        help="If defined, topgen doesn't generate the interrup controller RTLs."
+        help="If defined, topgen doesn't generate the interrupt controller RTLs."
     )
     parser.add_argument("--no-rust",
                         action="store_true",
@@ -1580,7 +1591,7 @@ def main():
     # avoid performing multiple passes when creating the complete top
     # configuration. Please refer to the description in util/topgen/README.md.
     #
-    # This performs mutiple passes until the complete top configuration
+    # This performs multiple passes until the complete top configuration
     # doesn't change.
     #
     # This fix is related to #2083

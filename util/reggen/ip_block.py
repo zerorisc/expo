@@ -22,6 +22,9 @@ from reggen.reg_block import RegBlock
 from reggen.signal import Signal
 from semantic_version import Version
 
+from systemrdl.component import Addrmap
+from systemrdl.importer import RDLImporter
+
 # Known unique comportable IP names and associated CIP_IDs.
 KNOWN_CIP_IDS = {
     1: 'adc_ctrl',
@@ -135,7 +138,7 @@ OPTIONAL_FIELDS = {
     'scan_reset': ['pb', 'Indicates the module have `scan_rst_ni`'],
     'scan_en': ['pb', 'Indicates the module has `scan_en_i`'],
     'SPDX-License-Identifier': [
-        's', "License ientifier (if using pure json) "
+        's', "License identifier (if using pure json) "
         "Only use this if unable to put this "
         "information in a comment at the top of the "
         "file."
@@ -645,3 +648,23 @@ class IpBlock:
                           f"register block: {', '.join(unused_regwens)}")
                 status = False
         return status
+
+    def to_systemrdl(self, importer: RDLImporter) -> Addrmap | None:
+        num_children = 0
+
+        rdl_addrmap = importer.create_addrmap_definition(self.name)
+
+        for rb in self.reg_blocks.values():
+            rdl_rb = rb.to_systemrdl(importer)
+
+            # Skip empty interfaces
+            if rdl_rb is None:
+                continue
+
+            importer.add_child(rdl_addrmap, rdl_rb)
+            num_children += 1
+
+        if num_children > 1:
+            rdl_addrmap.properties['bridge'] = True
+
+        return rdl_addrmap if num_children else None
