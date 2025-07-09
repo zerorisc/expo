@@ -66,9 +66,20 @@ filegroup(
     testonly = True,
     srcs = select({
         "bitstream_skip": ["//hw/bitstream/universal:none"],
-        "bitstream_vivado": ["//hw/bitstream/vivado:fpga_cw310_test_rom"],
-        "bitstream_gcp_splice": ["@bitstreams//:chip_earlgrey_cw310_bitstream"],
-        "//conditions:default": ["@bitstreams//:chip_earlgrey_cw310_bitstream"],
+        "bitstream_vivado": ["//hw/bitstream/vivado:fpga_vcu118_test_rom"],
+        "//conditions:default": ["//hw/bitstream/vivado:fpga_vcu118_test_rom"],
+        # "bitstream_gcp_splice": ["@bitstreams//:chip_earlgrey_cw310_bitstream"],
+    }),
+    tags = ["manual"],
+)
+
+filegroup(
+    name = "vcu118_mmi",
+    testonly = True,
+    srcs = select({
+        "bitstream_skip": ["//hw/bitstream/universal:none"],
+        "bitstream_vivado": ["//hw/bitstream/vivado:vcu118_mmi"],
+        "//conditions:default": ["//hw/bitstreams/vivado:vcu118_mmi"],
     }),
     tags = ["manual"],
 )

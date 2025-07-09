@@ -37,6 +37,7 @@ def get_dio_sig(pinmux: {}, pad: {}):
 maxwidth = 0
 muxed_pads = []
 dedicated_pads = []
+nopadring_pads = []
 k = 0
 for pad in pinout["pads"]:
   if pad["connection"] == "muxed":
@@ -54,11 +55,22 @@ for pad in target["pinout"]["add_pads"]:
   # we need to add their global index here.
   amended_pad = deepcopy(pad)
   amended_pad.update({"idx" : k})
-  dedicated_pads.append(pad)
+  if pad["connection"] == "manual_nopadring":
+    nopadring_pads.append(pad)
+  else:
+    dedicated_pads.append(pad)
   k += 1
 %>\
 
 module chip_${top["name"]}_${target["name"]} #(
+% if target["name"] == "vcu118":
+  // Path to a VMEM file containing the contents of the boot ROM, which will be
+  // baked into the FPGA bitstream.
+  parameter BootRomInitFile = "test_rom_fpga_${target["name"]}.32.vmem",
+  // Path to a VMEM file containing the contents of the emulated OTP, which will be
+  // baked into the FPGA bitstream.
+  parameter OtpMacroMemInitFile = "otp_img_fpga_${target["name"]}.vmem",
+% endif
   parameter bit SecRomCtrl0DisableScrambling = 1'b0,
   parameter bit SecRomCtrl1DisableScrambling = 1'b0
 ) (
@@ -80,6 +92,11 @@ module chip_${top["name"]}_${target["name"]} #(
     comment = "// Manual Pad"
 %>\
   ${port_comment}${pad["port_type"]} ${pad["name"]}, ${comment}
+% endfor
+
+  // Manual Pads kept off padring
+% for pad in nopadring_pads:
+  ${port_comment}${pad["port_type"]} ${pad["name"]}, // Manual Pad kept off padring
 % endfor
 
   // Muxed Pads
@@ -113,6 +130,22 @@ module chip_${top["name"]}_${target["name"]} #(
 
   // DFT and Debug signal positions in the pinout.
   localparam pinmux_pkg::target_cfg_t PinmuxTargetCfg = '{
+    tck_idx:           TckPadIdx,
+    tms_idx:           TmsPadIdx,
+    trst_idx:          TrstNPadIdx,
+    tdi_idx:           TdiPadIdx,
+    tdo_idx:           TdoPadIdx,
+    tap_strap0_idx:    Tap0PadIdx,
+    tap_strap1_idx:    Tap1PadIdx,
+    dft_strap0_idx:    Dft0PadIdx,
+    dft_strap1_idx:    Dft1PadIdx,
+    // TODO: check whether there is a better way to pass these USB-specific params
+    // The use of these indexes is gated behind a parameter, but to synthesize they
+    // need to exist even if the code-path is never used (pinmux.sv:UsbWkupModuleEn).
+    // Hence, set to zero.
+    usb_dp_idx:        0,
+    usb_dn_idx:        0,
+    usb_sense_idx:     0,
     // Pad types for attribute WARL behavior
     dio_pad_type: {
 <%
@@ -249,15 +282,18 @@ module chip_${top["name"]}_${target["name"]} #(
 
   ast_pkg::ast_clks_t ast_base_clks;
 
+% if target["name"] == "asic":
   // AST signals needed in padring
   logic scan_rst_n;
    prim_mubi_pkg::mubi4_t scanmode;
+% endif
 
   padring #(
     // Padring specific counts may differ from pinmux config due
     // to custom, stubbed or added pads.
     .NDioPads(${len(dedicated_pads)}),
     .NMioPads(${len(muxed_pads)}),
+% if target["name"] == "asic":
     .PhysicalPads(1),
     .NIoBanks(int'(IoBankCount)),
     .DioScanRole ({
@@ -280,6 +316,7 @@ module chip_${top["name"]}_${target["name"]} #(
       ${lib.Name.from_snake_case('io_bank_' + pad["bank"]).as_camel_case()}${" " if loop.last else ","} // ${pad['name']}
 % endfor
     }),
+% endif
 \
 \
     .DioPadType ({
@@ -294,8 +331,13 @@ module chip_${top["name"]}_${target["name"]} #(
     })
   ) u_padring (
   // This is only used for scan and DFT purposes
+% if target["name"] == "asic":
     .clk_scan_i   ( ast_base_clks.clk_sys ),
     .scanmode_i   ( scanmode              ),
+% else:
+    .clk_scan_i   ( 1'b0                  ),
+    .scanmode_i   ( prim_mubi_pkg::MuBi4False ),
+% endif
     .dio_in_raw_o ( dio_in_raw ),
     // Chip IOs
     .dio_pad_io ({
@@ -493,16 +535,86 @@ module chip_${top["name"]}_${target["name"]} #(
   logic unused_pwr_clamp;
   assign unused_pwr_clamp = base_ast_pwr.pwr_clamp;
 
+% else:
+  // TODO: Hook this up when FPGA pads are updated
+  assign ext_clk = '0;
+  assign pad2ast = '0;
+
+  logic clk_main, clk_usb_48mhz, clk_aon, rst_n, srst_n;
+  % if target["name"] == "vcu118":
+  clkgen_vcu118 # (
+    .AddClkBuf(0)
+  ) clkgen (
+    .clk_p_i(IO_CLK_P),
+    .clk_n_i(IO_CLK_N),
+    .rst_ni(manual_in_por_n),
+    .clk_main_o(clk_main),
+    .clk_io_o(clk_io),
+    .clk_48MHz_o(clk_usb_48mhz),
+    .clk_aon_o(clk_aon),
+    .rst_no(rst_n)
+  );
+  % else:
+  clkgen_xil7series # (
+    .AddClkBuf(0)
+  ) clkgen (
+    .clk_i(manual_in_io_clk),
+    .rst_ni(manual_in_por_n),
+    .srst_ni(srst_n),
+    .clk_main_o(clk_main),
+    .clk_48MHz_o(clk_usb_48mhz),
+    .clk_aon_o(clk_aon),
+    .rst_no(rst_n)
+  );
+  % endif
+
+  logic [31:0] fpga_info;
+  usr_access_xil7series u_info (
+    .info_o(fpga_info)
+  );
+
+  ast_pkg::clks_osc_byp_t clks_osc_byp;
+  assign clks_osc_byp = '{
+    usb: clk_usb_48mhz,
+    sys: clk_main,
+  % if target["name"] == "vcu118":
+    io:  clk_io,
+  % else:
+    io:  clk_main,
+  % endif
+    aon: clk_aon
+  };
+
+% endif
+
+  prim_mubi_pkg::mubi4_t ast_init_done;
+
   ast #(
     .Ast2PadOutWidth(ast_pkg::Ast2PadOutWidth),
     .Pad2AstInWidth(ast_pkg::Pad2AstInWidth)
   ) u_ast (
+% if target["name"] == "asic":
     // external POR
     .por_ni                ( manual_in_por_n ),
 
     // Direct short to PAD
     .ast2pad_t0_ao         ( unused_t0 ),
     .ast2pad_t1_ao         ( unused_t1 ),
+% else:
+    // external POR
+    .por_ni                ( rst_n ),
+
+    // USB IO Pull-up Calibration Setting
+    .usb_io_pu_cal_o       ( ),
+
+    // clocks' oscillator bypass for FPGA
+    .clk_osc_byp_i         ( clks_osc_byp ),
+
+    // Direct short to PAD
+    .ast2pad_t0_ao         (  ),
+    .ast2pad_t1_ao         (  ),
+
+% endif
 
     // clocks and resets supplied for detection
     .sns_clks_i            ( clkmgr_aon_clocks    ),
@@ -512,7 +624,7 @@ module chip_${top["name"]}_${target["name"]} #(
     .tl_i                  ( base_ast_bus ),
     .tl_o                  ( ast_base_bus ),
     // init done indication
-    .ast_init_done_o       ( ),
+    .ast_init_done_o       ( ast_init_done ),
     // buffered clocks & resets
     % for port, clk in ast["clock_connections"].items():
     .${port} (${clk}),
@@ -786,6 +898,11 @@ module chip_${top["name"]}_${target["name"]} #(
     .alert_o()
   );
 
+###################################################################
+## ASIC                                                          ##
+###################################################################
+
+% if target["name"] == "asic":
   //////////////////////////////////
   // Manual Pad / Signal Tie-offs //
   //////////////////////////////////
@@ -962,6 +1079,7 @@ module chip_${top["name"]}_${target["name"]} #(
     // FPGA build info
     .fpga_info_i                       ( '0                         )
   );
+% endif
 
   logic unused_signals;
   assign unused_signals = ^{pwrmgr_boot_status.clk_status,
@@ -970,5 +1088,190 @@ module chip_${top["name"]}_${target["name"]} #(
                             pwrmgr_boot_status.otp_done,
                             pwrmgr_boot_status.rom_ctrl_status,
                             pwrmgr_boot_status.strap_sampled};
+
+###################################################################
+## VCU118                                                        ##
+###################################################################
+% if target["name"] == "vcu118":
+  //////////////////
+  // PLL for FPGA //
+  //////////////////
+
+  assign manual_attr_io_clk = '0;
+  assign manual_out_io_clk = 1'b0;
+  assign manual_oe_io_clk = 1'b0;
+  assign manual_attr_por_n = '0;
+  assign manual_out_por_n = 1'b0;
+  assign manual_oe_por_n = 1'b0;
+
+  // Extend the internal reset request from the power manager.
+  //
+  // TODO: To model the SoC within FPGA this logic is insufficient; its presence here
+  // is to avoid a design that locks up awaiting the deassertion of the signal
+  // `soc_rst_req_async_i` in response to an internal reset request.
+  logic  internal_request_d, internal_request_q;
+  logic  external_reset, count_up;
+  logic  [3:0] count;
+  always_ff @(posedge ast_base_clks.clk_aon or negedge por_n[0]) begin
+    if (!por_n[0]) begin
+      external_reset     <= 1'b0;
+      internal_request_q <= 1'b0;
+      count_up           <= '0;
+      count              <= '0;
+    end else begin
+      internal_request_q <= internal_request_d;
+      if (!internal_request_q && internal_request_d) begin
+        count_up       <= 1'b1;
+        external_reset <= 1;
+      end else if (count == 'd8) begin
+        count_up       <= 0;
+        external_reset <= 0;
+        count          <= '0;
+      end else if (count_up) begin
+        count <= count + 1;
+      end
+    end
+  end
+
+  //////////////////////
+  // Top-level design //
+  //////////////////////
+
+  // the rst_ni pin only goes to AST
+  // the rest of the logic generates reset based on the 'pok' signal.
+  // for verilator purposes, make these two the same.
+  prim_mubi_pkg::mubi4_t lc_clk_bypass;   // TODO Tim
+
+// TODO: align this with ASIC version to minimize the duplication.
+// Also need to add AST simulation and FPGA emulation models for things like entropy source -
+// otherwise Verilator / FPGA will hang.
+  top_${top["name"]} #(
+    .SecAesMasking(1'b1),
+    .SecAesSBoxImpl(aes_pkg::SBoxImplDom),
+    .SecAesStartTriggerDelay(320),
+    .SecAesAllowForcingMasks(1'b1),
+    .KmacEnMasking(0),
+    .KmacSwKeyMasked(1),
+    .SecKmacCmdDelay(320),
+    .SecKmacIdleAcceptSwMsg(1'b1),
+    .KeymgrDpeKmacEnMasking(0),
+    .CsrngSBoxImpl(aes_pkg::SBoxImplLut),
+    .OtbnRegFile(otbn_pkg::RegFileFPGA),
+    .SecOtbnMuteUrnd(1'b1),
+    .SecOtbnSkipUrndReseedAtStart(1'b1),
+    .OtpMacroMemInitFile(OtpMacroMemInitFile),
+    .RvCoreIbexPipeLine(1),
+    .SramCtrlRetAonInstrExec(0),
+  % if lib.num_rom_ctrl(top["module"]) > 1:
+    // TODO(opentitan-integrated/issues/251):
+    // Enable hashing below once the build infrastructure can
+    // load scrambled images on FPGA platforms. The DV can
+    // already partially handle it by initializing the 2nd ROM
+    // with random data via the backdoor loading interface - it
+    // can't load "real" SW images yet since that requires
+    // additional build infrastructure.
+    .SecRomCtrl1DisableScrambling(1),
+  % endif
+    .RomCtrl0BootRomInitFile(BootRomInitFile),
+    .RvCoreIbexRegFile(ibex_pkg::RegFileFPGA),
+    .RvCoreIbexSecureIbex(0),
+    .SramCtrlMainInstrExec(1),
+    .PinmuxAonTargetCfg(PinmuxTargetCfg)
+  ) top_${top["name"]} (
+    .por_n_i                      ( por_n                 ),
+    .clk_main_i                   ( ast_base_clks.clk_sys ),
+    .clk_io_i                     ( ast_base_clks.clk_io  ),
+    .clk_aon_i                    ( ast_base_clks.clk_aon ),
+    .clks_ast_o                   ( clkmgr_aon_clocks     ),
+    .clk_main_jitter_en_o         ( jen                   ),
+    .rsts_ast_o                   ( rstmgr_aon_resets     ),
+    .integrator_id_i              ( '0                    ),
+    .sck_monitor_o                ( sck_monitor           ),
+    .pwrmgr_ast_req_o             ( base_ast_pwr          ),
+    .pwrmgr_ast_rsp_i             ( ast_base_pwr          ),
+    .obs_ctrl_i                   ( obs_ctrl              ),
+    .io_clk_byp_req_o             ( io_clk_byp_req        ),
+    .io_clk_byp_ack_i             ( io_clk_byp_ack        ),
+    .all_clk_byp_req_o            ( all_clk_byp_req       ),
+    .all_clk_byp_ack_i            ( all_clk_byp_ack       ),
+    .hi_speed_sel_o               ( hi_speed_sel          ),
+    .div_step_down_req_i          ( div_step_down_req     ),
+    .fpga_info_i                  ( fpga_info             ),
+    .ast_tl_req_o                 ( base_ast_bus               ),
+    .ast_tl_rsp_i                 ( ast_base_bus               ),
+    .otp_macro_pwr_seq_o          ( otp_macro_pwr_seq          ),
+    .otp_macro_pwr_seq_h_i        ( otp_macro_pwr_seq_h        ),
+    .otp_obs_o                    ( otp_obs                    ),
+    .otp_cfg_i                    ( otp_cfg                    ),
+    .otp_cfg_rsp_o                ( otp_cfg_rsp                ),
+    .ctn_tl_h2d_o                 ( ctn_tl_h2d[0]              ),
+    .ctn_tl_d2h_i                 ( ctn_tl_d2h[0]              ),
+    .ac_range_check_overwrite_i   ( ac_range_check_overwrite_i ),
+    .racl_error_i                 ( ext_racl_error             ),
+    .soc_gpi_async_o              (                            ),
+    .soc_gpo_async_i              ( '0                         ),
+    .soc_dbg_policy_bus_o         ( soc_dbg_policy_bus         ),
+    .debug_halt_cpu_boot_i        ( '0                         ),
+    .dma_sys_req_o                (                            ),
+    .dma_sys_rsp_i                ( '0                         ),
+    .soc_rst_req_async_i          ( external_reset             ),
+    .soc_lsio_trigger_i           ( '0                         ),
+    .es_rng_enable_o              ( es_rng_enable              ),
+    .es_rng_valid_i               ( es_rng_valid               ),
+    .es_rng_bit_i                 ( es_rng_bit                 ),
+    .calib_rdy_i                  ( ast_init_done              ),
+
+    // DMI TL-UL
+    .dbg_tl_req_i                 ( dmi_h2d                    ),
+    .dbg_tl_rsp_o                 ( dmi_d2h                    ),
+    // Quasi-static word address for next_dm register value.
+    .rv_dm_next_dm_addr_i         ( '0                         ),
+    // Multiplexed I/O
+    .mio_in_i                     ( mio_in                     ),
+    .mio_out_o                    ( mio_out                    ),
+    .mio_oe_o                     ( mio_oe                     ),
+
+    // Dedicated I/O
+    .dio_in_i                     ( dio_in                     ),
+    .dio_out_o                    ( dio_out                    ),
+    .dio_oe_o                     ( dio_oe                     ),
+
+    // Pad attributes
+    .mio_attr_o                   ( mio_attr                   ),
+    .dio_attr_o                   ( dio_attr                   ),
+
+    // Memory attributes
+    .rom_ctrl0_cfg_i                           ( '0 ),
+    .rom_ctrl1_cfg_i                           ( '0 ),
+    .i2c_ram_1p_cfg_i                          ( '0 ),
+    .i2c_ram_1p_cfg_rsp_o                      (    ),
+    .sram_ctrl_ret_aon_ram_1p_cfg_i            ( '0 ),
+    .sram_ctrl_ret_aon_ram_1p_cfg_rsp_o        (    ),
+    .sram_ctrl_main_ram_1p_cfg_i               ( '0 ),
+    .sram_ctrl_main_ram_1p_cfg_rsp_o           (    ),
+    .sram_ctrl_mbox_ram_1p_cfg_i               ( '0 ),
+    .sram_ctrl_mbox_ram_1p_cfg_rsp_o           (    ),
+    .otbn_imem_ram_1p_cfg_i                    ( '0 ),
+    .otbn_imem_ram_1p_cfg_rsp_o                (    ),
+    .otbn_dmem_ram_1p_cfg_i                    ( '0 ),
+    .otbn_dmem_ram_1p_cfg_rsp_o                (    ),
+    .rv_core_ibex_icache_tag_ram_1p_cfg_i      ( '0 ),
+    .rv_core_ibex_icache_tag_ram_1p_cfg_rsp_o  (    ),
+    .rv_core_ibex_icache_data_ram_1p_cfg_i     ( '0 ),
+    .rv_core_ibex_icache_data_ram_1p_cfg_rsp_o (    ),
+    .spi_device_ram_2p_cfg_sys2spi_i           ( '0 ),
+    .spi_device_ram_2p_cfg_spi2sys_i           ( '0 ),
+    .spi_device_ram_2p_cfg_rsp_sys2spi_o       (    ),
+    .spi_device_ram_2p_cfg_rsp_spi2sys_o       (    ),
+
+     // DFT signals
+    .ast_lc_dft_en_o      ( lc_dft_en                  ),
+    .ast_lc_hw_debug_en_o (                            ),
+    // DFT signals
+    .scan_rst_ni        ( 1'b1             ),
+    .scan_en_i          ( 1'b0             ),
+    .scanmode_i         ( prim_mubi_pkg::MuBi4False )
+  );
+% endif
 
 endmodule : chip_${top["name"]}_${target["name"]}

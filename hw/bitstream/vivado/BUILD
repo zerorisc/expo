@@ -159,6 +159,7 @@ filegroup(
     tags = ["manual"],
 )
 
+# VCU118 bitstream
 fusesoc_build(
     name = "fpga_vcu118",
     testonly = True,
@@ -174,10 +175,10 @@ fusesoc_build(
         "--OtpCtrlMemInitFile=" + _OTP_RMA_PATH,
     ],
     output_groups = {
-        "bitstream": ["synth-vivado/lowrisc_systems_chip_earlgrey_vcu118_0.1.bit"],
+        "bitstream": ["synth-vivado/lowrisc_systems_chip_darjeeling_vcu118_0.1.bit"],
         "mmi": ["synth-vivado/memories.mmi"],
     },
-    systems = ["lowrisc:systems:chip_earlgrey_vcu118"],
+    systems = ["lowrisc:systems:chip_darjeeling_vcu118"],
     tags = ["manual"],
     target = "synth",
 )
@@ -205,6 +206,7 @@ filegroup(
     output_group = "otp_mmi",
     tags = ["manual"],
 )
+
 
 # Bitstream cache manifest fragment targets
 bitstream_manifest_fragment(
