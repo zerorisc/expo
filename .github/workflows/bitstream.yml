@@ -13,12 +13,18 @@ on:
       vivado_version:
         default: "2024.1"
         type: string
+      runner:
+        default: "zerorisc-vivado"
+        type: string
+      license_file:
+        default: ""
+        type: string
 
 jobs:
   bitstream:
     name: Build bitstream
     runs-on:
-      group: zerorisc-vivado
+      group: ${{ inputs.runner }}
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +34,7 @@ jobs:
         uses: ./.github/actions/prepare-env
         with:
           vivado-version: ${{ inputs.vivado_version }}
+          license-file: ${{ inputs.license_file }}
       - name: Configure bitstream strategy
         id: strategy
         run: |

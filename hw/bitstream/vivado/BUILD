@@ -207,7 +207,6 @@ filegroup(
     tags = ["manual"],
 )
 
-
 # Bitstream cache manifest fragment targets
 bitstream_manifest_fragment(
     name = "earlgrey_cw310_manifest",
@@ -308,11 +307,11 @@ filegroup(
 )
 
 bitstream_manifest_fragment(
-    name = "earlgrey_vcu118_manifest",
+    name = "darjeeling_vcu118_manifest",
     testonly = True,
     srcs = [":fpga_vcu118"],
     bitstream = "bitstream",
-    design = "chip_earlgrey_vcu118",
+    design = "chip_darjeeling_vcu118",
     memories = [
         "rom",
         "otp",
@@ -322,12 +321,12 @@ bitstream_manifest_fragment(
 )
 
 pkg_tar(
-    name = "earlgrey_vcu118_archive",
+    name = "darjeeling_vcu118_archive",
     testonly = True,
-    srcs = [":earlgrey_vcu118_manifest"],
+    srcs = [":darjeeling_vcu118_manifest"],
     mode = "0444",
-    package_dir = "build-bin/hw/top_earlgrey/chip_earlgrey_vcu118",
-    strip_prefix = "/hw/bitstream/vivado/earlgrey_vcu118_manifest",
+    package_dir = "build-bin/hw/top_darjeeling/chip_darjeeling_vcu118",
+    strip_prefix = "/hw/bitstream/vivado/darjeeling_vcu118_manifest",
     tags = ["manual"],
 )
 

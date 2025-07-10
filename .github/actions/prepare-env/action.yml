@@ -34,6 +34,11 @@ inputs:
   vivado-version:
     description: Vivado version to configure, if any.
     default: ''
+  license-file:
+    description: |
+      Path to a local Xilinx license. This license is prioritized over
+      xilinx-license-host if it is provided.
+    default: ''
   license-host:
     description: Hostname of the license server.
     default: 'license-server'
@@ -226,6 +231,10 @@ runs:
     - name: Set environment variable for license server
       if: inputs.vivado-version != ''
       run: |
-        LICENSE_HOST="$(cat /etc/ci/${{ inputs.license-host }}/hostname)"
-        echo "XILINXD_LICENSE_FILE=${{ inputs.license-port }}@${LICENSE_HOST}" >> $GITHUB_ENV
+        if ${{ inputs.license-file != '' }}; then
+          echo "XILINXD_LICENSE_FILE=${{ inputs.license-file }}" >> $GITHUB_ENV
+        else
+          LICENSE_HOST="$(cat /etc/ci/${{ inputs.license-host }}/hostname)"
+          echo "XILINXD_LICENSE_FILE=${{ inputs.license-port }}@${LICENSE_HOST}" >> $GITHUB_ENV
+        fi
       shell: bash
