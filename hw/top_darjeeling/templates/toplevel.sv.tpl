@@ -17,6 +17,7 @@ top_has_alert_handler = lib.find_module(top['module'], 'alert_handler') is not N
 top_has_ast           = lib.find_module(top['module'], 'ast') is not None
 top_has_rstmgr        = lib.find_module(top['module'], 'rstmgr') is not None
 top_has_gpio          = lib.find_module(top['module'], 'gpio') is not None
+top_has_ibex          = lib.find_module(top['module'], 'rv_core_ibex') is not None
 top_has_scan_en = False
 for m in top['module']:
   if not lib.is_inst(m):
@@ -380,6 +381,7 @@ module top_${top["name"]} #(
   assign rsts_ast_o = ${top['resets'].hier_paths['top'][:-1]};
 % endif
 
+% if top_has_ibex:
   // ibex specific assignments
   // TODO: This should be further automated in the future.
   assign rv_core_ibex_irq_timer = intr_rv_timer_timer_expired_hart0_timer0;
@@ -388,15 +390,16 @@ module top_${top["name"]} #(
   // Unconditionally disable the late debug feature and enable early debug
   assign rv_dm_otp_dis_rv_dm_late_debug = prim_mubi_pkg::MuBi8True;
 
-% if 'rv_core_ibex_boot_addr' in (sig['signame'] for sig in top['inter_signal']['definitions']):
-  ## Not all top levels have a rom controller.
-  ## For those that do not, reference the ROM directly.
-<% num_rom_ctrl = lib.num_rom_ctrl(top["module"]) %>\
-  % if num_rom_ctrl != 0:
-  assign rv_core_ibex_boot_addr = ADDR_SPACE_ROM_CTRL0__ROM;
-  % else:
-  ## Not all top levels have
-  assign rv_core_ibex_boot_addr = ADDR_SPACE_ROM;
+  % if 'rv_core_ibex_boot_addr' in (sig['signame'] for sig in top['inter_signal']['definitions']):
+    ## Not all top levels have a rom controller.
+    ## For those that do not, reference the ROM directly.
+  <% num_rom_ctrl = lib.num_rom_ctrl(top["module"]) %>\
+    % if num_rom_ctrl != 0:
+assign rv_core_ibex_boot_addr = ADDR_SPACE_ROM_CTRL0__ROM;
+    % else:
+    ## Not all top levels have
+assign rv_core_ibex_boot_addr = ADDR_SPACE_ROM;
+    % endif
   % endif
 % endif
 
