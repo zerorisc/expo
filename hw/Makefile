@@ -1,3 +1,4 @@
+# Copyright zeroRISC Inc.
 # Copyright lowRISC contributors (OpenTitan project).
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
@@ -48,7 +49,7 @@ IPS ?= aes           \
        uart          \
        usbdev
 
-TOPS ?= top_darjeeling top_earlgrey top_englishbreakfast
+TOPS ?= top_darjeeling top_darjeeling_no_ibex top_earlgrey top_englishbreakfast
 
 USE_BUFFER ?= 0
 

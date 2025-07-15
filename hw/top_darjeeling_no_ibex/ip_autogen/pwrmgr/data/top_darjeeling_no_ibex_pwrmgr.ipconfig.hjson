@@ -1,0 +1,76 @@
+// Copyright lowRISC contributors (OpenTitan project).
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+{
+  instance_name: top_darjeeling_no_ibex_pwrmgr
+  param_values:
+  {
+    NumWkups: 4
+    Wkups:
+    [
+      {
+        name: pin_wkup_req
+        width: "1"
+        module: pinmux_aon
+      }
+      {
+        name: wkup_req
+        width: "1"
+        module: aon_timer_aon
+      }
+      {
+        name: wkup_internal_req
+        width: "1"
+        module: soc_proxy
+      }
+      {
+        name: wkup_external_req
+        width: "1"
+        module: soc_proxy
+      }
+    ]
+    NumRstReqs: 2
+    rst_reqs:
+    {
+      int:
+      [
+        {
+          name: MainPwr
+          desc: main power glitch reset request
+          module: pwrmgr_aon
+        }
+        {
+          name: Esc
+          desc: escalation reset request
+          module: alert_handler
+        }
+      ]
+      peripheral:
+      [
+        {
+          name: aon_timer_rst_req
+          width: "1"
+          module: aon_timer_aon
+          desc: Watchdog reset request.
+        }
+        {
+          name: rst_req_external
+          width: "1"
+          module: soc_proxy
+          desc: External reset request
+        }
+      ]
+    }
+    wait_for_external_reset: true
+    NumRomInputs: 3
+    has_aon_clk: true
+    src_clks:
+    [
+      main
+      io
+    ]
+    topname: darjeeling_no_ibex
+    uniquified_modules: {}
+    module_instance_name: pwrmgr
+  }
+}

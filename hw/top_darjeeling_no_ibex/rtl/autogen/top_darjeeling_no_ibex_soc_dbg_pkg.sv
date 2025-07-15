@@ -1,0 +1,45 @@
+// Copyright lowRISC contributors (OpenTitan project).
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+//
+// ------------------- W A R N I N G: A U T O - G E N E R A T E D   C O D E !! -------------------//
+// PLEASE DO NOT HAND-EDIT THIS FILE. IT HAS BEEN AUTO-GENERATED WITH THE FOLLOWING COMMAND:
+//
+// util/topgen.py -t hw/top_darjeeling_no_ibex/data/top_darjeeling_no_ibex.hjson \
+//                -o hw/top_darjeeling_no_ibex/ \
+//                --rnd_cnst_seed \
+//                1017106219537032642877583828875051302543807092889754935647094601236425074047
+
+package top_darjeeling_no_ibex_soc_dbg_pkg;
+  /**
+   * Peripheral base address for dmi device on lc_ctrl in top darjeeling_no_ibex.
+   */
+  parameter int unsigned TOP_DARJEELING_NO_IBEX_SOC_DBG_LC_CTRL_DMI_BASE_ADDR = 32'h3000;
+
+  /**
+   * Peripheral size in bytes for dmi device on lc_ctrl in top darjeeling_no_ibex.
+   */
+  parameter int unsigned TOP_DARJEELING_NO_IBEX_SOC_DBG_LC_CTRL_DMI_SIZE_BYTES = 32'h1000;
+
+  /**
+   * Peripheral base address for soc device on mbx_jtag in top darjeeling_no_ibex.
+   */
+  parameter int unsigned TOP_DARJEELING_NO_IBEX_SOC_DBG_MBX_JTAG_SOC_BASE_ADDR = 32'h2200;
+
+  /**
+   * Peripheral size in bytes for soc device on mbx_jtag in top darjeeling_no_ibex.
+   */
+  parameter int unsigned TOP_DARJEELING_NO_IBEX_SOC_DBG_MBX_JTAG_SOC_SIZE_BYTES = 32'h20;
+
+  /**
+   * Peripheral base address for jtag device on soc_dbg_ctrl in top darjeeling_no_ibex.
+   */
+  parameter int unsigned TOP_DARJEELING_NO_IBEX_SOC_DBG_SOC_DBG_CTRL_JTAG_BASE_ADDR = 32'h2300;
+
+  /**
+   * Peripheral size in bytes for jtag device on soc_dbg_ctrl in top darjeeling_no_ibex.
+   */
+  parameter int unsigned TOP_DARJEELING_NO_IBEX_SOC_DBG_SOC_DBG_CTRL_JTAG_SIZE_BYTES = 32'h20;
+
+
+endpackage
