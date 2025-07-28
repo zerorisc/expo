@@ -97,7 +97,23 @@ package otp_ctrl_env_pkg;
 % endfor
   };
 
-  // lc does not have digest
+  // start address of special locations, either digest or zeroized field
+  parameter int PART_OTP_SPECIALS_OFFSETS [NumPart-1] = {
+% for part in parts_without_lc:
+<%
+  part_name_camel = Name.to_camel_case(part["name"])
+  bytes_per_special = 8
+  size_of_specials = 0
+  if part["sw_digest"] or part["hw_digest"]:
+    size_of_specials += bytes_per_special
+  if part["zeroizable"]:
+    size_of_specials += bytes_per_special
+%>\
+    ${part_name_camel}Offset + ${part_name_camel}Size - ${size_of_specials}${"" if loop.last else ","}
+% endfor
+  };
+
+  // lc partition does not have digest
   parameter int PART_OTP_DIGEST_ADDRS [NumPart-1] = {
 % for part in parts_without_lc:
 <%
@@ -111,6 +127,7 @@ package otp_ctrl_env_pkg;
 % endfor
   };
 
+  // lc partition is not zeroizable
   parameter int PART_OTP_ZEROIZED_ADDRS [NumPart-1] = {
 % for part in parts_without_lc:
 <%
@@ -220,11 +237,22 @@ package otp_ctrl_env_pkg;
     return PartInfo[part_idx].hw_digest;
   endfunction
 
+  function automatic bit part_is_zeroizable(int part_idx);
+    return PartInfo[part_idx].zeroizable;
+  endfunction
+
+  function automatic int digest_offset(int part_idx);
+    return PART_OTP_DIGEST_ADDRS[part_idx] << 2;
+  endfunction
+
+  function automatic int zeroized_offset(int part_idx);
+    return PART_OTP_ZEROIZED_ADDRS[part_idx] << 2;
+  endfunction
+
   function automatic bit is_sw_digest(bit [TL_DW-1:0] addr);
     int part_idx = get_part_index(addr);
     if (PartInfo[part_idx].sw_digest) begin
-      // If the partition contains a digest, it will be located in the last 64bit of the partition.
-      return {addr[TL_DW-1:3], 3'b0} == ((PartInfo[part_idx].offset + PartInfo[part_idx].size) - 8);
+      return {addr[TL_DW-1:3], 3'b0} == digest_offset(part_idx);
     end else begin
       return 0;
     end
@@ -232,9 +260,18 @@ package otp_ctrl_env_pkg;
 
   function automatic bit is_digest(bit [TL_DW-1:0] addr);
     int part_idx = get_part_index(addr);
-    if (PartInfo[part_idx].sw_digest || PartInfo[part_idx].hw_digest) begin
+    if (part_has_digest(part_idx)) begin
       // If the partition contains a digest, it will be located in the last 64bit of the partition.
-      return {addr[TL_DW-1:3], 3'b0} == ((PartInfo[part_idx].offset + PartInfo[part_idx].size) - 8);
+      return {addr[TL_DW-1:3], 3'b0} == digest_offset(part_idx);
+    end else begin
+      return 0;
+    end
+  endfunction
+
+  function automatic bit is_zeroized_addr(bit [TL_DW-1:0] addr);
+    int part_idx = get_part_index(addr);
+    if (part_is_zeroizable(part_idx)) begin
+      return {addr[TL_DW-1:3], 3'b0} == zeroized_offset(part_idx);
     end else begin
       return 0;
     end
@@ -269,9 +306,13 @@ package otp_ctrl_env_pkg;
     return dai_addr + SW_WINDOW_BASE_ADDR;
   endfunction
 
+  function automatic bit is_granule_64(bit [TL_DW-1:0] dai_addr);
+    return (is_secret(dai_addr) || is_digest(dai_addr) || is_zeroized_addr(dai_addr)) ? 1'b1 : 1'b0;
+  endfunction
+
   function automatic bit [TL_DW-1:0] normalize_dai_addr(bit [TL_DW-1:0] dai_addr);
-    normalize_dai_addr = (is_secret(dai_addr) || is_digest(dai_addr)) ? dai_addr >> 3 << 3 :
-                                                                        dai_addr >> 2 << 2;
+    normalize_dai_addr = is_granule_64(dai_addr) ? dai_addr >> 3 << 3 :
+                                                   dai_addr >> 2 << 2;
   endfunction
 
   // package sources
