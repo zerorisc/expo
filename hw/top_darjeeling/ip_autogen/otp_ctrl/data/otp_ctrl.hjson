@@ -2685,8 +2685,8 @@
             name: "ZEROIZE",
             desc: '''
                   Initiates the zeroization sequence of location specified by !!DIRECT_ACCESS_ADDRESS.
-                  The command places the zeroized data into !!DIRECT_ACCESS_RDATA_0 and
-                  !!DIRECT_ACCESS_RDATA_1 (for 64bit partitions) if the execution is successful.
+                  The command places the resulting count of bits set into !!DIRECT_ACCESS_RDATA_0 if
+                  the execution is successful.
                   '''
           }
         ]

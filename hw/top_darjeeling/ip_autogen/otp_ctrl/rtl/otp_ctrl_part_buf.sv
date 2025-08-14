@@ -330,7 +330,7 @@ module otp_ctrl_part_buf
     cnsty_chk_ack_o = 1'b0;
     integ_chk_ack_o = 1'b0;
 
-    // Zeroization digest register enable
+    // Zeroization marker register enable
     zer_mrk_en = 1'b0;
 
     // Flopped OTP command.
@@ -379,7 +379,7 @@ module otp_ctrl_part_buf
       end
       ///////////////////////////////////////////////////////////////////
       // Configurations based on the read out and flopped zeroization
-      // digest. Currently, this only affects the OTP command.
+      // marker. Currently, this only affects the OTP command.
       InitChkZerCnfSt: begin
         state_d = InitSt;
         // Use ECC-protected reads when the partition is not zeroized.
@@ -762,7 +762,7 @@ module otp_ctrl_part_buf
     end
     if (Info.zeroizable) begin
       // Unconditionally transfer the partition into the terminal error state
-      // when an invalid indicator is detected.
+      // when an invalid zeroization marker is detected.
       if (mubi8_test_invalid(is_zeroized) || zer_mrk_ecc_err) begin
         state_d = ErrorSt;
         fsm_err_o = 1'b1;

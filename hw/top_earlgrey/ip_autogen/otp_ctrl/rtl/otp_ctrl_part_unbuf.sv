@@ -278,7 +278,7 @@ module otp_ctrl_part_unbuf
     pending_tlul_error_d = 1'b0;
     fsm_err_o = 1'b0;
 
-    // Zeroization digest register enable
+    // Zeroization marker register enable
     zer_mrk_en = 1'b0;
 
     // Flopped OTP command.
@@ -338,7 +338,7 @@ module otp_ctrl_part_unbuf
       end
       ///////////////////////////////////////////////////////////////////
       // Configurations based on the read out and flopped zeroization
-      // digest. Currently, this only affects the OTP command.
+      // marker. Currently, this only affects the OTP command.
       InitChkZerCnfSt: begin
         state_d = InitSt;
         // Use ECC-protected reads when the partition is not zeroized.
