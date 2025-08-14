@@ -4,6 +4,8 @@
 // SPDX-License-Identifier: Apache-2.0
 <%
 from topgen.lib import Name
+from design.lib.OtpMemMap import get_part_by_name
+
 unbuf_parts_with_digest = [part for part in otp_mmap["partitions"] if
                            part["variant"] == "Unbuffered" and
                            (part["sw_digest"] or part["hw_digest"])]
@@ -68,7 +70,7 @@ interface otp_ctrl_if(input clk_i, input rst_ni);
   otp_ast_rsp_t           otp_ast_pwr_seq_h_i;
   ast_pkg::ast_obs_ctrl_t obs_ctrl_i;
 
-  // Unused in prim_generic_otp memory.
+  // Unused in otp_macro memory.
   logic [OtpTestCtrlWidth-1:0]   otp_vendor_test_ctrl_i;
   logic [OtpTestStatusWidth-1:0] otp_vendor_test_status_o;
   logic [OtpTestVectWidth-1:0]   cio_test_o;
@@ -198,7 +200,7 @@ interface otp_ctrl_if(input clk_i, input rst_ni);
 % endfor
   endtask
 
-  // Force prim_generic_otp input cmd_i to an invalid value.
+  // Force otp_macro input cmd_i to an invalid value.
   task automatic force_invalid_otp_cmd_i();
     @(posedge clk_i);
     force `PRIM_GENERIC_OTP_CMD_I_PATH = otp_ctrl_macro_pkg::cmd_e'(2'b10);
@@ -331,10 +333,20 @@ interface otp_ctrl_if(input clk_i, input rst_ni);
     RndCnstOtpCtrlPartInvDefault[CreatorRootKeyShare1Offset*8+:CreatorRootKeyShare1Size*8])
 
   `OTP_FATAL_ERR_ASSERT(HwCfgOValid_A, otp_broadcast_o.valid == lc_ctrl_pkg::Off)
+  // The digests and optional zeroizable fields are excluded from the broadcast, so we exclude
+  // either 8 or 16 bytes from each hw_cfg partition.
+<%
+hw_cfg0_part = get_part_by_name("HW_CFG0", otp_mmap["partitions"])
+part_data_size = f"(HwCfg0Size - {16 if hw_cfg0_part['zeroizable'] else 8})"
+%>\
   `OTP_FATAL_ERR_ASSERT(HwCfg0OData_A, otp_broadcast_o.hw_cfg0_data ==
-    RndCnstOtpCtrlPartInvDefault[HwCfg0Offset*8+:HwCfg0Size*8])
+                        RndCnstOtpCtrlPartInvDefault[HwCfg0Offset*8+:${part_data_size}*8])
+<%
+hw_cfg1_part = get_part_by_name("HW_CFG1", otp_mmap["partitions"])
+part_data_size = f"(HwCfg1Size - {16 if hw_cfg1_part['zeroizable'] else 8})"
+%>\
   `OTP_FATAL_ERR_ASSERT(HwCfg1OData_A, otp_broadcast_o.hw_cfg1_data ==
-    RndCnstOtpCtrlPartInvDefault[HwCfg1Offset*8+:HwCfg1Size*8])
+                        RndCnstOtpCtrlPartInvDefault[HwCfg1Offset*8+:${part_data_size}*8])
 
   `OTP_FATAL_ERR_ASSERT(LcProgAck_A, lc_prog_ack == 0)
 % if enable_flash_key:

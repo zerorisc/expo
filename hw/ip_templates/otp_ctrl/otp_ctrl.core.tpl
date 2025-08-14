@@ -107,3 +107,6 @@ targets:
     default_tool: icarus
     parameters:
       - SYNTHESIS=true
+
+mapping:
+  "lowrisc:virtual_constants:rnd_cnst_pkg": "lowrisc:${topname}_constants:dev_rnd_cnst_pkg"
