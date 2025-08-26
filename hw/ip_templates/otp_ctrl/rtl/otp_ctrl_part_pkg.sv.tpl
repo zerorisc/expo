@@ -225,9 +225,17 @@ package otp_ctrl_part_pkg;
     ${int(part["size"])*8}'({
     % for item in part["items"][::-1]:
       % if offset != item['offset'] + item['size']:
+        % if (offset - item['size'] - item['offset']) * 8 >= 65536:
+      ${"{{{}'h{:0X}, {}'h{:0X}}}".format((offset - item['size'] - item['offset']) * 8 - 65536, 0, 65536, 0)}, // unallocated space<% offset = item['offset'] + item['size'] %>
+        % else:
       ${"{}'h{:0X}".format((offset - item['size'] - item['offset']) * 8, 0)}, // unallocated space<% offset = item['offset'] + item['size'] %>
+        % endif
       % endif
+      % if item["size"] * 8 >= 65536:
+      ${"{{{}'h{:0X}, {}'h{:0X}}}".format(item["size"] * 8 - 65536, item["inv_default"], 65536, item["inv_default"])}${("\n    })," if k < len(otp_mmap["partitions"])-1 else "\n    })});") if loop.last else ","}<% offset -= item['size'] %>
+      % else:
       ${"{}'h{:0X}".format(item["size"] * 8, item["inv_default"])}${("\n    })," if k < len(otp_mmap["partitions"])-1 else "\n    })});") if loop.last else ","}<% offset -= item['size'] %>
+      % endif
     % endfor
   % endfor
 

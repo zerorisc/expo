@@ -1,0 +1,697 @@
+// Copyright lowRISC contributors (OpenTitan project).
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+//
+// ------------------- W A R N I N G: A U T O - G E N E R A T E D   C O D E !! -------------------//
+// PLEASE DO NOT HAND-EDIT THIS FILE. IT HAS BEEN AUTO-GENERATED WITH THE FOLLOWING COMMAND:
+// util/topgen.py -t hw/top_darjeeling_no_ibex/data/top_darjeeling_no_ibex.hjson -o hw/top_darjeeling_no_ibex/
+
+{
+  name: main
+  clock_srcs:
+  {
+    clk_main_i: main
+    clk_fixed_i: io_div4
+  }
+  clock_group: infra
+  reset: rst_main_ni
+  reset_connections:
+  {
+    rst_main_ni:
+    {
+      name: lc
+      domain: "0"
+    }
+    rst_fixed_ni:
+    {
+      name: lc_io_div4
+      domain: "0"
+    }
+  }
+  clock_connections:
+  {
+    clk_main_i: clkmgr_aon_clocks.clk_main_infra
+    clk_fixed_i: clkmgr_aon_clocks.clk_io_div4_infra
+  }
+  domain:
+  [
+    "0"
+  ]
+  connections:
+  {
+    dma.host:
+    [
+      sram_ctrl_main.ram
+      sram_ctrl_mbox.ram
+      aes
+      hmac
+      otbn
+      keymgr_dpe
+      kmac
+      soc_proxy.ctn
+      peri
+    ]
+    mbx0.sram:
+    [
+      sram_ctrl_mbox.ram
+    ]
+    mbx1.sram:
+    [
+      sram_ctrl_mbox.ram
+    ]
+    mbx2.sram:
+    [
+      sram_ctrl_mbox.ram
+    ]
+    mbx3.sram:
+    [
+      sram_ctrl_mbox.ram
+    ]
+    mbx4.sram:
+    [
+      sram_ctrl_mbox.ram
+    ]
+    mbx5.sram:
+    [
+      sram_ctrl_mbox.ram
+    ]
+    mbx6.sram:
+    [
+      sram_ctrl_mbox.ram
+    ]
+    mbx_jtag.sram:
+    [
+      sram_ctrl_mbox.ram
+    ]
+    mbx_pcie0.sram:
+    [
+      sram_ctrl_mbox.ram
+    ]
+    mbx_pcie1.sram:
+    [
+      sram_ctrl_mbox.ram
+    ]
+  }
+  nodes:
+  [
+    {
+      name: peri
+      type: device
+      clock: clk_fixed_i
+      reset: rst_fixed_ni
+      req_fifo_pass: false
+      rsp_fifo_pass: false
+      xbar: true
+      stub: false
+      pipeline: true
+      addr_space: hart
+      addr_range:
+      [
+        {
+          base_addrs:
+          {
+            hart: 0x30000000
+          }
+          size_byte: 0x800000
+        }
+      ]
+    }
+    {
+      name: soc_proxy.ctn
+      type: device
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      inst_type: soc_proxy
+      addr_range:
+      [
+        {
+          base_addrs:
+          {
+            hart: 0x40000000
+          }
+          size_byte: 0x40000000
+        }
+      ]
+      xbar: false
+      stub: false
+      req_fifo_pass: true
+    }
+    {
+      name: hmac
+      type: device
+      clock: clk_main_i
+      reset: rst_main_ni
+      req_fifo_pass: false
+      rsp_fifo_pass: false
+      inst_type: hmac
+      addr_range:
+      [
+        {
+          base_addrs:
+          {
+            hart: 0x21110000
+          }
+          size_byte: 0x2000
+        }
+      ]
+      xbar: false
+      stub: false
+      pipeline: true
+    }
+    {
+      name: kmac
+      type: device
+      clock: clk_main_i
+      reset: rst_main_ni
+      req_fifo_pass: false
+      rsp_fifo_pass: false
+      inst_type: kmac
+      addr_range:
+      [
+        {
+          base_addrs:
+          {
+            hart: 0x21120000
+          }
+          size_byte: 0x1000
+        }
+      ]
+      xbar: false
+      stub: false
+      pipeline: true
+    }
+    {
+      name: aes
+      type: device
+      clock: clk_main_i
+      reset: rst_main_ni
+      req_fifo_pass: false
+      rsp_fifo_pass: false
+      inst_type: aes
+      addr_range:
+      [
+        {
+          base_addrs:
+          {
+            hart: 0x21100000
+          }
+          size_byte: 0x100
+        }
+      ]
+      xbar: false
+      stub: false
+      pipeline: true
+    }
+    {
+      name: otbn
+      type: device
+      clock: clk_main_i
+      reset: rst_main_ni
+      req_fifo_pass: false
+      rsp_fifo_pass: false
+      inst_type: otbn
+      addr_range:
+      [
+        {
+          base_addrs:
+          {
+            hart: 0x21130000
+          }
+          size_byte: 0x10000
+        }
+      ]
+      xbar: false
+      stub: false
+      pipeline: true
+    }
+    {
+      name: keymgr_dpe
+      type: device
+      clock: clk_main_i
+      reset: rst_main_ni
+      req_fifo_pass: false
+      rsp_fifo_pass: false
+      inst_type: keymgr_dpe
+      addr_range:
+      [
+        {
+          base_addrs:
+          {
+            hart: 0x21140000
+          }
+          size_byte: 0x100
+        }
+      ]
+      xbar: false
+      stub: false
+      pipeline: true
+    }
+    {
+      name: sram_ctrl_main.ram
+      type: device
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      inst_type: sram_ctrl
+      addr_range:
+      [
+        {
+          base_addrs:
+          {
+            hart: 0x10000000
+          }
+          size_byte: 0x10000
+        }
+      ]
+      xbar: false
+      stub: false
+      req_fifo_pass: true
+    }
+    {
+      name: sram_ctrl_mbox.ram
+      type: device
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      inst_type: sram_ctrl
+      addr_range:
+      [
+        {
+          base_addrs:
+          {
+            hart: 0x11000000
+          }
+          size_byte: 0x1000
+        }
+      ]
+      xbar: false
+      stub: false
+      req_fifo_pass: true
+    }
+    {
+      name: dma.host
+      type: host
+      addr_space: hart
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      xbar: false
+      stub: false
+      inst_type: ""
+      req_fifo_pass: true
+      rsp_fifo_pass: true
+    }
+    {
+      name: mbx0.sram
+      type: host
+      addr_space: hart
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      xbar: false
+      stub: false
+      inst_type: ""
+      req_fifo_pass: true
+      rsp_fifo_pass: true
+    }
+    {
+      name: mbx1.sram
+      type: host
+      addr_space: hart
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      xbar: false
+      stub: false
+      inst_type: ""
+      req_fifo_pass: true
+      rsp_fifo_pass: true
+    }
+    {
+      name: mbx2.sram
+      type: host
+      addr_space: hart
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      xbar: false
+      stub: false
+      inst_type: ""
+      req_fifo_pass: true
+      rsp_fifo_pass: true
+    }
+    {
+      name: mbx3.sram
+      type: host
+      addr_space: hart
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      xbar: false
+      stub: false
+      inst_type: ""
+      req_fifo_pass: true
+      rsp_fifo_pass: true
+    }
+    {
+      name: mbx4.sram
+      type: host
+      addr_space: hart
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      xbar: false
+      stub: false
+      inst_type: ""
+      req_fifo_pass: true
+      rsp_fifo_pass: true
+    }
+    {
+      name: mbx5.sram
+      type: host
+      addr_space: hart
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      xbar: false
+      stub: false
+      inst_type: ""
+      req_fifo_pass: true
+      rsp_fifo_pass: true
+    }
+    {
+      name: mbx6.sram
+      type: host
+      addr_space: hart
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      xbar: false
+      stub: false
+      inst_type: ""
+      req_fifo_pass: true
+      rsp_fifo_pass: true
+    }
+    {
+      name: mbx_jtag.sram
+      type: host
+      addr_space: hart
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      xbar: false
+      stub: false
+      inst_type: ""
+      req_fifo_pass: true
+      rsp_fifo_pass: true
+    }
+    {
+      name: mbx_pcie0.sram
+      type: host
+      addr_space: hart
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      xbar: false
+      stub: false
+      inst_type: ""
+      req_fifo_pass: true
+      rsp_fifo_pass: true
+    }
+    {
+      name: mbx_pcie1.sram
+      type: host
+      addr_space: hart
+      clock: clk_main_i
+      reset: rst_main_ni
+      pipeline: false
+      xbar: false
+      stub: false
+      inst_type: ""
+      req_fifo_pass: true
+      rsp_fifo_pass: true
+    }
+  ]
+  addr_spaces:
+  [
+    hart
+  ]
+  clock: clk_main_i
+  type: xbar
+  inter_signal_list:
+  [
+    {
+      name: tl_dma__host
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: rsp
+      inst_name: main
+      width: 1
+      default: ""
+      end_idx: -1
+      top_signame: main_tl_dma__host
+      index: -1
+    }
+    {
+      name: tl_mbx0__sram
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: rsp
+      inst_name: main
+      width: 1
+      default: ""
+      end_idx: -1
+      top_signame: main_tl_mbx0__sram
+      index: -1
+    }
+    {
+      name: tl_mbx1__sram
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: rsp
+      inst_name: main
+      width: 1
+      default: ""
+      end_idx: -1
+      top_signame: main_tl_mbx1__sram
+      index: -1
+    }
+    {
+      name: tl_mbx2__sram
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: rsp
+      inst_name: main
+      width: 1
+      default: ""
+      end_idx: -1
+      top_signame: main_tl_mbx2__sram
+      index: -1
+    }
+    {
+      name: tl_mbx3__sram
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: rsp
+      inst_name: main
+      width: 1
+      default: ""
+      end_idx: -1
+      top_signame: main_tl_mbx3__sram
+      index: -1
+    }
+    {
+      name: tl_mbx4__sram
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: rsp
+      inst_name: main
+      width: 1
+      default: ""
+      end_idx: -1
+      top_signame: main_tl_mbx4__sram
+      index: -1
+    }
+    {
+      name: tl_mbx5__sram
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: rsp
+      inst_name: main
+      width: 1
+      default: ""
+      end_idx: -1
+      top_signame: main_tl_mbx5__sram
+      index: -1
+    }
+    {
+      name: tl_mbx6__sram
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: rsp
+      inst_name: main
+      width: 1
+      default: ""
+      end_idx: -1
+      top_signame: main_tl_mbx6__sram
+      index: -1
+    }
+    {
+      name: tl_mbx_jtag__sram
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: rsp
+      inst_name: main
+      width: 1
+      default: ""
+      end_idx: -1
+      top_signame: main_tl_mbx_jtag__sram
+      index: -1
+    }
+    {
+      name: tl_mbx_pcie0__sram
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: rsp
+      inst_name: main
+      width: 1
+      default: ""
+      end_idx: -1
+      top_signame: main_tl_mbx_pcie0__sram
+      index: -1
+    }
+    {
+      name: tl_mbx_pcie1__sram
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: rsp
+      inst_name: main
+      width: 1
+      default: ""
+      end_idx: -1
+      top_signame: main_tl_mbx_pcie1__sram
+      index: -1
+    }
+    {
+      name: tl_peri
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: req
+      inst_name: main
+      width: 1
+      default: ""
+      end_idx: -1
+      top_signame: main_tl_peri
+      index: -1
+    }
+    {
+      name: tl_soc_proxy__ctn
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: req
+      inst_name: main
+      width: 1
+      default: ""
+      top_signame: soc_proxy_ctn_tl
+      index: -1
+    }
+    {
+      name: tl_hmac
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: req
+      inst_name: main
+      width: 1
+      default: ""
+      top_signame: hmac_tl
+      index: -1
+    }
+    {
+      name: tl_kmac
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: req
+      inst_name: main
+      width: 1
+      default: ""
+      top_signame: kmac_tl
+      index: -1
+    }
+    {
+      name: tl_aes
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: req
+      inst_name: main
+      width: 1
+      default: ""
+      top_signame: aes_tl
+      index: -1
+    }
+    {
+      name: tl_otbn
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: req
+      inst_name: main
+      width: 1
+      default: ""
+      top_signame: otbn_tl
+      index: -1
+    }
+    {
+      name: tl_keymgr_dpe
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: req
+      inst_name: main
+      width: 1
+      default: ""
+      top_signame: keymgr_dpe_tl
+      index: -1
+    }
+    {
+      name: tl_sram_ctrl_main__ram
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: req
+      inst_name: main
+      width: 1
+      default: ""
+      top_signame: sram_ctrl_main_ram_tl
+      index: -1
+    }
+    {
+      name: tl_sram_ctrl_mbox__ram
+      struct: tl
+      package: tlul_pkg
+      type: req_rsp
+      act: req
+      inst_name: main
+      width: 1
+      default: ""
+      top_signame: sram_ctrl_mbox_ram_tl
+      index: -1
+    }
+  ]
+}
