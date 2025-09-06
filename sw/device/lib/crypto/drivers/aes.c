@@ -1,3 +1,7 @@
+// Copyright zeroRISC Inc.
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright lowRISC contributors (OpenTitan project).
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
@@ -7,9 +11,11 @@
 #include "sw/device/lib/base/abs_mmio.h"
 #include "sw/device/lib/base/bitfield.h"
 #include "sw/device/lib/base/hardened.h"
+#include "sw/device/lib/base/hardened_memory.h"
 #include "sw/device/lib/base/macros.h"
 #include "sw/device/lib/base/memory.h"
 #include "sw/device/lib/crypto/drivers/entropy.h"
+#include "sw/device/lib/crypto/drivers/rv_core_ibex.h"
 #include "sw/device/lib/crypto/impl/status.h"
 
 #include "aes_regs.h"  // Generated.
@@ -24,6 +30,7 @@ enum {
   kAesKeyWordLen128 = 128 / (sizeof(uint32_t) * 8),
   kAesKeyWordLen192 = 192 / (sizeof(uint32_t) * 8),
   kAesKeyWordLen256 = 256 / (sizeof(uint32_t) * 8),
+  kAesKeyWordLenMax = kAesKeyWordLen256,
 };
 
 /**
@@ -47,6 +54,8 @@ static status_t spin_until(uint32_t bit) {
  *
  * If the key is sideloaded, this is a no-op.
  *
+ * Consumes randomness; the caller must ensure the entropy complex is up.
+ *
  * @param key AES key.
  * @return result, OK or error.
  */
@@ -61,26 +70,17 @@ static status_t aes_write_key(aes_key_t key) {
   uint32_t share0 = kBase + AES_KEY_SHARE0_0_REG_OFFSET;
   uint32_t share1 = kBase + AES_KEY_SHARE1_0_REG_OFFSET;
 
-  // Handle key shares in two separate loops to avoid dealing with
-  // corresponding parts too close together, which could risk power
-  // side-channel leakage in the ALU.
-  // TODO: randomize iteration order.
-  size_t i = 0;
-  for (; i < key.key_len; ++i) {
-    abs_mmio_write32(share0 + i * sizeof(uint32_t), key.key_shares[0][i]);
-  }
-  HARDENED_CHECK_EQ(i, key.key_len);
-  for (i = 0; i < key.key_len; ++i) {
-    abs_mmio_write32(share1 + i * sizeof(uint32_t), key.key_shares[1][i]);
-  }
-  HARDENED_CHECK_EQ(i, key.key_len);
+  hardened_mmio_write(share0, key.key_shares[0], key.key_len);
+  hardened_mmio_write(share1, key.key_shares[1], key.key_len);
 
-  // NOTE: all eight share registers must be written; in the case we don't have
-  // enough key data, we fill it with zeroes.
-  for (size_t i = key.key_len; i < 8; ++i) {
-    abs_mmio_write32(share0 + i * sizeof(uint32_t), 0);
-    abs_mmio_write32(share1 + i * sizeof(uint32_t), 0);
+  // Write random words to remaining key registers.
+  size_t i = key.key_len;
+  for (; i < kAesKeyWordLenMax; i++) {
+    abs_mmio_write32(share0 + i * sizeof(uint32_t), ibex_rnd32_read());
+    abs_mmio_write32(share1 + i * sizeof(uint32_t), ibex_rnd32_read());
   }
+  HARDENED_CHECK_EQ(i, kAesKeyWordLenMax);
+
   return spin_until(AES_STATUS_IDLE_BIT);
 }
 
@@ -105,14 +105,16 @@ static status_t aes_begin(aes_key_t key, const aes_block_t *iv,
 
   // Set the operation (encrypt or decrypt).
   hardened_bool_t operation_written = kHardenedBoolFalse;
-  switch (encrypt) {
+  switch (launder32(encrypt)) {
     case kHardenedBoolTrue:
+      HARDENED_CHECK_EQ(encrypt, kHardenedBoolTrue);
       ctrl_reg =
           bitfield_field32_write(ctrl_reg, AES_CTRL_SHADOWED_OPERATION_FIELD,
                                  AES_CTRL_SHADOWED_OPERATION_VALUE_AES_ENC);
       operation_written = launder32(kHardenedBoolTrue);
       break;
     case kHardenedBoolFalse:
+      HARDENED_CHECK_EQ(encrypt, kHardenedBoolFalse);
       ctrl_reg =
           bitfield_field32_write(ctrl_reg, AES_CTRL_SHADOWED_OPERATION_FIELD,
                                  AES_CTRL_SHADOWED_OPERATION_VALUE_AES_DEC);
@@ -126,13 +128,15 @@ static status_t aes_begin(aes_key_t key, const aes_block_t *iv,
 
   // Indicate whether the key will be sideloaded.
   hardened_bool_t sideload_written = kHardenedBoolFalse;
-  switch (key.sideload) {
+  switch (launder32(key.sideload)) {
     case kHardenedBoolTrue:
+      HARDENED_CHECK_EQ(key.sideload, kHardenedBoolTrue);
       ctrl_reg =
           bitfield_bit32_write(ctrl_reg, AES_CTRL_SHADOWED_SIDELOAD_BIT, true);
       sideload_written = launder32(kHardenedBoolTrue);
       break;
     case kHardenedBoolFalse:
+      HARDENED_CHECK_EQ(key.sideload, kHardenedBoolFalse);
       ctrl_reg =
           bitfield_bit32_write(ctrl_reg, AES_CTRL_SHADOWED_SIDELOAD_BIT, false);
       sideload_written = launder32(kHardenedBoolTrue);
@@ -180,26 +184,34 @@ static status_t aes_begin(aes_key_t key, const aes_block_t *iv,
 
   // Translate the key length to the hardware-encoding value and write the
   // control reg field.
-  switch (key.key_len) {
+  hardened_bool_t len_written = kHardenedBoolFalse;
+  switch (launder32(key.key_len)) {
     case kAesKeyWordLen128:
+      HARDENED_CHECK_EQ(key.key_len, kAesKeyWordLen128);
       ctrl_reg =
           bitfield_field32_write(ctrl_reg, AES_CTRL_SHADOWED_KEY_LEN_FIELD,
                                  AES_CTRL_SHADOWED_KEY_LEN_VALUE_AES_128);
+      len_written = launder32(kHardenedBoolTrue);
       break;
     case kAesKeyWordLen192:
+      HARDENED_CHECK_EQ(key.key_len, kAesKeyWordLen192);
       ctrl_reg =
           bitfield_field32_write(ctrl_reg, AES_CTRL_SHADOWED_KEY_LEN_FIELD,
                                  AES_CTRL_SHADOWED_KEY_LEN_VALUE_AES_192);
+      len_written = launder32(kHardenedBoolTrue);
       break;
     case kAesKeyWordLen256:
+      HARDENED_CHECK_EQ(key.key_len, kAesKeyWordLen256);
       ctrl_reg =
           bitfield_field32_write(ctrl_reg, AES_CTRL_SHADOWED_KEY_LEN_FIELD,
                                  AES_CTRL_SHADOWED_KEY_LEN_VALUE_AES_256);
+      len_written = launder32(kHardenedBoolTrue);
       break;
     default:
       // Invalid value.
       return OTCRYPTO_BAD_ARGS;
   }
+  HARDENED_CHECK_EQ(len_written, kHardenedBoolTrue);
 
   // Never enable manual operation.
   ctrl_reg = bitfield_bit32_write(
@@ -260,18 +272,14 @@ status_t aes_update(aes_block_t *dest, const aes_block_t *src) {
     HARDENED_TRY(spin_until(AES_STATUS_OUTPUT_VALID_BIT));
 
     uint32_t offset = kBase + AES_DATA_OUT_0_REG_OFFSET;
-    for (size_t i = 0; i < ARRAYSIZE(dest->data); ++i) {
-      dest->data[i] = abs_mmio_read32(offset + i * sizeof(uint32_t));
-    }
+    hardened_mmio_read(dest->data, offset, ARRAYSIZE(dest->data));
   }
 
   if (src != NULL) {
     HARDENED_TRY(spin_until(AES_STATUS_INPUT_READY_BIT));
 
     uint32_t offset = kBase + AES_DATA_IN_0_REG_OFFSET;
-    for (size_t i = 0; i < ARRAYSIZE(src->data); ++i) {
-      abs_mmio_write32(offset + i * sizeof(uint32_t), src->data[i]);
-    }
+    hardened_mmio_write(offset, src->data, ARRAYSIZE(src->data));
   }
 
   return OTCRYPTO_OK;

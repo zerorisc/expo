@@ -174,7 +174,7 @@ static status_t ecdh_p256(cryptotest_ecdh_private_key_t d,
   uint32_t share0[shared_secret_words];
   uint32_t share1[shared_secret_words];
   TRY(otcrypto_export_blinded_key(
-      shared_secret,
+      &shared_secret,
       (otcrypto_word32_buf_t){.data = share0, .len = ARRAYSIZE(share0)},
       (otcrypto_word32_buf_t){.data = share1, .len = ARRAYSIZE(share1)}));
   for (size_t i = 0; i < shared_secret_words; i++) {
@@ -295,7 +295,7 @@ static status_t ecdh_p384(cryptotest_ecdh_private_key_t d,
   uint32_t share0[shared_secret_words];
   uint32_t share1[shared_secret_words];
   TRY(otcrypto_export_blinded_key(
-      shared_secret,
+      &shared_secret,
       (otcrypto_word32_buf_t){.data = share0, .len = ARRAYSIZE(share0)},
       (otcrypto_word32_buf_t){.data = share1, .len = ARRAYSIZE(share1)}));
   for (size_t i = 0; i < shared_secret_words; i++) {

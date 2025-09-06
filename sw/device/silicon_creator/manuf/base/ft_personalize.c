@@ -670,7 +670,7 @@ static status_t compute_tbs_was_hmac(perso_blob_t *perso_blob_to_host) {
   // Compute HMAC of TBS certs with WAS as the key.
   // HSMs and host tooling will compute an HMAC in big endian format, so we do
   // the same to make the comparison easier.
-  hmac_hmac_sha256_init(was, /*big_endian_digest=*/true);
+  sc_hmac_hmac_sha256_init(was, /*big_endian_digest=*/true);
   uint8_t *tlv_buf = perso_blob_to_host->body;
   uint16_t obj_size;
   perso_tlv_object_type_t obj_type;
@@ -1193,6 +1193,7 @@ bool test_main(void) {
 
   // Enable peripherals, ATE GPIO indicators, and the SPI console.
   CHECK_STATUS_OK(peripheral_handles_init());
+  CHECK_STATUS_OK(entropy_complex_init());
   pinmux_testutils_init(&pinmux);
   CHECK_STATUS_OK(configure_ate_gpio_indicators());
   CHECK_DIF_OK(dif_gpio_write(&gpio, kGpioPinTestStart, true));

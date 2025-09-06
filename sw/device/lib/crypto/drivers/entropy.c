@@ -1,3 +1,7 @@
+// Copyright zeroRISC Inc.
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright lowRISC contributors (OpenTitan project).
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
@@ -38,16 +42,17 @@ enum {
 
 /**
  * Supported CSRNG application commands.
- * See https://docs.opentitan.org/hw/ip/csrng/doc/#command-header for
- * details.
+ *
+ * Hardened values generated with
+ * $ ./util/design/sparse-fsm-encode.py -d 6 -m 5 -n 11 \
+ *     --avoid-zero -s 3404370429
  */
-// TODO(#14542): Harden csrng/edn command fields.
 typedef enum entropy_csrng_op {
-  kEntropyDrbgOpInstantiate = 1,
-  kEntropyDrbgOpReseed = 2,
-  kEntropyDrbgOpGenerate = 3,
-  kEntropyDrbgOpUpdate = 4,
-  kEntropyDrbgOpUninstantiate = 5,
+  kEntropyDrbgOpInstantiate = 0x30f,
+  kEntropyDrbgOpReseed = 0x4bd,
+  kEntropyDrbgOpGenerate = 0x77a,
+  kEntropyDrbgOpUpdate = 0x6c3,
+  kEntropyDrbgOpUninstantiate = 0x3d4,
 } entropy_csrng_op_t;
 
 /**
@@ -72,18 +77,33 @@ typedef struct entropy_csrng_cmd {
 } entropy_csrng_cmd_t;
 
 /**
- * Entropy complex configuration modes.
+ * This enum type contains all the different command types for
+ * csrng_send_app_cmd().
  *
- * Each enum value is used a confiugration index in `kEntropyComplexConfigs`.
+ * Hardened values generated with
+ * $ ./util/design/sparse-fsm-encode.py -d 6 -m 4 -n 11 \
+ *     --avoid-zero -s 1616753714
  */
-typedef enum entropy_complex_config_id {
+typedef enum entropy_csrng_send_app_cmd_type {
   /**
-   * Entropy complex in continuous mode. This is the default runtime
-   * configuration.
+   * Command issued directly to CSRNG.
    */
-  kEntropyComplexConfigIdContinuous,
-  kEntropyComplexConfigIdNumEntries,
-} entropy_complex_config_id_t;
+  kEntropyCsrngSendAppCmdTypeCsrng = 0x0be,
+  /**
+   * Command issued to CSRNG via the SW_CMD_REQ register of the EDN.
+   */
+  kEntropyCsrngSendAppCmdTypeEdnSw = 0x387,
+  /**
+   * Command issued to CSRNG via the GENERATE_CMD register of the EDN.
+   * This type of command will be used in the auto mode of the EDN.
+   */
+  kEntropyCsrngSendAppCmdTypeEdnGen = 0x574,
+  /**
+   * Command issued to CSRNG via the RESEED_CMD register of the EDN.
+   * This type of command will be used in the auto mode of the EDN.
+   */
+  kEntropyCsrngSendAppCmdTypeEdnRes = 0x4e9,
+} entropy_csrng_send_app_cmd_type_t;
 
 /**
  * EDN configuration settings.
@@ -197,10 +217,6 @@ typedef struct entropy_src_config {
  */
 typedef struct entropy_complex_config {
   /**
-   * Configuration identifier.
-   */
-  entropy_complex_config_id_t id;
-  /**
    * ENTROPY_SRC configuration.
    */
   entropy_src_config_t entropy_src;
@@ -214,99 +230,119 @@ typedef struct entropy_complex_config {
   edn_config_t edn1;
 } entropy_complex_config_t;
 
-// Entropy complex configuration table. This is expected to be fixed at build
-// time. For this reason, it is not recommended to use this table in a ROM
-// target unless the values are known to work. In other words, only use in
-// mutable code partitions.
-static const entropy_complex_config_t
-    kEntropyComplexConfigs[kEntropyComplexConfigIdNumEntries] = {
-        [kEntropyComplexConfigIdContinuous] =
-            {
-                .entropy_src =
-                    {
-                        .fips_enable = kMultiBitBool4True,
-                        .fips_flag = kMultiBitBool4True,
-                        .rng_fips = kMultiBitBool4True,
-                        .route_to_firmware = kMultiBitBool4False,
-                        .bypass_conditioner = kMultiBitBool4False,
-                        .single_bit_mode = kMultiBitBool4False,
-                        .fips_test_window_size = 0x200,
-                        .alert_threshold = 2,
-                        // TODO(#19392): Figure out appropriate thresholds.
-                        .repcnt_threshold = 0xffff,
-                        .repcnts_threshold = 0xffff,
-                        .adaptp_hi_threshold = 0xffff,
-                        .adaptp_lo_threshold = 0x0,
-                        .bucket_threshold = 0xffff,
-                        .markov_hi_threshold = 0xffff,
-                        .markov_lo_threshold = 0x0,
-                        .extht_hi_threshold = 0xffff,
-                        .extht_lo_threshold = 0x0,
-                    },
-                .edn0 =
-                    {
-                        .base_address = kBaseEdn0,
-                        .reseed_interval = 128,
-                        .instantiate =
-                            {
-                                .id = kEntropyDrbgOpInstantiate,
-                                .disable_trng_input = kHardenedBoolFalse,
-                                .seed_material = NULL,
-                                .generate_len = 0,
-                            },
-                        .generate =
-                            {
-                                .id = kEntropyDrbgOpGenerate,
-                                .disable_trng_input = kHardenedBoolFalse,
-                                .seed_material = NULL,
-                                .generate_len = 32,
-                            },
-                        .reseed =
-                            {
-                                .id = kEntropyDrbgOpReseed,
-                                .disable_trng_input = kHardenedBoolFalse,
-                                .seed_material = NULL,
-                                .generate_len = 0,
-                            },
-                    },
-                .edn1 =
-                    {
-                        .base_address = kBaseEdn1,
-                        .reseed_interval = 4,
-                        .instantiate =
-                            {
-                                .id = kEntropyDrbgOpInstantiate,
-                                .disable_trng_input = kHardenedBoolFalse,
-                                .seed_material = NULL,
-                                .generate_len = 0,
-                            },
-                        .generate =
-                            {
-                                .id = kEntropyDrbgOpGenerate,
-                                .seed_material = NULL,
-                                .generate_len = 4,
-                            },
-                        .reseed =
-                            {
-                                .id = kEntropyDrbgOpReseed,
-                                .disable_trng_input = kHardenedBoolFalse,
-                                .seed_material = NULL,
-                                .generate_len = 0,
-                            },
-                    },
-            },
+/**
+ * Entropy complex configuration in continuous mode (default runtime
+ * configuration).
+ */
+static const entropy_complex_config_t kEntropyComplexConfigIdContinuous = {
+    .entropy_src =
+        {
+            .fips_enable = kMultiBitBool4True,
+            .fips_flag = kMultiBitBool4True,
+            .rng_fips = kMultiBitBool4True,
+            .route_to_firmware = kMultiBitBool4False,
+            .bypass_conditioner = kMultiBitBool4False,
+            .single_bit_mode = kMultiBitBool4False,
+            .fips_test_window_size = 0x200,
+            .alert_threshold = 2,
+            // TODO(#19392): Figure out appropriate thresholds.
+            .repcnt_threshold = 0xffff,
+            .repcnts_threshold = 0xffff,
+            .adaptp_hi_threshold = 0xffff,
+            .adaptp_lo_threshold = 0x0,
+            .bucket_threshold = 0xffff,
+            .markov_hi_threshold = 0xffff,
+            .markov_lo_threshold = 0x0,
+            .extht_hi_threshold = 0xffff,
+            .extht_lo_threshold = 0x0,
+        },
+    .edn0 =
+        {
+            .base_address = kBaseEdn0,
+            .reseed_interval = 128,
+            .instantiate =
+                {
+                    .id = kEntropyDrbgOpInstantiate,
+                    .disable_trng_input = kHardenedBoolFalse,
+                    .seed_material = NULL,
+                    .generate_len = 0,
+                },
+            .generate =
+                {
+                    .id = kEntropyDrbgOpGenerate,
+                    .disable_trng_input = kHardenedBoolFalse,
+                    .seed_material = NULL,
+                    .generate_len = 32,
+                },
+            .reseed =
+                {
+                    .id = kEntropyDrbgOpReseed,
+                    .disable_trng_input = kHardenedBoolFalse,
+                    .seed_material = NULL,
+                    .generate_len = 0,
+                },
+        },
+    .edn1 =
+        {
+            .base_address = kBaseEdn1,
+            .reseed_interval = 4,
+            .instantiate =
+                {
+                    .id = kEntropyDrbgOpInstantiate,
+                    .disable_trng_input = kHardenedBoolFalse,
+                    .seed_material = NULL,
+                    .generate_len = 0,
+                },
+            .generate =
+                {
+                    .id = kEntropyDrbgOpGenerate,
+                    .seed_material = NULL,
+                    .generate_len = 4,
+                },
+            .reseed =
+                {
+                    .id = kEntropyDrbgOpReseed,
+                    .disable_trng_input = kHardenedBoolFalse,
+                    .seed_material = NULL,
+                    .generate_len = 0,
+                },
+        },
 };
 
-// Write a CSRNG command to a register. That register can be the SW interface
-// of CSRNG, in which case the `check_completion` argument should be `true`.
-// That register can alternatively be one of EDN's that holds commands that EDN
-// passes to CSRNG. In this case, the check_completion argument should only be
-// true for non-generate commands issued to the SW register.
-OT_WARN_UNUSED_RESULT
-static status_t csrng_send_app_cmd(uint32_t base_address,
-                                   entropy_csrng_cmd_t cmd,
-                                   entropy_csrng_send_app_cmd_type_t cmd_type,
-                                   bool check_completion) {
+/**
+ * A collection of randomized 32-bit values that XOR to OTCRYPTO_OK.
+ *
+ * The first kEntropySeedWords values were generated randomly, and the final
+ * value is the XOR of their XOR-sum and OTCRYPTO_OK.
+ */
+static const uint32_t kOkShares[kEntropySeedWords + 1] = {
+    0xd990a239, 0x54861cb,  0xdfbd4cbb, 0xb605926,  0xd5f6bd5,
+    0x4f51f602, 0x963ae7a2, 0xfc6046d3, 0x7ab34624, 0xa0443290,
+    0xb8d78bdf, 0xa92632e5, 0xeb57207e};
+
+#define ENTROPY_CMD(m, i) ((bitfield_field32_t){.mask = m, .index = i})
+// The application command header is not specified as a register in the
+// hardware specification, so the fields are mapped here by hand. The
+// command register also accepts arbitrary 32bit data.
+static const bitfield_field32_t kAppCmdFieldFlag0 = ENTROPY_CMD(0xf, 8);
+static const bitfield_field32_t kAppCmdFieldCmdId = ENTROPY_CMD(0xf, 0);
+static const bitfield_field32_t kAppCmdFieldCmdLen = ENTROPY_CMD(0xf, 4);
+static const bitfield_field32_t kAppCmdFieldGlen = ENTROPY_CMD(0x7ffff, 12);
+#undef ENTROPY_CMD
+
+/**
+ * Write a CSRNG command to a register.
+ *
+ * The register can be the SW interface of CSRNG or one of the EDN's that holds
+ * commands to pass to CSRNG.
+ *
+ * @param base_address Base for the relevant hardware block (CSRNG or EDN).
+ * @param cmd Command to send.
+ * @param cmd_type Type of the command.
+ */
+OT_WARN_UNUSED_RESULT static status_t csrng_send_app_cmd(
+    uint32_t base_address, entropy_csrng_cmd_t cmd,
+    entropy_csrng_send_app_cmd_type_t cmd_type) {
   enum {
     // This is to maintain full compliance with NIST SP 800-90A, which requires
     // the max generate output to be constrained to gen < 2 ^ 12 bits or 0x800
@@ -317,71 +353,75 @@ static status_t csrng_send_app_cmd(uint32_t base_address,
     return OTCRYPTO_BAD_ARGS;
   }
 
-  uint32_t cmd_reg_addr;
-  uint32_t sts_reg_addr;
-  uint32_t rdy_bit_offset;
-  uint32_t reg_rdy_bit_offset;
-  uint32_t reg;
+  // Calculate the amount of seed material we will need to send.
+  uint32_t cmd_len = cmd.seed_material == NULL ? 0 : cmd.seed_material->len;
+  if (launder32(cmd_len) & ~kAppCmdFieldCmdLen.mask) {
+    return OTCRYPTO_RECOV_ERR;
+  }
+  HARDENED_CHECK_EQ(cmd_len & ~kAppCmdFieldCmdLen.mask, 0);
+
+  // Initialize the return value. We will XOR values into this register
+  // throughout the computation and end up with an OK error code only if we
+  // progress through all expected steps.
+  uint32_t res = launder32(UINT32_MAX);
+  for (size_t i = cmd_len; i < kEntropySeedWords; ++i) {
+    // Add in the shares for the unused words now; the used words will get
+    // added later as they are written.
+    res ^= kOkShares[i];
+  }
+
+  uint32_t cmd_reg_addr = 0;
+  uint32_t sts_reg_addr = 0;
+  uint32_t rdy_bit_offset = 0;
+  uint32_t reg_rdy_bit_offset = 0;
+  uint32_t reg = UINT32_MAX;
   bool ready;
 
-  switch (cmd_type) {
+  switch (launder32(cmd_type)) {
     case kEntropyCsrngSendAppCmdTypeCsrng:
-      cmd_reg_addr = base_address + CSRNG_CMD_REQ_REG_OFFSET;
-      sts_reg_addr = base_address + CSRNG_SW_CMD_STS_REG_OFFSET;
+      HARDENED_CHECK_EQ(cmd_type, kEntropyCsrngSendAppCmdTypeCsrng);
       rdy_bit_offset = CSRNG_SW_CMD_STS_CMD_RDY_BIT;
       reg_rdy_bit_offset = CSRNG_SW_CMD_STS_CMD_RDY_BIT;
+      cmd_reg_addr = base_address + CSRNG_CMD_REQ_REG_OFFSET;
+      sts_reg_addr = base_address + CSRNG_SW_CMD_STS_REG_OFFSET;
       break;
     case kEntropyCsrngSendAppCmdTypeEdnSw:
-      cmd_reg_addr = base_address + EDN_SW_CMD_REQ_REG_OFFSET;
-      sts_reg_addr = base_address + EDN_SW_CMD_STS_REG_OFFSET;
+      HARDENED_CHECK_EQ(cmd_type, kEntropyCsrngSendAppCmdTypeEdnSw);
       rdy_bit_offset = EDN_SW_CMD_STS_CMD_RDY_BIT;
       reg_rdy_bit_offset = EDN_SW_CMD_STS_CMD_REG_RDY_BIT;
+      cmd_reg_addr = base_address + EDN_SW_CMD_REQ_REG_OFFSET;
+      sts_reg_addr = base_address + EDN_SW_CMD_STS_REG_OFFSET;
       break;
     case kEntropyCsrngSendAppCmdTypeEdnGen:
+      HARDENED_CHECK_EQ(cmd_type, kEntropyCsrngSendAppCmdTypeEdnGen);
       cmd_reg_addr = base_address + EDN_GENERATE_CMD_REG_OFFSET;
       break;
     case kEntropyCsrngSendAppCmdTypeEdnRes:
+      HARDENED_CHECK_EQ(cmd_type, kEntropyCsrngSendAppCmdTypeEdnRes);
       cmd_reg_addr = base_address + EDN_RESEED_CMD_REG_OFFSET;
       break;
     default:
       return OTCRYPTO_BAD_ARGS;
   }
+  HARDENED_CHECK_NE(cmd_reg_addr, 0);
 
   if ((cmd_type == kEntropyCsrngSendAppCmdTypeCsrng) ||
       (cmd_type == kEntropyCsrngSendAppCmdTypeEdnSw)) {
+    HARDENED_CHECK_NE(sts_reg_addr, 0);
     // Wait for the status register to be ready to accept the next command.
     do {
       reg = abs_mmio_read32(sts_reg_addr);
       ready = bitfield_bit32_read(reg, rdy_bit_offset);
     } while (!ready);
+    // Re-read as a hardening check.
+    reg = abs_mmio_read32(sts_reg_addr);
+    ready = bitfield_bit32_read(reg, rdy_bit_offset);
+    HARDENED_CHECK_EQ(ready, true);
+  } else {
+    res ^= launder32(kOkShares[kEntropySeedWords]);
   }
 
-#define ENTROPY_CMD(m, i) ((bitfield_field32_t){.mask = m, .index = i})
-  // The application command header is not specified as a register in the
-  // hardware specification, so the fields are mapped here by hand. The
-  // command register also accepts arbitrary 32bit data.
-  static const bitfield_field32_t kAppCmdFieldFlag0 = ENTROPY_CMD(0xf, 8);
-  static const bitfield_field32_t kAppCmdFieldCmdId = ENTROPY_CMD(0xf, 0);
-  static const bitfield_field32_t kAppCmdFieldCmdLen = ENTROPY_CMD(0xf, 4);
-  static const bitfield_field32_t kAppCmdFieldGlen = ENTROPY_CMD(0x7ffff, 12);
-#undef ENTROPY_CMD
-
-  uint32_t cmd_len = cmd.seed_material == NULL ? 0 : cmd.seed_material->len;
-
-  if (cmd_len & ~kAppCmdFieldCmdLen.mask) {
-    return OTCRYPTO_RECOV_ERR;
-  }
-
-  // TODO: Consider removing this since the driver will be constructing these
-  // commands internally.
-  // Ensure the `seed_material` array is word-aligned, so it can be loaded to a
-  // CPU register with natively aligned loads.
-  if (cmd.seed_material != NULL &&
-      misalignment32_of((uintptr_t)cmd.seed_material->data) != 0) {
-    return OTCRYPTO_RECOV_ERR;
-  }
-
-  if (check_completion && (cmd_type == kEntropyCsrngSendAppCmdTypeCsrng)) {
+  if (cmd_type == kEntropyCsrngSendAppCmdTypeCsrng) {
     // Clear the `cs_cmd_req_done` bit, which is asserted whenever a command
     // request is completed, because that bit will be used below to determine if
     // this command request is completed. EDN automatically clears the
@@ -390,34 +430,72 @@ static status_t csrng_send_app_cmd(uint32_t base_address,
     abs_mmio_write32(kBaseCsrng + CSRNG_INTR_STATE_REG_OFFSET, reg);
   }
 
-  // Build and write application command header.
-  reg = bitfield_field32_write(0, kAppCmdFieldCmdId, cmd.id);
-  reg = bitfield_field32_write(reg, kAppCmdFieldCmdLen, cmd_len);
-  reg = bitfield_field32_write(reg, kAppCmdFieldGlen, cmd.generate_len);
-  reg = bitfield_field32_write(reg, kAppCmdFieldFlag0, kMultiBitBool4False);
+  // Build and write application command header. For details see
+  // https://docs.opentitan.org/hw/ip/csrng/doc/#command-header
+  uint32_t cmd_reg = 0;
+  switch (launder32(cmd.id)) {
+    case kEntropyDrbgOpInstantiate:
+      HARDENED_CHECK_EQ(cmd.id, kEntropyDrbgOpInstantiate);
+      cmd_reg = bitfield_field32_write(0, kAppCmdFieldCmdId, 1);
+      break;
+    case kEntropyDrbgOpReseed:
+      HARDENED_CHECK_EQ(cmd.id, kEntropyDrbgOpReseed);
+      cmd_reg = bitfield_field32_write(0, kAppCmdFieldCmdId, 2);
+      break;
+    case kEntropyDrbgOpGenerate:
+      HARDENED_CHECK_EQ(cmd.id, kEntropyDrbgOpGenerate);
+      cmd_reg = bitfield_field32_write(0, kAppCmdFieldCmdId, 3);
+      break;
+    case kEntropyDrbgOpUpdate:
+      HARDENED_CHECK_EQ(cmd.id, kEntropyDrbgOpUpdate);
+      cmd_reg = bitfield_field32_write(0, kAppCmdFieldCmdId, 4);
+      break;
+    case kEntropyDrbgOpUninstantiate:
+      HARDENED_CHECK_EQ(cmd.id, kEntropyDrbgOpUninstantiate);
+      cmd_reg = bitfield_field32_write(0, kAppCmdFieldCmdId, 5);
+      break;
+    default:
+      return OTCRYPTO_BAD_ARGS;
+  }
+  HARDENED_CHECK_NE(cmd_reg, 0);
+  cmd_reg = bitfield_field32_write(cmd_reg, kAppCmdFieldCmdLen, cmd_len);
+  cmd_reg = bitfield_field32_write(cmd_reg, kAppCmdFieldGlen, cmd.generate_len);
+  cmd_reg =
+      bitfield_field32_write(cmd_reg, kAppCmdFieldFlag0, kMultiBitBool4False);
 
   if (launder32(cmd.disable_trng_input) == kHardenedBoolTrue) {
-    reg = bitfield_field32_write(reg, kAppCmdFieldFlag0, kMultiBitBool4True);
+    HARDENED_CHECK_EQ(cmd.disable_trng_input, kHardenedBoolTrue);
+    cmd_reg =
+        bitfield_field32_write(cmd_reg, kAppCmdFieldFlag0, kMultiBitBool4True);
   }
 
-  abs_mmio_write32(cmd_reg_addr, reg);
+  abs_mmio_write32(cmd_reg_addr, cmd_reg);
 
-  for (size_t i = 0; i < cmd_len; ++i) {
+  size_t i = launder32(0);
+  for (; launder32(i) < cmd_len; ++i) {
     // Before writing each word of additional data, the command ready or command
     // reg ready bit needs to be polled if the command is issued to CSRNG or the
     // SW register of EDN, respectively.
     if (cmd_type == kEntropyCsrngSendAppCmdTypeCsrng ||
         cmd_type == kEntropyCsrngSendAppCmdTypeEdnSw) {
+      HARDENED_CHECK_NE(sts_reg_addr, 0);
       do {
         reg = abs_mmio_read32(sts_reg_addr);
         ready = bitfield_bit32_read(reg, reg_rdy_bit_offset);
       } while (!ready);
+      // Re-read as a hardening check.
+      reg = abs_mmio_read32(sts_reg_addr);
+      ready = bitfield_bit32_read(reg, rdy_bit_offset);
+      HARDENED_CHECK_EQ(ready, true);
     }
     abs_mmio_write32(cmd_reg_addr, cmd.seed_material->data[i]);
+    res ^= kOkShares[i];
   }
+  HARDENED_CHECK_EQ(i, cmd_len);
 
-  if (check_completion && (cmd_type == kEntropyCsrngSendAppCmdTypeCsrng)) {
-    if (cmd.id == kEntropyDrbgOpGenerate) {
+  if (launder32(cmd_type) == kEntropyCsrngSendAppCmdTypeCsrng) {
+    HARDENED_CHECK_EQ(cmd_type, kEntropyCsrngSendAppCmdTypeCsrng);
+    if (launder32(cmd.id) == kEntropyDrbgOpGenerate) {
       // The Generate command is complete only after all entropy bits have been
       // consumed. Thus poll the register that indicates if entropy bits are
       // available.
@@ -426,6 +504,7 @@ static status_t csrng_send_app_cmd(uint32_t base_address,
       } while (!bitfield_bit32_read(reg, CSRNG_GENBITS_VLD_GENBITS_VLD_BIT));
 
     } else {
+      HARDENED_CHECK_NE(cmd.id, kEntropyDrbgOpGenerate);
       // The non-Generate commands complete earlier, so poll the "command
       // request done" interrupt bit.  Once it is set, the "status" bit is
       // updated.
@@ -438,26 +517,44 @@ static status_t csrng_send_app_cmd(uint32_t base_address,
       if (bitfield_field32_read(reg, CSRNG_SW_CMD_STS_CMD_STS_FIELD)) {
         return OTCRYPTO_RECOV_ERR;
       }
+
+      // Read the status bit again as an FI protection.
+      reg = abs_mmio_read32(kBaseCsrng + CSRNG_SW_CMD_STS_REG_OFFSET);
+      HARDENED_CHECK_EQ(
+          bitfield_field32_read(reg, CSRNG_SW_CMD_STS_CMD_STS_FIELD), false);
     }
+    res ^= launder32(kOkShares[kEntropySeedWords]);
+  } else {
+    HARDENED_CHECK_NE(cmd_type, kEntropyCsrngSendAppCmdTypeCsrng);
   }
 
-  if (check_completion && (cmd_type == kEntropyCsrngSendAppCmdTypeEdnSw)) {
+  if (launder32(cmd_type) == kEntropyCsrngSendAppCmdTypeEdnSw) {
+    HARDENED_CHECK_EQ(cmd_type, kEntropyCsrngSendAppCmdTypeEdnSw);
     // Acknowledgements for generate commands are only sent after all the
     // entropy is consumed. Thus the acknowledgement bit shall only be polled
     // for non-generate commands.
-    if (cmd.id != kEntropyDrbgOpGenerate) {
+    if (launder32(cmd.id) != kEntropyDrbgOpGenerate) {
+      HARDENED_CHECK_NE(cmd.id, kEntropyDrbgOpGenerate);
       do {
         reg = abs_mmio_read32(sts_reg_addr);
       } while (!bitfield_bit32_read(reg, EDN_SW_CMD_STS_CMD_ACK_BIT));
 
       // Check the "status" bit, which will be 0 unless there was an error.
-      if (bitfield_field32_read(reg, CSRNG_SW_CMD_STS_CMD_STS_FIELD)) {
+      if (bitfield_field32_read(reg, EDN_SW_CMD_STS_CMD_STS_FIELD)) {
         return OTCRYPTO_RECOV_ERR;
       }
+
+      // Read the status bit again as an FI protection.
+      reg = abs_mmio_read32(sts_reg_addr);
+      HARDENED_CHECK_EQ(
+          bitfield_field32_read(reg, CSRNG_SW_CMD_STS_CMD_STS_FIELD), false);
     }
+    res ^= launder32(kOkShares[kEntropySeedWords]);
+  } else {
+    HARDENED_CHECK_NE(cmd_type, kEntropyCsrngSendAppCmdTypeEdnSw);
   }
 
-  return OTCRYPTO_OK;
+  return (status_t){.value = (int32_t)(~res)};
 }
 
 /**
@@ -525,9 +622,9 @@ static status_t edn_ready_block(uint32_t edn_address) {
 OT_WARN_UNUSED_RESULT
 static status_t edn_configure(const edn_config_t *config) {
   HARDENED_TRY(csrng_send_app_cmd(config->base_address, config->reseed,
-                                  kEntropyCsrngSendAppCmdTypeEdnRes, false));
+                                  kEntropyCsrngSendAppCmdTypeEdnRes));
   HARDENED_TRY(csrng_send_app_cmd(config->base_address, config->generate,
-                                  kEntropyCsrngSendAppCmdTypeEdnGen, false));
+                                  kEntropyCsrngSendAppCmdTypeEdnGen));
   abs_mmio_write32(
       config->base_address + EDN_MAX_NUM_REQS_BETWEEN_RESEEDS_REG_OFFSET,
       config->reseed_interval);
@@ -547,7 +644,7 @@ static status_t edn_configure(const edn_config_t *config) {
 
   HARDENED_TRY(edn_ready_block(config->base_address));
   HARDENED_TRY(csrng_send_app_cmd(config->base_address, config->instantiate,
-                                  kEntropyCsrngSendAppCmdTypeEdnSw, true));
+                                  kEntropyCsrngSendAppCmdTypeEdnSw));
   return OTCRYPTO_OK;
 }
 
@@ -624,6 +721,7 @@ static status_t entropy_src_configure(const entropy_src_config_t *config) {
     // Bypassing the conditioner is not supported.
     return OTCRYPTO_BAD_ARGS;
   }
+  HARDENED_CHECK_EQ(config->bypass_conditioner, kMultiBitBool4False);
 
   // Control register configuration.
   uint32_t reg = bitfield_field32_write(
@@ -634,21 +732,22 @@ static status_t entropy_src_configure(const entropy_src_config_t *config) {
                    reg);
 
   // Config register configuration
-  reg = bitfield_field32_write(0, ENTROPY_SRC_CONF_FIPS_ENABLE_FIELD,
-                               config->fips_enable);
-  reg = bitfield_field32_write(reg, ENTROPY_SRC_CONF_FIPS_FLAG_FIELD,
-                               config->fips_flag);
-  reg = bitfield_field32_write(reg, ENTROPY_SRC_CONF_RNG_FIPS_FIELD,
-                               config->rng_fips);
-  reg = bitfield_field32_write(reg,
-                               ENTROPY_SRC_CONF_ENTROPY_DATA_REG_ENABLE_FIELD,
-                               config->route_to_firmware);
-  reg = bitfield_field32_write(reg, ENTROPY_SRC_CONF_THRESHOLD_SCOPE_FIELD,
-                               kMultiBitBool4False);
-  reg = bitfield_field32_write(reg, ENTROPY_SRC_CONF_RNG_BIT_ENABLE_FIELD,
-                               config->single_bit_mode);
-  reg = bitfield_field32_write(reg, ENTROPY_SRC_CONF_RNG_BIT_SEL_FIELD, 0);
-  abs_mmio_write32(kBaseEntropySrc + ENTROPY_SRC_CONF_REG_OFFSET, reg);
+  uint32_t conf_reg = bitfield_field32_write(
+      0, ENTROPY_SRC_CONF_FIPS_ENABLE_FIELD, config->fips_enable);
+  conf_reg = bitfield_field32_write(conf_reg, ENTROPY_SRC_CONF_FIPS_FLAG_FIELD,
+                                    config->fips_flag);
+  conf_reg = bitfield_field32_write(conf_reg, ENTROPY_SRC_CONF_RNG_FIPS_FIELD,
+                                    config->rng_fips);
+  conf_reg = bitfield_field32_write(
+      conf_reg, ENTROPY_SRC_CONF_ENTROPY_DATA_REG_ENABLE_FIELD,
+      config->route_to_firmware);
+  conf_reg = bitfield_field32_write(
+      conf_reg, ENTROPY_SRC_CONF_THRESHOLD_SCOPE_FIELD, kMultiBitBool4False);
+  conf_reg = bitfield_field32_write(
+      conf_reg, ENTROPY_SRC_CONF_RNG_BIT_ENABLE_FIELD, config->single_bit_mode);
+  conf_reg =
+      bitfield_field32_write(conf_reg, ENTROPY_SRC_CONF_RNG_BIT_SEL_FIELD, 0);
+  abs_mmio_write32(kBaseEntropySrc + ENTROPY_SRC_CONF_REG_OFFSET, conf_reg);
 
   // Configure health test window. Conditioning bypass is not supported.
   abs_mmio_write32(
@@ -682,7 +781,6 @@ static status_t entropy_src_configure(const entropy_src_config_t *config) {
   abs_mmio_write32(kBaseEntropySrc + ENTROPY_SRC_MODULE_ENABLE_REG_OFFSET,
                    kMultiBitBool4True);
 
-  // TODO: Add FI checks.
   return OTCRYPTO_OK;
 }
 
@@ -700,9 +798,10 @@ static status_t entropy_src_configure(const entropy_src_config_t *config) {
         kBaseEntropySrc + ENTROPY_SRC_##name##_THRESHOLDS_REG_OFFSET); \
     uint32_t act = bitfield_field32_read(                              \
         reg, ENTROPY_SRC_##name##_THRESHOLDS_FIPS_THRESH_FIELD);       \
-    if (act != exp) {                                                  \
+    if (launder32(act) != exp) {                                       \
       return OTCRYPTO_RECOV_ERR;                                       \
     }                                                                  \
+    HARDENED_CHECK_EQ(act, exp);                                       \
   } while (false);
 
 /**
@@ -725,12 +824,22 @@ static status_t entropy_src_check(const entropy_src_config_t *config) {
     return OTCRYPTO_BAD_ARGS;
   }
 
+  // Initialize the return status code. We will gradually XOR in compared
+  // values throughout the computation so that we only get OK if we go through
+  // the expected steps.
+  uint32_t res =
+      launder32(UINT32_MAX ^ kMultiBitBool4True ^ (kMultiBitBool4True << 4) ^
+                (kMultiBitBool4False << 8) ^ (kMultiBitBool4False << 12) ^
+                (kMultiBitBool4False << 16) ^ (uint32_t)OTCRYPTO_OK.value);
+
   // Check that entropy_src is enabled.
   uint32_t reg =
       abs_mmio_read32(kBaseEntropySrc + ENTROPY_SRC_MODULE_ENABLE_REG_OFFSET);
-  if (reg != kMultiBitBool4True) {
+  if (launder32(reg) != kMultiBitBool4True) {
     return OTCRYPTO_RECOV_ERR;
   }
+  res ^=
+      abs_mmio_read32(kBaseEntropySrc + ENTROPY_SRC_MODULE_ENABLE_REG_OFFSET);
 
   // Check that entropy_src is running in a FIPS-enabled mode without bypassing
   // the conditioner (es_type) and while making results available to hardware
@@ -744,20 +853,24 @@ static status_t entropy_src_check(const entropy_src_config_t *config) {
       bitfield_field32_read(reg, ENTROPY_SRC_CONF_FIPS_ENABLE_FIELD);
   uint32_t conf_rng_bit_enable =
       bitfield_field32_read(reg, ENTROPY_SRC_CONF_RNG_BIT_ENABLE_FIELD);
-  if (conf_fips_enable != kMultiBitBool4True ||
-      conf_rng_bit_enable != kMultiBitBool4False) {
+  if (launder32(conf_fips_enable) != kMultiBitBool4True ||
+      launder32(conf_rng_bit_enable) != kMultiBitBool4False) {
     return OTCRYPTO_RECOV_ERR;
   }
+  res ^= conf_fips_enable << 4;
+  res ^= conf_rng_bit_enable << 8;
   reg =
       abs_mmio_read32(kBaseEntropySrc + ENTROPY_SRC_ENTROPY_CONTROL_REG_OFFSET);
   uint32_t control_es_type =
       bitfield_field32_read(reg, ENTROPY_SRC_ENTROPY_CONTROL_ES_TYPE_FIELD);
   uint32_t control_es_route =
       bitfield_field32_read(reg, ENTROPY_SRC_ENTROPY_CONTROL_ES_ROUTE_FIELD);
-  if (control_es_type != kMultiBitBool4False ||
-      control_es_route != kMultiBitBool4False) {
+  if (launder32(control_es_type) != kMultiBitBool4False ||
+      launder32(control_es_route) != kMultiBitBool4False) {
     return OTCRYPTO_RECOV_ERR;
   }
+  res ^= control_es_type << 12;
+  res ^= control_es_route << 16;
 
   // Check health test window register.
   reg = abs_mmio_read32(kBaseEntropySrc +
@@ -767,7 +880,6 @@ static status_t entropy_src_check(const entropy_src_config_t *config) {
       config->fips_test_window_size) {
     return OTCRYPTO_RECOV_ERR;
   }
-
   // Check alert threshold.
   uint32_t exp_reg = bitfield_field32_write(
       0, ENTROPY_SRC_ALERT_THRESHOLD_ALERT_THRESHOLD_FIELD,
@@ -780,6 +892,16 @@ static status_t entropy_src_check(const entropy_src_config_t *config) {
     return OTCRYPTO_RECOV_ERR;
   }
 
+  // Read values again as an FI mitigation.
+  reg = abs_mmio_read32(kBaseEntropySrc +
+                        ENTROPY_SRC_HEALTH_TEST_WINDOWS_REG_OFFSET);
+  HARDENED_CHECK_EQ(bitfield_field32_read(
+                        reg, ENTROPY_SRC_HEALTH_TEST_WINDOWS_FIPS_WINDOW_FIELD),
+                    config->fips_test_window_size);
+  HARDENED_CHECK_EQ(exp_reg,
+                    abs_mmio_read32(kBaseEntropySrc +
+                                    ENTROPY_SRC_ALERT_THRESHOLD_REG_OFFSET));
+
   // Check health test thresholds.
   VERIFY_FIPS_THRESH(REPCNT, config->repcnt_threshold);
   VERIFY_FIPS_THRESH(REPCNTS, config->repcnts_threshold);
@@ -791,8 +913,7 @@ static status_t entropy_src_check(const entropy_src_config_t *config) {
   VERIFY_FIPS_THRESH(EXTHT_HI, config->extht_hi_threshold);
   VERIFY_FIPS_THRESH(EXTHT_LO, config->extht_lo_threshold);
 
-  // TODO: more FI checks on comparisons here.
-  return OTCRYPTO_OK;
+  return (status_t){.value = (int32_t)(~res)};
 }
 
 /**
@@ -807,7 +928,8 @@ OT_WARN_UNUSED_RESULT
 static status_t csrng_check(void) {
   uint32_t reg = abs_mmio_read32(kBaseCsrng + CSRNG_CTRL_REG_OFFSET);
   uint32_t enable = bitfield_field32_read(reg, CSRNG_CTRL_ENABLE_FIELD);
-  if (enable == kMultiBitBool4True) {
+  if (launder32(enable) == kMultiBitBool4True) {
+    HARDENED_CHECK_EQ(enable, kMultiBitBool4True);
     return OTCRYPTO_OK;
   }
   return OTCRYPTO_RECOV_ERR;
@@ -828,7 +950,10 @@ static status_t edn_check(const edn_config_t *config) {
   uint32_t edn_enable = bitfield_field32_read(reg, EDN_CTRL_EDN_ENABLE_FIELD);
   uint32_t auto_req_mode =
       bitfield_field32_read(reg, EDN_CTRL_AUTO_REQ_MODE_FIELD);
-  if (edn_enable == kMultiBitBool4True && auto_req_mode == kMultiBitBool4True) {
+  if (launder32(edn_enable) == kMultiBitBool4True &&
+      launder32(auto_req_mode) == kMultiBitBool4True) {
+    HARDENED_CHECK_EQ(edn_enable, kMultiBitBool4True);
+    HARDENED_CHECK_EQ(auto_req_mode, kMultiBitBool4True);
     return OTCRYPTO_OK;
   }
   return OTCRYPTO_RECOV_ERR;
@@ -837,25 +962,21 @@ static status_t edn_check(const edn_config_t *config) {
 status_t entropy_complex_init(void) {
   entropy_complex_stop_all();
 
-  const entropy_complex_config_t *config =
-      &kEntropyComplexConfigs[kEntropyComplexConfigIdContinuous];
-  if (launder32(config->id) != kEntropyComplexConfigIdContinuous) {
-    return OTCRYPTO_RECOV_ERR;
-  }
-
+  const entropy_complex_config_t *config = &kEntropyComplexConfigIdContinuous;
   HARDENED_TRY(entropy_src_configure(&config->entropy_src));
   csrng_configure();
   HARDENED_TRY(edn_configure(&config->edn0));
+#ifndef OT_DISABLE_HARDENING
+  // As an FI mitigation, read back and check the configuration after writing.
+  HARDENED_TRY(edn_configure(&config->edn1));
+  return entropy_complex_check();
+#else   // OT_DISABLE_HARDENING
   return edn_configure(&config->edn1);
+#endif  // OT_DISABLE_HARDENING
 }
 
 status_t entropy_complex_check(void) {
-  const entropy_complex_config_t *config =
-      &kEntropyComplexConfigs[kEntropyComplexConfigIdContinuous];
-  if (launder32(config->id) != kEntropyComplexConfigIdContinuous) {
-    return OTCRYPTO_RECOV_ERR;
-  }
-
+  const entropy_complex_config_t *config = &kEntropyComplexConfigIdContinuous;
   HARDENED_TRY(entropy_src_check(&config->entropy_src));
   HARDENED_TRY(csrng_check());
   HARDENED_TRY(edn_check(&config->edn0));
@@ -872,7 +993,7 @@ status_t entropy_csrng_instantiate(
                                 .seed_material = seed_material,
                                 .generate_len = 0,
                             },
-                            kEntropyCsrngSendAppCmdTypeCsrng, true);
+                            kEntropyCsrngSendAppCmdTypeCsrng);
 }
 
 status_t entropy_csrng_reseed(hardened_bool_t disable_trng_input,
@@ -884,7 +1005,7 @@ status_t entropy_csrng_reseed(hardened_bool_t disable_trng_input,
                                 .seed_material = seed_material,
                                 .generate_len = 0,
                             },
-                            kEntropyCsrngSendAppCmdTypeCsrng, true);
+                            kEntropyCsrngSendAppCmdTypeCsrng);
 }
 
 status_t entropy_csrng_update(const entropy_seed_material_t *seed_material) {
@@ -894,7 +1015,7 @@ status_t entropy_csrng_update(const entropy_seed_material_t *seed_material) {
                                 .seed_material = seed_material,
                                 .generate_len = 0,
                             },
-                            kEntropyCsrngSendAppCmdTypeCsrng, true);
+                            kEntropyCsrngSendAppCmdTypeCsrng);
 }
 
 status_t entropy_csrng_generate_start(
@@ -908,16 +1029,27 @@ status_t entropy_csrng_generate_start(
                                 .seed_material = seed_material,
                                 .generate_len = num_128bit_blocks,
                             },
-                            kEntropyCsrngSendAppCmdTypeCsrng, true);
+                            kEntropyCsrngSendAppCmdTypeCsrng);
 }
 
 status_t entropy_csrng_generate_data_get(uint32_t *buf, size_t len,
                                          hardened_bool_t fips_check) {
   static_assert(kEntropyCsrngBitsBufferNumWords == 4,
                 "kEntropyCsrngBitsBufferNumWords must be 4.");
+
+  // Initialize the return value. We will use the precomputed "OK" shares on
+  // the last writes in order to ensure all wordsa re written. This measure is
+  // most effective when the length of the retrieved data is less than the
+  // length of the shares.
+  uint32_t res = launder32(UINT32_MAX);
+  for (size_t i = len; i < ARRAYSIZE(kOkShares); i++) {
+    res ^= kOkShares[i];
+  }
+
   size_t nblocks = ceil_div(len, 4);
-  status_t res = OTCRYPTO_OK;
-  for (size_t block_idx = 0; block_idx < nblocks; ++block_idx) {
+  size_t block_idx = 0;
+  hardened_bool_t fail = kHardenedBoolFalse;
+  for (; block_idx < nblocks; ++block_idx) {
     // Block until there is more data available in the genbits buffer. CSRNG
     // generates data in 128bit chunks (i.e. 4 words).
     uint32_t reg;
@@ -929,7 +1061,7 @@ status_t entropy_csrng_generate_data_get(uint32_t *buf, size_t len,
         !bitfield_bit32_read(reg, CSRNG_GENBITS_VLD_GENBITS_FIPS_BIT)) {
       // Entropy isn't FIPS-compatible, so we should return an error when
       // done. However, we still need to read the result to clear CSRNG's FIFO.
-      res = OTCRYPTO_RECOV_ERR;
+      fail = kHardenedBoolTrue;
     }
 
     // Read the full 128-bit block, in reverse word order to match known-answer
@@ -942,11 +1074,21 @@ status_t entropy_csrng_generate_data_get(uint32_t *buf, size_t len,
                         kEntropyCsrngBitsBufferNumWords - 1 - offset;
       if (word_idx < len) {
         buf[word_idx] = word;
+        if ((len - 1 - word_idx < ARRAYSIZE(kOkShares)) &&
+            fail == kHardenedBoolFalse) {
+          res ^= kOkShares[len - 1 - word_idx];
+        }
       }
     }
   }
+  HARDENED_CHECK_EQ(block_idx, nblocks);
 
-  return res;
+  if (fail == kHardenedBoolFalse) {
+    HARDENED_CHECK_EQ(fail, kHardenedBoolFalse);
+    return (status_t){.value = (int32_t)(~res)};
+  }
+
+  return OTCRYPTO_RECOV_ERR;
 }
 
 status_t entropy_csrng_generate(const entropy_seed_material_t *seed_material,
@@ -963,5 +1105,5 @@ status_t entropy_csrng_uninstantiate(void) {
                                 .seed_material = NULL,
                                 .generate_len = 0,
                             },
-                            kEntropyCsrngSendAppCmdTypeCsrng, true);
+                            kEntropyCsrngSendAppCmdTypeCsrng);
 }

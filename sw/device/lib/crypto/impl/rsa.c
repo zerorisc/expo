@@ -5,6 +5,7 @@
 #include "sw/device/lib/crypto/include/rsa.h"
 
 #include "sw/device/lib/base/hardened_memory.h"
+#include "sw/device/lib/base/math.h"
 #include "sw/device/lib/crypto/drivers/entropy.h"
 #include "sw/device/lib/crypto/impl/integrity.h"
 #include "sw/device/lib/crypto/impl/rsa/rsa_encryption.h"
@@ -74,6 +75,9 @@ otcrypto_status_t otcrypto_rsa_public_key_construct(
   if (modulus.data == NULL || public_key == NULL || public_key->key == NULL) {
     return OTCRYPTO_BAD_ARGS;
   }
+  // Entropy complex must be initialized for `hardened_memcpy`.
+  HARDENED_TRY(entropy_complex_check());
+
   HARDENED_TRY(rsa_mode_check(public_key->key_mode));
 
   switch (size) {
@@ -178,6 +182,9 @@ otcrypto_status_t otcrypto_rsa_private_key_from_exponents(
       private_key == NULL || private_key->keyblob == NULL) {
     return OTCRYPTO_BAD_ARGS;
   }
+  // Entropy complex must be initialized for `hardened_memcpy`.
+  HARDENED_TRY(entropy_complex_check());
+
   HARDENED_TRY(rsa_mode_check(private_key->config.key_mode));
 
   // Ensure that the length of the private exponent shares matches the length
@@ -194,6 +201,10 @@ otcrypto_status_t otcrypto_rsa_private_key_from_exponents(
 
   // Check the mode and lengths for the private key.
   HARDENED_TRY(private_key_structural_check(size, private_key));
+
+  // Randomize the keyblob.
+  hardened_memshred(private_key->keyblob,
+                    ceil_div(private_key->keyblob_length, sizeof(uint32_t)));
 
   switch (size) {
     case kOtcryptoRsaSize2048: {
@@ -258,6 +269,9 @@ otcrypto_status_t otcrypto_rsa_keypair_from_cofactor(
       size, modulus, e, cofactor_share0, cofactor_share1));
   HARDENED_TRY(otcrypto_rsa_keypair_from_cofactor_async_finalize(public_key,
                                                                  private_key));
+
+  // Entropy complex must be initialized for `hardened_memcpy`.
+  HARDENED_TRY(entropy_complex_check());
 
   // Interpret the recomputed public key. Double-check the lengths to be safe,
   // but they should have been checked above already.
@@ -437,6 +451,10 @@ otcrypto_status_t otcrypto_rsa_keygen_async_finalize(
       private_key->keyblob == NULL) {
     return OTCRYPTO_BAD_ARGS;
   }
+
+  // Check that the entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
+
   // Infer the RSA size from the public key modulus.
   otcrypto_rsa_size_t size;
   HARDENED_TRY(rsa_size_from_public_key(public_key, &size));
@@ -446,6 +464,10 @@ otcrypto_status_t otcrypto_rsa_keygen_async_finalize(
 
   // Check the caller-provided private key buffer.
   HARDENED_TRY(private_key_structural_check(size, private_key));
+
+  // Randomize the keyblob memory.
+  hardened_memshred(private_key->keyblob,
+                    ceil_div(private_key->keyblob_length, sizeof(uint32_t)));
 
   // Call the required finalize() operation.
   switch (size) {
@@ -494,6 +516,9 @@ otcrypto_status_t otcrypto_rsa_keypair_from_cofactor_async_start(
     return OTCRYPTO_BAD_ARGS;
   }
 
+  // Entropy complex must be initialized for `hardened_memcpy`.
+  HARDENED_TRY(entropy_complex_check());
+
   // Ensure that the length of the cofactor shares is half the length
   // of the modulus.
   if (cofactor_share0.len != modulus.len / 2 ||
@@ -540,6 +565,10 @@ otcrypto_status_t otcrypto_rsa_keypair_from_cofactor_async_finalize(
       private_key->keyblob == NULL) {
     return OTCRYPTO_BAD_ARGS;
   }
+
+  // Check that the entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
+
   // Infer the RSA size from the public key modulus.
   otcrypto_rsa_size_t size;
   HARDENED_TRY(rsa_size_from_public_key(public_key, &size));
@@ -549,6 +578,10 @@ otcrypto_status_t otcrypto_rsa_keypair_from_cofactor_async_finalize(
 
   // Check the caller-provided private key buffer.
   HARDENED_TRY(private_key_structural_check(size, private_key));
+
+  // Randomize the keyblob memory.
+  hardened_memshred(private_key->keyblob,
+                    ceil_div(private_key->keyblob_length, sizeof(uint32_t)));
 
   // Call the required finalize() operation.
   switch (size) {
@@ -621,6 +654,9 @@ otcrypto_status_t otcrypto_rsa_sign_async_start(
     return OTCRYPTO_BAD_ARGS;
   }
 
+  // Check that the entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
+
   // Infer the RSA size from the private key.
   otcrypto_rsa_size_t size;
   HARDENED_TRY(rsa_size_from_private_key(private_key, &size));
@@ -675,6 +711,9 @@ otcrypto_status_t otcrypto_rsa_sign_async_finalize(
     return OTCRYPTO_BAD_ARGS;
   }
 
+  // Check that the entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
+
   // Determine the size based on the signature buffer length.
   switch (signature.len) {
     case kRsa2048NumWords:
@@ -702,6 +741,9 @@ otcrypto_status_t otcrypto_rsa_verify_async_start(
   if (public_key == NULL || public_key->key == NULL || signature.data == NULL) {
     return OTCRYPTO_BAD_ARGS;
   }
+
+  // Check that the entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
 
   // Check the caller-provided public key buffer.
   HARDENED_TRY(public_key_structural_check(public_key));
@@ -759,6 +801,9 @@ otcrypto_status_t otcrypto_rsa_verify_async_finalize(
     return OTCRYPTO_BAD_ARGS;
   }
 
+  // Check that the entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
+
   // Initialize verification result to false by default.
   *verification_result = kHardenedBoolFalse;
 
@@ -777,6 +822,9 @@ otcrypto_status_t otcrypto_rsa_encrypt_async_start(
   if (public_key == NULL || public_key->key == NULL) {
     return OTCRYPTO_BAD_ARGS;
   }
+
+  // Check that the entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
 
   if (message.data == NULL && (message.len != 0)) {
     return OTCRYPTO_BAD_ARGS;
@@ -844,6 +892,9 @@ otcrypto_status_t otcrypto_rsa_encrypt_async_finalize(
     return OTCRYPTO_BAD_ARGS;
   }
 
+  // Check that the entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
+
   switch (launder32(ciphertext.len)) {
     case kRsa2048NumWords: {
       HARDENED_CHECK_EQ(ciphertext.len * sizeof(uint32_t),
@@ -880,6 +931,9 @@ otcrypto_status_t otcrypto_rsa_decrypt_async_start(
       ciphertext.data == NULL) {
     return OTCRYPTO_BAD_ARGS;
   }
+
+  // Check that the entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
 
   // Infer the RSA size from the private key.
   otcrypto_rsa_size_t size;
@@ -956,6 +1010,9 @@ otcrypto_status_t otcrypto_rsa_decrypt_async_finalize(
   if (plaintext.data == NULL || label.data == NULL) {
     return OTCRYPTO_BAD_ARGS;
   }
+
+  // Check that the entropy complex is initialized.
+  HARDENED_TRY(entropy_complex_check());
 
   // Call the unified `finalize()` operation, which will infer the RSA size
   // from OTBN.

@@ -75,6 +75,9 @@ void hmac_hmac_sha256_configure(bool big_endian_digest, hmac_key_t key);
  * Convenience single-shot function for computing the HMAC-SHA-256 keyed-digest
  * of a contiguous buffer.
  *
+ * Note: function is prefixed with sc to avoid a name collision with the
+ * cryptolib HMAC driver.
+ *
  * @param data Buffer to copy data from.
  * @param len Size of the `data` buffer in bytes.
  * @param key Secret key to use.
@@ -82,8 +85,8 @@ void hmac_hmac_sha256_configure(bool big_endian_digest, hmac_key_t key);
  *                          big-endian digest.
  * @param[out] digest Buffer to copy digest to.
  */
-void hmac_hmac_sha256(const void *data, size_t len, hmac_key_t key,
-                      bool big_endian_digest, hmac_digest_t *digest);
+void sc_hmac_hmac_sha256(const void *data, size_t len, hmac_key_t key,
+                         bool big_endian_digest, hmac_digest_t *digest);
 
 /**
  * Configure the HMAC block in SHA256 mode.
@@ -118,8 +121,11 @@ void hmac_sha256_init(void);
 
 /**
  * Configures and starts HMAC in HMAC mode with little-endian output.
+ *
+ * Note: function is prefixed with sc to avoid a name collision with the
+ * cryptolib HMAC driver.
  */
-inline void hmac_hmac_sha256_init(hmac_key_t key, bool big_endian_digest) {
+inline void sc_hmac_hmac_sha256_init(hmac_key_t key, bool big_endian_digest) {
   hmac_hmac_sha256_configure(big_endian_digest, key);
   hmac_sha256_start();
 }

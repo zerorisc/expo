@@ -1,3 +1,7 @@
+// Copyright zeroRISC Inc.
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright lowRISC contributors (OpenTitan project).
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
@@ -89,6 +93,28 @@ void hardened_memshred(uint32_t *dest, size_t word_len);
  */
 hardened_bool_t hardened_memeq(const uint32_t *lhs, const uint32_t *rhs,
                                size_t word_len);
+
+/**
+ * Writes 32-bit words into an MMIO location.
+ *
+ * Similar to `hardened_memcpy`, but treats the destination as volatile.
+ *
+ * @param dest The destination of the copy (MMIO address).
+ * @param src The source of the copy.
+ * @param word_len The number of words to copy.
+ */
+void hardened_mmio_write(uint32_t dest, const uint32_t *src, size_t word_len);
+
+/**
+ * Reads 32-bit words from an MMIO location.
+ *
+ * Similar to `hardened_memcpy`, but treats the destination as volatile.
+ *
+ * @param dest The destination of the copy.
+ * @param src The source of the copy (MMIO address).
+ * @param word_len The number of words to copy.
+ */
+void hardened_mmio_read(uint32_t *dest, uint32_t src, size_t word_len);
 
 #ifdef __cplusplus
 }  // extern "C"

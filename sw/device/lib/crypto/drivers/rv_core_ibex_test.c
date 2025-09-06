@@ -8,7 +8,6 @@
 #include "sw/device/lib/runtime/log.h"
 #include "sw/device/lib/testing/test_framework/check.h"
 #include "sw/device/lib/testing/test_framework/ottf_main.h"
-
 #include "hw/top_earlgrey/sw/autogen/top_earlgrey.h"
 #include "rv_core_ibex_regs.h"
 
@@ -19,9 +18,6 @@ enum {
 OTTF_DEFINE_TEST_CONFIG();
 
 static status_t ibex_entropy_test(void) {
-  uint32_t rnd_status;
-  uint32_t rnd_data[2];
-
   // Read the initial value of the RND_DATA CSR.
   uint32_t rnd_data0 = ibex_rnd32_read();
   // Read RND_DATA again and check if it changed.

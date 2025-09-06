@@ -1,3 +1,7 @@
+// Copyright zeroRISC Inc.
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright lowRISC contributors (OpenTitan project).
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
@@ -6,6 +10,7 @@
 
 #include "sw/device/lib/base/abs_mmio.h"
 #include "sw/device/lib/base/bitfield.h"
+#include "sw/device/lib/base/hardened_memory.h"
 #include "sw/device/lib/base/memory.h"
 #include "sw/device/lib/crypto/drivers/entropy.h"
 #include "sw/device/lib/crypto/impl/status.h"
@@ -19,6 +24,10 @@
 
 enum {
   kBaseAddr = TOP_EARLGREY_KEYMGR_BASE_ADDR,
+
+  // Microseconds to leave the sideload-clear bit set. This value is probably
+  // overkill, since theoretically one cycle is enough if entropy is available.
+  kSideloadClearWaitMicros = 100,
 };
 static_assert(kKeymgrSaltNumWords == KEYMGR_SALT_MULTIREG_COUNT,
               "Number of salt registers does not match.");
@@ -57,11 +66,8 @@ static void keymgr_start(keymgr_diversification_t diversification) {
   abs_mmio_write32(kBaseAddr + KEYMGR_KEY_VERSION_REG_OFFSET,
                    diversification.version);
   // Set the salt.
-  for (size_t i = 0; i < kKeymgrSaltNumWords; i++) {
-    abs_mmio_write32(
-        kBaseAddr + KEYMGR_SALT_0_REG_OFFSET + (i * sizeof(uint32_t)),
-        diversification.salt[i]);
-  }
+  hardened_mmio_write(kBaseAddr + KEYMGR_SALT_0_REG_OFFSET,
+                      diversification.salt, kKeymgrSaltNumWords);
 
   // Issue the start command.
   abs_mmio_write32(kBaseAddr + KEYMGR_START_REG_OFFSET,
@@ -91,13 +97,19 @@ static status_t keymgr_wait_until_done(void) {
   // Clear OP_STATUS by writing back the value we read.
   abs_mmio_write32(kBaseAddr + KEYMGR_OP_STATUS_REG_OFFSET, reg);
 
+  // Check that the value was cleared (doubles as a read-back check).
+  HARDENED_CHECK_EQ(abs_mmio_read32(kBaseAddr + KEYMGR_OP_STATUS_REG_OFFSET),
+                    0);
+
   // Check if the key manager reported errors. If it is already idle or
   // completed an operation successfully, return an OK status. No other
   // statuses (e.g. WIP) should be possible.
-  switch (status) {
+  switch (launder32(status)) {
     case KEYMGR_OP_STATUS_STATUS_VALUE_IDLE:
+      HARDENED_CHECK_EQ(status, KEYMGR_OP_STATUS_STATUS_VALUE_IDLE);
       return OTCRYPTO_OK;
     case KEYMGR_OP_STATUS_STATUS_VALUE_DONE_SUCCESS:
+      HARDENED_CHECK_EQ(status, KEYMGR_OP_STATUS_STATUS_VALUE_DONE_SUCCESS);
       return OTCRYPTO_OK;
     case KEYMGR_OP_STATUS_STATUS_VALUE_DONE_ERROR: {
       // Clear the ERR_CODE register before returning.
@@ -149,18 +161,17 @@ status_t keymgr_generate_key_sw(keymgr_diversification_t diversification,
   keymgr_start(diversification);
   HARDENED_TRY(keymgr_wait_until_done());
 
+  // Randomize the destination buffer.
+  hardened_memshred(key->share0, kKeymgrOutputShareNumWords);
+  hardened_memshred(key->share1, kKeymgrOutputShareNumWords);
+
   // Collect output.
-  // TODO: for SCA hardening, randomize the order of these reads.
-  for (size_t i = 0; i < kKeymgrOutputShareNumWords; i++) {
-    key->share0[i] =
-        abs_mmio_read32(kBaseAddr + KEYMGR_SW_SHARE0_OUTPUT_0_REG_OFFSET +
-                        (i * sizeof(uint32_t)));
-  }
-  for (size_t i = 0; i < kKeymgrOutputShareNumWords; i++) {
-    key->share1[i] =
-        abs_mmio_read32(kBaseAddr + KEYMGR_SW_SHARE1_OUTPUT_0_REG_OFFSET +
-                        (i * sizeof(uint32_t)));
-  }
+  hardened_mmio_read(key->share0,
+                     kBaseAddr + KEYMGR_SW_SHARE0_OUTPUT_0_REG_OFFSET,
+                     kKeymgrOutputShareNumWords);
+  hardened_mmio_read(key->share1,
+                     kBaseAddr + KEYMGR_SW_SHARE1_OUTPUT_0_REG_OFFSET,
+                     kKeymgrOutputShareNumWords);
 
   return OTCRYPTO_OK;
 }
@@ -224,18 +235,15 @@ static status_t keymgr_sideload_clear(uint32_t slot) {
       kBaseAddr + KEYMGR_SIDELOAD_CLEAR_REG_OFFSET,
       bitfield_field32_write(0, KEYMGR_SIDELOAD_CLEAR_VAL_FIELD, slot));
 
-  // Read back the value (hardening measure).
+  // Read back the value (FI hardening measure).
   uint32_t sideload_clear =
       abs_mmio_read32(kBaseAddr + KEYMGR_SIDELOAD_CLEAR_REG_OFFSET);
-  if (bitfield_field32_read(sideload_clear, KEYMGR_SIDELOAD_CLEAR_VAL_FIELD) !=
-      slot) {
-    return OTCRYPTO_FATAL_ERR;
-  }
+  HARDENED_CHECK_EQ(
+      bitfield_field32_read(sideload_clear, KEYMGR_SIDELOAD_CLEAR_VAL_FIELD),
+      slot);
 
-  // Spin for 100 microseconds.
-  // TODO: this value seems to work for tests, but it would be good to run a
-  // more principled analysis.
-  busy_spin_micros(100);
+  // Wait for a bit to ensure the slot has time to clear.
+  busy_spin_micros(kSideloadClearWaitMicros);
 
   // Stop continuous clearing.
   abs_mmio_write32(
