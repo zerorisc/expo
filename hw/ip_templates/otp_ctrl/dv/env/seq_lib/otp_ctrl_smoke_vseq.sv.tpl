@@ -7,7 +7,7 @@ from topgen.lib import Name
 %>\
 // smoke test vseq to walk through DAI states and request keys
 `define PART_CONTENT_RANGE(i) ${"\\"}
-    {[PartInfo[``i``].offset : (PartInfo[``i``].offset + PartInfo[``i``].size - DIGEST_SIZE - 1)]}
+    {[PART_BASE_ADDRS[``i``]: PART_OTP_SPECIALS_OFFSETS[``i``] - 1]}
 
 class otp_ctrl_smoke_vseq extends otp_ctrl_base_vseq;
   `uvm_object_utils(otp_ctrl_smoke_vseq)
@@ -32,7 +32,7 @@ class otp_ctrl_smoke_vseq extends otp_ctrl_base_vseq;
   constraint partition_index_c {part_idx inside {[0:LifeCycleIdx-1]};}
 
   constraint dai_wr_legal_addr_c {
-% for part in otp_mmap["partitions"]:
+% for part in otp_mmap["partitions"][:-1]:
 <%
   part_name = Name.from_snake_case(part["name"])
   part_name_camel = part_name.as_camel_case()

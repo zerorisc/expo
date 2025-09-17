@@ -466,6 +466,14 @@ def _validate_mmap(config: Dict, generate_fresh_keys: bool) -> Dict:
     return part_dict
 
 
+def get_part_by_name(name: str, parts: list[Dict]) -> Dict:
+    """Return partition by the given name, or raise an exception"""
+    target_parts = [p for p in parts if p["name"] == name]
+    if len(target_parts) != 1:
+        raise RuntimeError(f"Expected a single partition named {name}")
+    return target_parts[0]
+
+
 class OtpMemMap():
 
     # This holds the config dict.

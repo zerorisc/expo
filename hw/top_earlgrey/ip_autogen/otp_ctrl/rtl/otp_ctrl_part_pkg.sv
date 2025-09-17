@@ -299,12 +299,10 @@ package otp_ctrl_part_pkg;
 
   // Breakout types for easier access of individual items.
   typedef struct packed {
-    logic [63:0] hw_cfg0_digest;
     logic [255:0] manuf_state;
     logic [255:0] device_id;
   } otp_hw_cfg0_data_t;
   typedef struct packed {
-    logic [63:0] hw_cfg1_digest;
     logic [39:0] unallocated;
     prim_mubi_pkg::mubi8_t dis_rv_dm_late_debug;
     prim_mubi_pkg::mubi8_t en_csrng_sw_app_read;
@@ -373,6 +371,8 @@ package otp_ctrl_part_pkg;
     return part_access_pre;
   endfunction : named_part_access_pre
 
+  // Create the broadcast data from specific partitions excluding digests since they
+  // are of no use for consumers of this data.
   function automatic otp_broadcast_t named_broadcast_assign(
       logic [NumPart-1:0] part_init_done,
       logic [2047:0][7:0] part_buf_data);
@@ -397,10 +397,12 @@ package otp_ctrl_part_pkg;
                 part_buf_data[RotCreatorAuthStateOffset +: RotCreatorAuthStateSize]};
     // HW_CFG0
     valid &= part_init_done[HwCfg0Idx];
-    otp_broadcast.hw_cfg0_data = otp_hw_cfg0_data_t'(part_buf_data[HwCfg0Offset +: HwCfg0Size]);
+    otp_broadcast.hw_cfg0_data = otp_hw_cfg0_data_t'(part_buf_data[HwCfg0Offset +: (HwCfg0Size - 8)]);
+    unused ^= ^part_buf_data[HwCfg0Offset + (HwCfg0Size - 8) +: 8];
     // HW_CFG1
     valid &= part_init_done[HwCfg1Idx];
-    otp_broadcast.hw_cfg1_data = otp_hw_cfg1_data_t'(part_buf_data[HwCfg1Offset +: HwCfg1Size]);
+    otp_broadcast.hw_cfg1_data = otp_hw_cfg1_data_t'(part_buf_data[HwCfg1Offset +: (HwCfg1Size - 8)]);
+    unused ^= ^part_buf_data[HwCfg1Offset + (HwCfg1Size - 8) +: 8];
     // SECRET0
     unused ^= ^{part_init_done[Secret0Idx],
                 part_buf_data[Secret0Offset +: Secret0Size]};

@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // smoke test vseq to walk through DAI states and request keys
 `define PART_CONTENT_RANGE(i) \
-    {[PartInfo[``i``].offset : (PartInfo[``i``].offset + PartInfo[``i``].size - DIGEST_SIZE - 1)]}
+    {[PART_BASE_ADDRS[``i``]: PART_OTP_SPECIALS_OFFSETS[``i``] - 1]}
 
 class otp_ctrl_smoke_vseq extends otp_ctrl_base_vseq;
   `uvm_object_utils(otp_ctrl_smoke_vseq)
@@ -49,8 +49,6 @@ class otp_ctrl_smoke_vseq extends otp_ctrl_base_vseq;
         dai_addr inside `PART_CONTENT_RANGE(Secret1Idx);
     if (part_idx == Secret2Idx)
         dai_addr inside `PART_CONTENT_RANGE(Secret2Idx);
-    if (part_idx == LifeCycleIdx)
-        dai_addr inside `PART_CONTENT_RANGE(LifeCycleIdx);
     solve part_idx before dai_addr;
   }
 

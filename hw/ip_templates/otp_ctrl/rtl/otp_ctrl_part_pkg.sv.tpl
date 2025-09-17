@@ -138,16 +138,21 @@ package otp_ctrl_part_pkg;
   % if part["bkout_type"]:
   typedef struct packed {<% offset = part['offset'] + part['size'] %>
     % for item in part["items"][::-1]:
-      % if offset != item['offset'] + item['size']:
+      ## Skip digest and zeroization marker
+      % if not item['isdigest'] and not item['iszer']:
+        ## Deal with unallocated items
+        % if offset != item['offset'] + item['size']:
     logic [${(offset - item['size'] - item['offset']) * 8 - 1}:0] unallocated;<% offset = item['offset'] + item['size'] %>
-      % endif
+        % endif
 <%
   if item['ismubi']:
     item_type = 'prim_mubi_pkg::mubi' + str(item["size"]*8) + '_t'
   else:
     item_type = 'logic [' + str(int(item["size"])*8-1) + ':0]'
 %>\
-    ${item_type} ${item["name"].lower()};<% offset -= item['size'] %>
+    ${item_type} ${item["name"].lower()};
+      % endif
+<% offset -= item['size'] %>\
     % endfor
   } otp_${part["name"].lower()}_data_t;
   % endif
@@ -204,6 +209,8 @@ package otp_ctrl_part_pkg;
     return part_access_pre;
   endfunction : named_part_access_pre
 
+  // Create the broadcast data from specific partitions excluding digests since they
+  // are of no use for consumers of this data.
 <% offset = int(otp_mmap["partitions"][-1]["offset"]) + int(otp_mmap["partitions"][-1]["size"]) %>\
   function automatic otp_broadcast_t named_broadcast_assign(
       logic [NumPart-1:0] part_init_done,
@@ -219,7 +226,22 @@ package otp_ctrl_part_pkg;
 %>\
   % if part["bkout_type"]:
     valid &= part_init_done[${part_name_camel}Idx];
-    otp_broadcast.${part["name"].lower()}_data = otp_${part["name"].lower()}_data_t'(part_buf_data[${part_name_camel}Offset +: ${part_name_camel}Size]);
+<%
+has_unused_chunk = False
+part_regular_size = part_name_camel + "Size"
+if (part["hw_digest"] or part["sw_digest"]) and part["zeroizable"]:
+  has_unused_chunk = True
+  skip_size = 16
+  part_regular_size = f"({part_regular_size} - {skip_size})"
+elif part["hw_digest"] or part["sw_digest"] or part["zeroizable"]:
+  has_unused_chunk = True
+  skip_size = 8
+  part_regular_size = f"({part_regular_size} - {skip_size})"
+%>\
+    otp_broadcast.${part["name"].lower()}_data = otp_${part["name"].lower()}_data_t'(part_buf_data[${part_name_camel}Offset +: ${part_regular_size}]);
+    % if has_unused_chunk:
+    unused ^= ^part_buf_data[${part_name_camel}Offset + ${part_regular_size} +: ${skip_size}];
+    % endif
   % else:
     unused ^= ^{part_init_done[${part_name_camel}Idx],
                 part_buf_data[${part_name_camel}Offset +: ${part_name_camel}Size]};

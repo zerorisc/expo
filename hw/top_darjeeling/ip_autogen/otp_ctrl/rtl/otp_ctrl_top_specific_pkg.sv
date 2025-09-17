@@ -82,7 +82,7 @@ package otp_ctrl_top_specific_pkg;
 
   // A 64-bit word is recognized as correctly zeroized if and only if the number of
   // set bits is greater or equal `ZeroizationValidBound`. Integrators should
-  // calibrate these this bounds in line with the macro-specific ratio of potentially
+  // calibrate this bound in line with the macro-specific ratio of potentially
   // stuck-at-0 bits.
   parameter int unsigned ZeroizationValidBound = ScrmblBlockWidth - 6; // 90.625%
 

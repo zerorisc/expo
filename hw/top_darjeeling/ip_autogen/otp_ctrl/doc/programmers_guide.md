@@ -64,7 +64,7 @@ A typical readout sequence looks as follows:
 
 1. Check whether the DAI is idle by reading the [`STATUS`](registers.md#status) register.
 2. Write the byte address for the access to [`DIRECT_ACCESS_ADDRESS`](registers.md#direct_access_address).
-Note that the address is aligned with the granule, meaning that either 2 or 3 LSBs of the address are ignored, depending on whether the access granule is 32 or 64bit.
+Note that the address is aligned with the access granule, meaning that either 2 or 3 LSBs of the address are ignored, depending on whether the access granule is 32 or 64 bits.
 3. Trigger a read command by writing 0x1 to [`DIRECT_ACCESS_CMD`](registers.md#direct_access_cmd).
 4. Poll the [`STATUS`](registers.md#status) until the DAI state goes back to idle.
 Alternatively, the `otp_operation_done` interrupt can be enabled up to notify the processor once an access has completed.
@@ -83,7 +83,7 @@ A typical programming sequence looks as follows:
 2. If the region to be accessed has a 32bit access granule, place a 32bit chunk of data into [`DIRECT_ACCESS_WDATA_0`](registers.md#direct_access_wdata).
 If the region to be accessed has a 64bit access granule, both the [`DIRECT_ACCESS_WDATA_0`](registers.md#direct_access_wdata) and [`DIRECT_ACCESS_WDATA_1`](registers.md#direct_access_wdata) registers have to be used.
 3. Write the byte address for the access to [`DIRECT_ACCESS_ADDRESS`](registers.md#direct_access_address).
-Note that the address is aligned with the granule, meaning that either 2 or 3 LSBs of the address are ignored, depending on whether the access granule is 32 or 64bit.
+Note that the address is aligned with the access granule, meaning that either 2 or 3 LSBs of the address are ignored, depending on whether the access granule is 32 or 64 bits.
 4. Trigger a write command by writing 0x2 to [`DIRECT_ACCESS_CMD`](registers.md#direct_access_cmd).
 5. Poll the [`STATUS`](registers.md#status) until the DAI state goes back to idle.
 Alternatively, the `otp_operation_done` interrupt can be enabled up to notify the processor once an access has completed.
@@ -131,29 +131,24 @@ If the partition is digest-locked, it is locked at that point.
 
 ### Zeroization Sequence
 
-A partition zeroization sequence is driven by accesses through the OTP Controller's DAI interface, and resembles an ordinary in-field provisioning flow.
+[Zeroization](theory_of_operation.md#zeroizing-the-otp) is an irreversible operation performed when the contents of the zeroizable partition need to be wiped.
+The table in the [Theory of Operation's Partition Listing and Description](theory_of_operation.md#partition-listing-and-description) section shows the per-partition `zeroizable` attribute.
+Attempting to zeroize a non-zeroizable partition will trigger a non-fatal error.
+All items in a zeroizable partition can be zeroized, including digests and zeroization markers.
+A typical zeroization sequence for a partition will zeroize all items in the partition.
+It is recommended to first zeroize the zeroization marker (the last 64-bit in a partition), followed by zeroizing each item.
+Zeroizing any item proceeds like this:
 
-1. The DAI has a dedicated `ZEROIZE` command through which a word (either 32-bit for software fuses or 64-bit for hardware fuses including the digest and zeroization fields) in a partition can be zeroized.
-The entire address space of a partition is zeroizable which contrasts with the other DAI commands.
-For example, the digest field is never writable through the `WRITE` command in a hardware partition.
+1. Check whether the DAI is idle by reading the [`STATUS`](registers.md#status) register.
+2. Write the address of the item to be zeroized in the [`DIRECT_ACCESS_ADDRESS`](registers.md#direct_access_address) register.
+Note that zeroization always affects a full access granule (32 or 64 bits).
+3. Trigger a zeroize command by a write to the [`DIRECT_ACCESS_CMD`](registers.md#direct_access_cmd) register setting the `ZEROIZE` bit to 1, all others to 0.
+4. Poll the [`STATUS`](registers.md#status) until the DAI state goes back to idle.
+5. If the status register flags a DAI error, additional handling is required (see [Error handling](#error-handling)).
+6. Read the data from the [`DIRECT_ACCESS_RDATA_0`](registers.md#direct_access_rdata): it contains the number of bits set after the zeroize command, and it could be somewhat smaller than the access granule size due to stuck-at-0 bits.
 
-    > Side effect: The OTP controller detects the first _successful_ word zeroization and disables periodic consistency checks for the corresponding partition as these can potentially fail when interrupting an ongoing zeroization procedure.
-    Integrity checks for hardware partitions can proceed normally until the next reset as they only act on buffered data.
-
-    Although the fuses of a partition can be zeroized in any order, it is recommended to first erase the zeroization marker at the end of a partition to mark it as zeroized or in the process of being so in case the flow is interrupted and needs to be resumed at a later point.
-
-    > Side effect: A fuse macro usually signals an error if a write attempts to clear an already set data or ECC bit.
-    > Such an unintended bit flip can occur in the ECC part of a word during a zeroization (when only the data part is zeroized), hence the `ZEROIZE` command disables ECC when zeroizing a word, setting all bits in both the data and ECC part of a fuse word.
-
-2. A successful zeroization of a fuse word results in the number of set bits in the zeroized word being returned to software in the `DIRECT_ACCESS_RDATA` registers bypassing the descrambling mechanism if the word belongs to a secret partition.
-This is the only way firmware can confirm, in the absence of a malicious tampering attempt, whether a fuse has been cleared.
-The `ZEROIZE` command is idempotent, i.e., it can be retried multiple times such that a zeroization of an already zeroized word has no effect.
-
-3. When firmware determines that a partition has been sufficiently zeroized, it should reset the OTP controller such that the zeroized data is also reflected in the buffer registers.
-If the zeroization is part of a life-cycle state transition, then the reset should be done after both zeroization and the transition are triggered.
-
-     > Side effect: Upon initialization, the OTP controller will first read the zeroization field of a partition to determine whether it is in a zeroized state.
-    If so, no periodic consistency and integrity checks will be executed for the partition.
+As with any write, zeroization of buffered partitions won't become effective before a device reset.
+When zeroization is part of a life cycle transition, a reset should wait until the life cycle transition is requested.
 
 ### Software Integrity Handling
 
