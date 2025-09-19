@@ -6,14 +6,13 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#include "sw/device/lib/crypto/drivers/aes.h"
-
 #include "sw/device/lib/base/abs_mmio.h"
 #include "sw/device/lib/base/bitfield.h"
 #include "sw/device/lib/base/hardened.h"
 #include "sw/device/lib/base/hardened_memory.h"
 #include "sw/device/lib/base/macros.h"
 #include "sw/device/lib/base/memory.h"
+#include "sw/device/lib/crypto/drivers/aes.h"
 #include "sw/device/lib/crypto/drivers/entropy.h"
 #include "sw/device/lib/crypto/drivers/rv_core_ibex.h"
 #include "sw/device/lib/crypto/impl/status.h"
@@ -222,7 +221,8 @@ static status_t aes_begin(aes_key_t key, const aes_block_t *iv,
       bitfield_field32_write(ctrl_reg, AES_CTRL_SHADOWED_PRNG_RESEED_RATE_FIELD,
                              AES_CTRL_SHADOWED_PRNG_RESEED_RATE_VALUE_PER_64);
 
-  abs_mmio_write32_shadowed(kBase + AES_CTRL_SHADOWED_REG_OFFSET, ctrl_reg);
+  abs_mmio_write32_shadowed(kBase + AES_CTRL_SHADOWED_REG_OFFSET,
+                            launder32(ctrl_reg));
   HARDENED_TRY(spin_until(AES_STATUS_IDLE_BIT));
 
   // Write the key (if it is not sideloaded).
@@ -236,6 +236,10 @@ static status_t aes_begin(aes_key_t key, const aes_block_t *iv,
       abs_mmio_write32(iv_offset + i * sizeof(uint32_t), iv->data[i]);
     }
   }
+
+  // Read back the AES configuration and compare to the expected configuration.
+  HARDENED_CHECK_EQ(abs_mmio_read32(kBase + AES_CTRL_SHADOWED_REG_OFFSET),
+                    ctrl_reg);
 
   // Check that AES is ready to receive input data.
   uint32_t status = abs_mmio_read32(kBase + AES_STATUS_REG_OFFSET);

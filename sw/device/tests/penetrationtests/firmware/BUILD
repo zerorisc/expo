@@ -19,12 +19,11 @@ load(
 package(default_visibility = ["//visibility:public"])
 
 PENTEST_EXEC_ENVS = dicts.add(
-    EARLGREY_TEST_ENVS,
-    EARLGREY_SILICON_OWNER_ROM_EXT_ENVS,
     {
-        "//hw/top_earlgrey:sim_dv": None,
-        "//hw/top_earlgrey:fpga_cw310_test_rom": None,
+        "//hw/top_earlgrey:fpga_cw340_test_rom": None,
+        "//hw/top_earlgrey:fpga_cw340_sival_rom_ext": None,
     },
+    EARLGREY_SILICON_OWNER_ROM_EXT_ENVS,
 )
 
 FIRMWARE_DEPS_FI = [
@@ -123,7 +122,6 @@ FIRMWARE_DEPS_CRYPTOLIB_FI_SYM = [
 FIRMWARE_DEPS_CRYPTOLIB_FI_ASYM = [
     "//sw/device/tests/penetrationtests/firmware/sca:trigger_sca",
     "//sw/device/tests/penetrationtests/firmware/fi:cryptolib_fi_asym",
-    "//sw/device/tests/penetrationtests/firmware/lib:extclk_sca_fi",
     "//sw/device/tests/penetrationtests/firmware/lib:pentest_lib",
     "//sw/device/lib/base:csr",
     "//sw/device/lib/base:status",
@@ -140,8 +138,8 @@ FIRMWARE_DEPS_CRYPTOLIB_FI_ASYM = [
 FIRMWARE_DEPS_CRYPTOLIB_SCA_SYM = [
     "//sw/device/tests/penetrationtests/firmware/sca:cryptolib_sca_sym",
     "//sw/device/tests/penetrationtests/firmware/sca:trigger_sca",
-    "//sw/device/tests/penetrationtests/firmware/lib:extclk_sca_fi",
     "//sw/device/tests/penetrationtests/firmware/lib:pentest_lib",
+    "//sw/device/tests/penetrationtests/firmware/sca:prng_sca",
     "//sw/device/lib/base:csr",
     "//sw/device/lib/base:status",
     "//sw/device/lib/crypto/drivers:entropy",
@@ -159,6 +157,7 @@ FIRMWARE_DEPS_CRYPTOLIB_SCA_ASYM = [
     "//sw/device/tests/penetrationtests/firmware/sca:trigger_sca",
     "//sw/device/tests/penetrationtests/firmware/lib:extclk_sca_fi",
     "//sw/device/tests/penetrationtests/firmware/lib:pentest_lib",
+    "//sw/device/tests/penetrationtests/firmware/sca:prng_sca",
     "//sw/device/lib/base:csr",
     "//sw/device/lib/base:status",
     "//sw/device/lib/crypto/drivers:entropy",

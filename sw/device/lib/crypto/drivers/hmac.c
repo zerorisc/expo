@@ -373,13 +373,16 @@ static status_t oneshot(const uint32_t cfg, const uint32_t *key,
   HARDENED_TRY(entropy_complex_check());
 
   // Configure the HMAC block.
-  abs_mmio_write32(kHmacBaseAddr + HMAC_CFG_REG_OFFSET, cfg);
+  abs_mmio_write32(kHmacBaseAddr + HMAC_CFG_REG_OFFSET, launder32(cfg));
 
   // Ensure the entropy complex is up.
   HARDENED_TRY(entropy_complex_check());
 
   // Write the key (no-op if the key length is 0, e.g. for hashing).
   key_write(key, key_wordlen);
+
+  // Read back the HMAC configuration and compare to the expected configuration.
+  HARDENED_CHECK_EQ(abs_mmio_read32(kHmacBaseAddr + HMAC_CFG_REG_OFFSET), cfg);
 
   // Send the START command.
   uint32_t cmd =
