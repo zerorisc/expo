@@ -1,5 +1,6 @@
 CAPI=2:
 # Copyright lowRISC contributors (OpenTitan project).
+# Copyright zeroRISC Inc.
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 name: "lowrisc:systems:top_englishbreakfast:0.1"
@@ -17,7 +18,6 @@ filesets:
       - lowrisc:prim:all
       - lowrisc:prim:ram_1p_adv
       - lowrisc:prim:ram_1p_scr
-      - lowrisc:prim:flash
       - lowrisc:ip:sram_ctrl
       # Instantiated by topgen
       - lowrisc:ip:uart:0.1
@@ -26,6 +26,7 @@ filesets:
       - lowrisc:ip:spi_host
       - lowrisc:ip:aes
       - lowrisc:ip:entropy_src
+      - lowrisc:ip:flash_macro_wrapper
       - lowrisc:ip:hmac
       - lowrisc:ip:kmac
       - lowrisc:ip:keymgr

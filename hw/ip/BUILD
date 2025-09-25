@@ -1,4 +1,5 @@
 # Copyright lowRISC contributors (OpenTitan project).
+# Copyright zeroRISC Inc.
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
@@ -21,6 +22,7 @@ filegroup(
         "//hw/ip/dma:rtl_files",
         "//hw/ip/edn:rtl_files",
         "//hw/ip/entropy_src:rtl_files",
+        "//hw/ip/flash_macro_wrapper:rtl_files",
         "//hw/ip/hmac:rtl_files",
         "//hw/ip/i2c:rtl_files",
         "//hw/ip/keymgr:rtl_files",
