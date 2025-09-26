@@ -25,6 +25,20 @@ filegroup(
     ],
 )
 
+filegroup(
+    name = "all_files",
+    srcs = glob(
+        ["**/*"],
+        exclude = [
+            "bazel-*/**",
+            "build-bin/**",
+            ".git/**",
+            "scratch/**",
+            ".venv/**",
+        ],
+    ),
+)
+
 alias(
     name = "gen_rust_project",
     actual = "@rules_rust//tools/rust_analyzer:gen_rust_project",

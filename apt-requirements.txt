@@ -12,6 +12,7 @@
 autoconf
 brotli
 build-essential
+clang
 cmake
 curl
 file
@@ -22,6 +23,7 @@ libelf1
 libelf-dev
 libftdi1-2
 libftdi1-dev
+libicu-dev
 # A requirement of the prebuilt clang toolchain.
 libncursesw5
 libpcsclite-dev
@@ -36,6 +38,7 @@ openssl
 perl
 pkgconf
 python3
+python3-icu
 python3-pip
 python3-setuptools
 python3-urllib3

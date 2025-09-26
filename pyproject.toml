@@ -69,8 +69,20 @@ dependencies = [
 
   "peakrdl-systemrdl >= 1.0",
 
-  # Dependency license checker
+  # Development version of minimal ChipWhisperer toolchain with latest features
+  # and bug fixes. We fix the version for improved stability and manually update
+  # if necessary.
+  "chipwhisperer@https://github.com/newaetech/chipwhisperer-minimal/archive/2643131b71e528791446ee1bab7359120288f4ab.zip",
+
+  # Dependency license checking tools.
   "pip-licenses==5.0.0",
+  "scancode-toolkit==32.4.1",
+  "extractcode-libarchive==3.5.1.210531",
+  "typecode-libmagic==5.39.210531",
+  # scancode-toolkit 32.4.1 pulls in click==8.3.0 by default, which is broken. We
+  # manually downgrade `click` to avoid this issue.
+  # See also: https://github.com/aboutcode-org/scancode-toolkit/issues/4572
+  "click==8.2.1",
 ]
 
 [tool.setuptools]
