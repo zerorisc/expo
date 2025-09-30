@@ -46,7 +46,14 @@ def _tock_repos():
         url = "https://github.com/tock/tock/archive/e81987f6a41e9b92f60fda1d5283f46b3cb597b5.tar.gz",
         sha256 = "b7c239f3bd7e7727eee99814661424e1e50587fe9068cec1943a7bb6743ed777",
         additional_files_content = {
-            "BUILD": """exports_files(glob(["**"]))""",
+            "BUILD": """
+exports_files(glob(["**"]))
+
+filegroup(
+    name = "all_srcs",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)""",
             "arch/riscv/BUILD": crate_build(
                 name = "riscv",
                 deps = [
@@ -157,28 +164,36 @@ def _tock_repos():
         url = "https://github.com/tock/libtock-rs/archive/a2c6ad80648e3ba073e7433b4330706df052a6ae.tar.gz",
         sha256 = "888d1925cd760e818385d13187286d6b87f763c548a4dc1bb26e55786dc95636",
         additional_files_content = {
-            "BUILD": crate_build(
-                name = "libtock",
-                deps = [
-                    "//apis/adc",
-                    "//apis/air_quality",
-                    "//apis/alarm",
-                    "//apis/ambient_light",
-                    "//apis/buttons",
-                    "//apis/buzzer",
-                    "//apis/console",
-                    "//apis/gpio",
-                    "//apis/leds",
-                    "//apis/low_level_debug",
-                    "//apis/ninedof",
-                    "//apis/proximity",
-                    "//apis/sound_pressure",
-                    "//apis/temperature",
-                    "//panic_handlers/debug_panic",
-                    "//platform",
-                    "//runtime",
-                ],
-            ),
+            "BUILD": """
+exports_files(glob(["**"]))
+
+filegroup(
+    name = "all_srcs",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)""" +
+                     crate_build(
+                         name = "libtock",
+                         deps = [
+                             "//apis/adc",
+                             "//apis/air_quality",
+                             "//apis/alarm",
+                             "//apis/ambient_light",
+                             "//apis/buttons",
+                             "//apis/buzzer",
+                             "//apis/console",
+                             "//apis/gpio",
+                             "//apis/leds",
+                             "//apis/low_level_debug",
+                             "//apis/ninedof",
+                             "//apis/proximity",
+                             "//apis/sound_pressure",
+                             "//apis/temperature",
+                             "//panic_handlers/debug_panic",
+                             "//platform",
+                             "//runtime",
+                         ],
+                     ),
             "apis/adc/BUILD": crate_build(
                 name = "adc",
                 crate_name = "libtock_{name}",

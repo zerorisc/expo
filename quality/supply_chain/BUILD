@@ -8,6 +8,7 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files([
     "policy.yaml",
+    "dev_policy.yaml",
     "scancode_test.sh",
     "lint.sh",
 ])

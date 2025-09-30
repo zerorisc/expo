@@ -1,3 +1,7 @@
+# Copyright zeroRISC Inc.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
 # Copyright lowRISC contributors (OpenTitan project).
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
@@ -5,8 +9,14 @@
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@rules_rust_bindgen//:defs.bzl", "rust_bindgen_toolchain")
 load("@rules_cc//cc:defs.bzl", "cc_import")
+load("//quality/supply_chain:scancode.bzl", "scancode_test")
 
 package(default_visibility = ["//visibility:public"])
+
+scancode_test(
+    name = "serde_annotate_license_check",
+    srcs = ["@lowrisc_serde_annotate//:all_srcs"],
+)
 
 config_setting(
     name = "specify_bindgen_libstdcxx",

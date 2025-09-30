@@ -1,3 +1,7 @@
+# Copyright zeroRISC Inc.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
 load(
     "@rules_rust//rust:defs.bzl",
     "rust_binary",
@@ -5,6 +9,11 @@ load(
 )
 
 package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "all_srcs",
+    srcs = glob(["**"]),
+)
 
 rust_library(
     name = "elf2tab",

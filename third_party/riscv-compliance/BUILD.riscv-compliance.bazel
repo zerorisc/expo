@@ -6,6 +6,11 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files(glob(["**/*"]))
 
+filegroup(
+    name = "all_srcs",
+    srcs = glob(["**"]),
+)
+
 # NOTE: The files below are included as genrules rather than as patches so that
 # they can be easilly edited without having to rebuild the patchset.
 genrule(

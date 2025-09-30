@@ -4,9 +4,16 @@
 
 package(default_visibility = ["//visibility:public"])
 
-exports_files(glob(["**"]))
-
 filegroup(
     name = "all_srcs",
     srcs = glob(["**"]),
 )
+
+filegroup(
+    name = "ec_bin",
+    srcs = ["@hyperdebug_firmware//:hyperdebug/ec.bin"],
+)
+
+exports_files([
+    "hyperdebug/ec.bin",
+])

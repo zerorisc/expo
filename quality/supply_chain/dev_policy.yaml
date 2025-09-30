@@ -1,0 +1,124 @@
+# Copyright zeroRISC Inc.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+license_policies:
+  # PERMITTED LICENSES
+
+  # SPDX: MIT
+  - license_key: mit
+    label: Approved License
+    compliance_alert: ''
+
+  # SPDX: Apache-2.0
+  - license_key: apache-2.0
+    label: Approved License
+    compliance_alert: ''
+
+  # SPDX: BSD-2-clause
+  # SPDX: BSD-3-clause
+  - license_key: bsd-new
+    label: Approved License
+    compliance_alert: ''
+
+  # Public Domain
+  - license_key: LicenseRef-scancode-public-domain
+    compliance_alert: ''
+
+  # RESTRICTED USE LICENSES
+
+  # SPDX: MPL-2.0
+  - license_key: mpl-2.0
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: MPL-2.0-or-later
+  - license_key: mpl-2.0-plus
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: LGPL-2.0
+  - license_key: lgpl-2.0
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: LGPL-2.0-or-later
+  - license_key: lgpl-2.0-plus
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: LGPL-3.0
+  - license_key: lgpl-3.0
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: LGPL-3.0-or-later
+  - license_key: lgpl-3.0-plus
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: GPL-1.0
+  - license_key: gpl-1.0
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: GPL-1.0-or-later
+  - license_key: gpl-1.0-plus
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: GPL-2.0
+  - license_key: gpl-2.0
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: GPL-2.0-or-later
+  - license_key: gpl-2.0-plus
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: GPL-3.0
+  - license_key: gpl-3.0
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: GPL-3.0-or-later
+  - license_key: gpl-3.0-plus
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: AGPL-1.0
+  - license_key: agpl-1.0
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: AGPL-1.0-or-later
+  - license_key: agpl-1.0-plus
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: AGPL-2.0
+  - license_key: agpl-2.0
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: AGPL-2.0-or-later
+  - license_key: agpl-2.0-plus
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: AGPL-3.0
+  - license_key: agpl-3.0
+    label: Restricted License
+    compliance_alert: warning
+
+  # SPDX: AGPL-3.0-or-later
+  - license_key: agpl-3.0-plus
+    label: Restricted License
+    compliance_alert: warning
+
+  # PROHIBITED LICENSES
+
+  # Unknown license
+  - license_key: LicenseRef-scancode-unknown-license-reference
+    compliance_alert: error

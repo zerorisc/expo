@@ -5,6 +5,11 @@
 package(default_visibility = ["//visibility:public"])
 
 filegroup(
+    name = "all_srcs",
+    srcs = glob(["**"]),
+)
+
+filegroup(
     name = "gh",
     srcs = ["bin/gh"],
 )
