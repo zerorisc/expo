@@ -22,6 +22,7 @@ PENTEST_EXEC_ENVS = dicts.add(
     {
         "//hw/top_earlgrey:fpga_cw340_test_rom": None,
         "//hw/top_earlgrey:fpga_cw340_sival_rom_ext": None,
+        "//hw/top_earlgrey:fpga_cw340_rom_ext": None,
     },
     EARLGREY_SILICON_OWNER_ROM_EXT_ENVS,
 )
