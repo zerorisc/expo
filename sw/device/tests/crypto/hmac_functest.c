@@ -77,6 +77,9 @@ bool test_main(void) {
   LOG_INFO("Testing cryptolib HMAC/SHA-2 streaming implementations.");
   CHECK_STATUS_OK(entropy_complex_init());
   status_t test_result = OK_STATUS();
+  // Even though the HMAC IP itself does not need entropy, we need to initialize
+  // the entropy complex to be able to clear HMAC with randomness.
+  CHECK_STATUS_OK(entropy_complex_init());
   for (size_t i = 0; i < ARRAYSIZE(kHmacTestVectors); i++) {
     current_test_vector = &kHmacTestVectors[i];
     LOG_INFO("Running test %d of %d, test vector identifier: %s", i + 1,
