@@ -636,11 +636,9 @@ OT_WARN_UNUSED_RESULT
 static status_t edn_configure(const edn_config_t *config) {
   // Determine which EDN instance this is based on the config pointer
   uint32_t base_address;
-  if (config ==
-      &kEntropyComplexConfigIdContinuous.edn0) {
+  if (config == &kEntropyComplexConfigIdContinuous.edn0) {
     base_address = edn0_base();
-  } else if (config ==
-             &kEntropyComplexConfigIdContinuous.edn1) {
+  } else if (config == &kEntropyComplexConfigIdContinuous.edn1) {
     base_address = edn1_base();
   } else {
     return OTCRYPTO_FATAL_ERR;
@@ -650,9 +648,8 @@ static status_t edn_configure(const edn_config_t *config) {
                                   kEntropyCsrngSendAppCmdTypeEdnRes));
   HARDENED_TRY(csrng_send_app_cmd(base_address, config->generate,
                                   kEntropyCsrngSendAppCmdTypeEdnGen));
-  abs_mmio_write32(
-      base_address + EDN_MAX_NUM_REQS_BETWEEN_RESEEDS_REG_OFFSET,
-      config->reseed_interval);
+  abs_mmio_write32(base_address + EDN_MAX_NUM_REQS_BETWEEN_RESEEDS_REG_OFFSET,
+                   config->reseed_interval);
 
   uint32_t reg =
       bitfield_field32_write(0, EDN_CTRL_EDN_ENABLE_FIELD, kMultiBitBool4True);
@@ -811,16 +808,16 @@ static status_t entropy_src_configure(const entropy_src_config_t *config) {
  * @param name Name of register (e.g. REPCNT, BUCKET).
  * @param exp Expected value of the FIPS_THRESH field.
  */
-#define VERIFY_FIPS_THRESH(name, exp)                                  \
-  do {                                                                 \
-    uint32_t reg = abs_mmio_read32(                                    \
+#define VERIFY_FIPS_THRESH(name, exp)                                     \
+  do {                                                                    \
+    uint32_t reg = abs_mmio_read32(                                       \
         entropy_src_base() + ENTROPY_SRC_##name##_THRESHOLDS_REG_OFFSET); \
-    uint32_t act = bitfield_field32_read(                              \
-        reg, ENTROPY_SRC_##name##_THRESHOLDS_FIPS_THRESH_FIELD);       \
-    if (launder32(act) != exp) {                                       \
-      return OTCRYPTO_RECOV_ERR;                                       \
-    }                                                                  \
-    HARDENED_CHECK_EQ(act, exp);                                       \
+    uint32_t act = bitfield_field32_read(                                 \
+        reg, ENTROPY_SRC_##name##_THRESHOLDS_FIPS_THRESH_FIELD);          \
+    if (launder32(act) != exp) {                                          \
+      return OTCRYPTO_RECOV_ERR;                                          \
+    }                                                                     \
+    HARDENED_CHECK_EQ(act, exp);                                          \
   } while (false);
 
 /**
@@ -857,8 +854,8 @@ static status_t entropy_src_check(const entropy_src_config_t *config) {
   if (launder32(reg) != kMultiBitBool4True) {
     return OTCRYPTO_RECOV_ERR;
   }
-  res ^=
-      abs_mmio_read32(entropy_src_base() + ENTROPY_SRC_MODULE_ENABLE_REG_OFFSET);
+  res ^= abs_mmio_read32(entropy_src_base() +
+                         ENTROPY_SRC_MODULE_ENABLE_REG_OFFSET);
 
   // Check that entropy_src is running in a FIPS-enabled mode without bypassing
   // the conditioner (es_type) and while making results available to hardware
@@ -878,8 +875,8 @@ static status_t entropy_src_check(const entropy_src_config_t *config) {
   }
   res ^= conf_fips_enable << 4;
   res ^= conf_rng_bit_enable << 8;
-  reg =
-      abs_mmio_read32(entropy_src_base() + ENTROPY_SRC_ENTROPY_CONTROL_REG_OFFSET);
+  reg = abs_mmio_read32(entropy_src_base() +
+                        ENTROPY_SRC_ENTROPY_CONTROL_REG_OFFSET);
   uint32_t control_es_type =
       bitfield_field32_read(reg, ENTROPY_SRC_ENTROPY_CONTROL_ES_TYPE_FIELD);
   uint32_t control_es_route =
@@ -967,11 +964,9 @@ OT_WARN_UNUSED_RESULT
 static status_t edn_check(const edn_config_t *config) {
   // Determine which EDN instance this is based on the config pointer
   uint32_t base_address;
-  if (config ==
-      &kEntropyComplexConfigIdContinuous.edn0) {
+  if (config == &kEntropyComplexConfigIdContinuous.edn0) {
     base_address = edn0_base();
-  } else if (config ==
-             &kEntropyComplexConfigIdContinuous.edn1) {
+  } else if (config == &kEntropyComplexConfigIdContinuous.edn1) {
     base_address = edn1_base();
   } else {
     return OTCRYPTO_FATAL_ERR;
