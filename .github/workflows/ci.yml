@@ -327,6 +327,16 @@ jobs:
       top_name: earlgrey
       design_suffix: cw340
 
+  chip_darjeeling_cw340:
+    name: Darjeeling for CW340
+    needs: quick_lint
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/bitstream.yml
+    secrets: inherit
+    with:
+      top_name: darjeeling
+      design_suffix: cw340
+
   # Hyper310 FPGA jobs
   execute_tests_hyper310:
     name: Hyper310 Tests

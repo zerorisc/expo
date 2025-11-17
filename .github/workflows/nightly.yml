@@ -48,6 +48,14 @@ jobs:
       top_name: earlgrey
       design_suffix: cw340
 
+  chip_darjeeling_cw340:
+    name: Darjeeling for CW340
+    uses: ./.github/workflows/bitstream.yml
+    secrets: inherit
+    with:
+      top_name: darjeeling
+      design_suffix: cw340
+
   cache_bitstreams:
     name: Cache bitstreams to GCP
     runs-on:
