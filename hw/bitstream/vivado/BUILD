@@ -159,54 +159,6 @@ filegroup(
     tags = ["manual"],
 )
 
-# VCU118 bitstream
-fusesoc_build(
-    name = "fpga_vcu118",
-    testonly = True,
-    srcs = [
-        "//hw:rtl_files",
-        _CW340_TESTROM,
-        _OTP_RMA,
-    ],
-    cores = ["//hw:cores"],
-    data = ["//hw/ip/otbn:rtl_files"],
-    flags = [
-        "--BootRomInitFile=" + _CW340_TESTROM_PATH,
-        "--OtpCtrlMemInitFile=" + _OTP_RMA_PATH,
-    ],
-    output_groups = {
-        "bitstream": ["synth-vivado/lowrisc_systems_chip_darjeeling_vcu118_0.1.bit"],
-        "mmi": ["synth-vivado/memories.mmi"],
-    },
-    systems = ["lowrisc:systems:chip_darjeeling_vcu118"],
-    tags = ["manual"],
-    target = "synth",
-)
-
-filegroup(
-    name = "fpga_vcu118_test_rom",
-    testonly = True,
-    srcs = [":fpga_vcu118"],
-    output_group = "bitstream",
-    tags = ["manual"],
-)
-
-filegroup(
-    name = "fpga_vcu118_rom_mmi",
-    testonly = True,
-    srcs = [":fpga_vcu118"],
-    output_group = "rom_mmi",
-    tags = ["manual"],
-)
-
-filegroup(
-    name = "fpga_vcu118_otp_mmi",
-    testonly = True,
-    srcs = [":fpga_vcu118"],
-    output_group = "otp_mmi",
-    tags = ["manual"],
-)
-
 # Bitstream cache manifest fragment targets
 bitstream_manifest_fragment(
     name = "earlgrey_cw310_manifest",
@@ -295,6 +247,38 @@ pkg_tar(
     mode = "0444",
     package_dir = "build-bin/hw/top_earlgrey/chip_earlgrey_cw340",
     strip_prefix = "/hw/bitstream/vivado/earlgrey_cw340_manifest",
+    tags = ["manual"],
+)
+
+# VCU118 bitstream
+fusesoc_build(
+    name = "fpga_vcu118",
+    testonly = True,
+    srcs = [
+        "//hw:rtl_files",
+        _CW340_TESTROM,
+        _OTP_RMA,
+    ],
+    cores = ["//hw:cores"],
+    data = ["//hw/ip/otbn:rtl_files"],
+    flags = [
+        "--BootRomInitFile=" + _CW340_TESTROM_PATH,
+        "--OtpCtrlMemInitFile=" + _OTP_RMA_PATH,
+    ],
+    output_groups = {
+        "bitstream": ["synth-vivado/lowrisc_systems_chip_darjeeling_vcu118_0.1.bit"],
+        "mmi": ["synth-vivado/memories.mmi"],
+    },
+    systems = ["lowrisc:systems:chip_darjeeling_vcu118"],
+    tags = ["manual"],
+    target = "synth",
+)
+
+filegroup(
+    name = "fpga_vcu118_test_rom",
+    testonly = True,
+    srcs = [":fpga_vcu118"],
+    output_group = "bitstream",
     tags = ["manual"],
 )
 
