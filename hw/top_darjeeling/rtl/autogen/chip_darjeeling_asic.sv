@@ -1531,6 +1531,7 @@ module chip_darjeeling_asic #(
     .alert_o()
   );
 
+
   //////////////////////////////////
   // Manual Pad / Signal Tie-offs //
   //////////////////////////////////
@@ -1715,5 +1716,6 @@ module chip_darjeeling_asic #(
                             pwrmgr_boot_status.otp_done,
                             pwrmgr_boot_status.rom_ctrl_status,
                             pwrmgr_boot_status.strap_sampled};
+
 
 endmodule : chip_darjeeling_asic

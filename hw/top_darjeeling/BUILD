@@ -6,6 +6,7 @@ load(
     "//rules/opentitan:defs.bzl",
     "DEFAULT_TEST_FAILURE_MSG",
     "DEFAULT_TEST_SUCCESS_MSG",
+    "fpga_vcu118",
     "sim_dv",
     "sim_verilator",
 )
@@ -83,6 +84,41 @@ sim_verilator(
     },
     rom = "//sw/device/lib/testing/test_rom:test_rom",
     test_cmd = """
+        --exec="console --non-interactive --exit-success='{exit_success}' --exit-failure='{exit_failure}'"
+        no-op
+    """,
+)
+
+###########################################################################
+# FPGA VCU118 Environments
+###########################################################################
+fpga_vcu118(
+    name = "fpga_vcu118",
+    design = "darjeeling",
+    exec_env = "fpga_vcu118",
+    libs = [
+        "//sw/device/lib/arch:boot_stage_rom_ext",
+        "//sw/device/lib/arch:fpga_vcu118",
+        "//hw/top_darjeeling/sw/dt:fpga_vcu118",
+    ],
+    linker_script = "//sw/device/lib/testing/test_framework:ottf_ld_silicon_creator_slot_a",
+    otp_mmap = "//hw/top_darjeeling/data/otp:otp_ctrl_mmap.hjson",
+    test_cmd = "testing-not-supported",
+)
+
+fpga_vcu118(
+    name = "fpga_vcu118_test_rom",
+    testonly = True,
+    base = ":fpga_vcu118",
+    base_bitstream = "//hw/bitstream/vcu118:bitstream",
+    exec_env = "fpga_vcu118_test_rom",
+    mmi = "//hw/bitstream/vcu118:mmi",
+    otp = "//hw/top_darjeeling/data/otp:img_rma",
+    rom = "//sw/device/lib/testing/test_rom:test_rom",
+    test_cmd = """
+        --exec="transport init"
+        --exec="fpga load-bitstream {bitstream}"
+        --exec="bootstrap --clear-uart=true {firmware}"
         --exec="console --non-interactive --exit-success='{exit_success}' --exit-failure='{exit_failure}'"
         no-op
     """,

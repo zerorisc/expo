@@ -36,6 +36,7 @@ opentitan_binary(
         "//hw/top_earlgrey:fpga_vcu118",
         "//hw/top_earlgrey:sim_dv_base",
         "//hw/top_earlgrey:sim_verilator_base",
+        "//hw/top_darjeeling:fpga_vcu118",
         "//hw/top_darjeeling:sim_dv_base",
         "//hw/top_darjeeling:sim_verilator_base",
     ],
@@ -67,6 +68,7 @@ legacy_rom_targets(
         "fpga_cw310": ["//hw/top_earlgrey:fpga_cw310"],
         "fpga_cw305": ["//hw/top_earlgrey:fpga_cw305"],
         "fpga_cw340": ["//hw/top_earlgrey:fpga_cw340"],
+        "fpga_vcu118": ["//hw/top_darjeeling:fpga_vcu118"],
     },
     target = "test_rom",
 )
@@ -83,6 +85,7 @@ legacy_rom_targets(
         "fpga_cw305",
         "fpga_cw310",
         "fpga_cw340",
+        "fpga_vcu118",
     ]
 ]
 
@@ -312,4 +315,31 @@ pkg_files(
     testonly = True,
     srcs = [":pre_package"],
     prefix = "earlgrey/test_rom",
+)
+
+output_groups(
+    name = "darjeeling_pre_package",
+    testonly = True,
+    srcs = [":test_rom"],
+    groups = [
+        "fpga_vcu118_binary",
+        "fpga_vcu118_elf",
+        "fpga_vcu118_rom",
+        "fpga_vcu118_mapfile",
+        "sim_dv_elf",
+        "sim_dv_rom",
+        "sim_dv_logs",
+        "sim_dv_mapfile",
+        "sim_verilator_elf",
+        "sim_verilator_rom",
+        "sim_verilator_mapfile",
+    ],
+    target_compatible_with = opentitan_require_top("darjeeling"),
+)
+
+pkg_files(
+    name = "darjeeling_package",
+    testonly = True,
+    srcs = [":darjeeling_pre_package"],
+    prefix = "darjeeling/test_rom",
 )

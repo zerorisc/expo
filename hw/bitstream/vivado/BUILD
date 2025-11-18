@@ -23,13 +23,21 @@ _CW310_TESTROM = "//sw/device/lib/testing/test_rom:test_rom_fpga_cw310_scr_vmem"
 
 _CW340_TESTROM = _CW310_TESTROM
 
-_OTP_RMA = "//hw/top_earlgrey/data/otp:img_rma"
+_EARLGREY_OTP_RMA = "//hw/top_earlgrey/data/otp:img_rma"
+
+_DARJEELING_OTP_RMA = "//hw/top_darjeeling/data/otp:img_rma"
 
 _CW310_TESTROM_PATH = "{}/$(location {})".format(_PREFIX, _CW310_TESTROM)
 
 _CW340_TESTROM_PATH = _CW310_TESTROM_PATH
 
-_OTP_RMA_PATH = "{}/$(location {})".format(_PREFIX, _OTP_RMA)
+_VCU118_TESTROM = "//sw/device/lib/testing/test_rom:test_rom_fpga_vcu118_scr_vmem"
+
+_VCU118_TESTROM_PATH = "{}/$(location {})".format(_PREFIX, _VCU118_TESTROM)
+
+_EARLGREY_OTP_RMA_PATH = "{}/$(location {})".format(_PREFIX, _EARLGREY_OTP_RMA)
+
+_DARJEELING_OTP_RMA_PATH = "{}/$(location {})".format(_PREFIX, _DARJEELING_OTP_RMA)
 
 _FPGA_PATH_TMPL = "lowrisc_systems_{}_0.1/synth-vivado/{}"
 
@@ -43,13 +51,13 @@ fusesoc_build(
     srcs = [
         "//hw:rtl_files",
         _CW310_TESTROM,
-        _OTP_RMA,
+        _EARLGREY_OTP_RMA,
     ],
     cores = ["//hw:cores"],
     data = ["//hw/ip/otbn:rtl_files"],
     flags = [
         "--BootRomInitFile=" + _CW310_TESTROM_PATH,
-        "--OtpMacroMemInitFile=" + _OTP_RMA_PATH,
+        "--OtpMacroMemInitFile=" + _EARLGREY_OTP_RMA_PATH,
     ],
     output_groups = {
         "bitstream": [_FPGA_PATH_TMPL.format("chip_earlgrey_cw310", "lowrisc_systems_chip_earlgrey_cw310_0.1.bit")],
@@ -84,13 +92,13 @@ fusesoc_build(
     srcs = [
         "//hw:rtl_files",
         _CW310_TESTROM,
-        _OTP_RMA,
+        _EARLGREY_OTP_RMA,
     ],
     cores = ["//hw:cores"],
     data = ["//hw/ip/otbn:rtl_files"],
     flags = [
         "--BootRomInitFile=" + _CW310_TESTROM_PATH,
-        "--OtpMacroMemInitFile=" + _OTP_RMA_PATH,
+        "--OtpMacroMemInitFile=" + _EARLGREY_OTP_RMA_PATH,
     ],
     output_groups = {
         "bitstream": [_FPGA_PATH_TMPL.format("chip_earlgrey_cw310_hyperdebug", "lowrisc_systems_chip_earlgrey_cw310_hyperdebug_0.1.bit")],
@@ -125,13 +133,13 @@ fusesoc_build(
     srcs = [
         "//hw:rtl_files",
         _CW340_TESTROM,
-        _OTP_RMA,
+        _EARLGREY_OTP_RMA,
     ],
     cores = ["//hw:cores"],
     data = ["//hw/ip/otbn:rtl_files"],
     flags = [
         "--BootRomInitFile=" + _CW340_TESTROM_PATH,
-        "--OtpMacroMemInitFile=" + _OTP_RMA_PATH,
+        "--OtpMacroMemInitFile=" + _EARLGREY_OTP_RMA_PATH,
     ],
     output_groups = {
         "bitstream": [_FPGA_PATH_TMPL.format("chip_earlgrey_cw340", "lowrisc_systems_chip_earlgrey_cw340_0.1.bit")],
@@ -256,18 +264,19 @@ fusesoc_build(
     testonly = True,
     srcs = [
         "//hw:rtl_files",
-        _CW340_TESTROM,
-        _OTP_RMA,
+        _VCU118_TESTROM,
+        _DARJEELING_OTP_RMA,
     ],
     cores = ["//hw:cores"],
     data = ["//hw/ip/otbn:rtl_files"],
     flags = [
-        "--BootRomInitFile=" + _CW340_TESTROM_PATH,
-        "--OtpCtrlMemInitFile=" + _OTP_RMA_PATH,
+        "--BootRomInitFile=" + _VCU118_TESTROM_PATH,
+        "--OtpCtrlMemInitFile=" + _DARJEELING_OTP_RMA_PATH,
     ],
     output_groups = {
-        "bitstream": ["synth-vivado/lowrisc_systems_chip_darjeeling_vcu118_0.1.bit"],
-        "mmi": ["synth-vivado/memories.mmi"],
+        "bitstream": [_FPGA_PATH_TMPL.format("chip_darjeeling_vcu118", "lowrisc_systems_chip_darjeeling_vcu118_0.1.bit")],
+        "mmi": [_FPGA_PATH_TMPL.format("chip_darjeeling_vcu118", "memories.mmi")],
+        "logs": [_FPGA_PATH_TMPL.format("chip_darjeeling_vcu118", "lowrisc_systems_chip_darjeeling_vcu118_0.1.runs/")],
     },
     systems = ["lowrisc:systems:chip_darjeeling_vcu118"],
     tags = ["manual"],
