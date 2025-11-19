@@ -330,9 +330,10 @@ output_groups(
         "sim_dv_rom",
         "sim_dv_logs",
         "sim_dv_mapfile",
-        "sim_verilator_elf",
-        "sim_verilator_rom",
-        "sim_verilator_mapfile",
+        # TODO: uncomment when Darjeeling verilator support is added.
+        #"sim_verilator_elf",
+        #"sim_verilator_rom",
+        #"sim_verilator_mapfile",
     ],
     target_compatible_with = opentitan_require_top("darjeeling"),
 )

@@ -1,4 +1,5 @@
 # Copyright lowRISC contributors (OpenTitan project).
+# Copyright zeroRISC Inc.
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
@@ -17,8 +18,8 @@ filegroup(
     srcs = select({
         "//hw/bitstream:bitstream_skip": ["//hw/bitstream/universal:none"],
         "//hw/bitstream:bitstream_vivado": ["//hw/bitstream/vivado:fpga_vcu118_test_rom"],
-        "//hw/bitstream:bitstream_gcp_splice": ["@bitstreams//:chip_earlgrey_vcu118_bitstream"],
-        "//conditions:default": ["@bitstreams//:chip_earlgrey_vcu118_bitstream"],
+        "//hw/bitstream:bitstream_gcp_splice": ["@bitstreams//:chip_darjeeling_vcu118_bitstream"],
+        "//conditions:default": ["@bitstreams//:chip_darjeeling_vcu118_bitstream"],
     }),
     tags = ["manual"],
 )
@@ -29,8 +30,8 @@ filegroup(
     srcs = select({
         "//hw/bitstream:bitstream_skip": ["//hw/bitstream/universal:none"],
         "//hw/bitstream:bitstream_vivado": ["//hw/bitstream/vivado:vcu118_mmi"],
-        "//hw/bitstream:bitstream_gcp_splice": ["@bitstreams//:chip_earlgrey_vcu118_mmi"],
-        "//conditions:default": ["@bitstreams//:chip_earlgrey_vcu118_mmi"],
+        "//hw/bitstream:bitstream_gcp_splice": ["@bitstreams//:chip_darjeeling_vcu118_mmi"],
+        "//conditions:default": ["@bitstreams//:chip_darjeeling_vcu118_mmi"],
     }),
     tags = ["manual"],
 )

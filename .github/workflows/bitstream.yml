@@ -83,7 +83,7 @@ jobs:
 
           . util/build_consts.sh
           # module load "xilinx/vivado/${{inputs.vivado_version }}"
-          ./bazelisk.sh build ${archive_target}
+          ./bazelisk.sh build --//hw/top=${{ inputs.top_name }} ${archive_target}
 
       - name: Display synthesis & implementation logs
         if: steps.strategy.outputs.bitstreamStrategy != 'cached'

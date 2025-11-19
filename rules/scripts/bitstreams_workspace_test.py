@@ -147,6 +147,16 @@ filegroup(
 )
 
 alias(
+    name = "chip_darjeeling_vcu118_bitstream",
+    actual = "@//hw/bitstream/vivado:fpga_vcu118_test_rom",
+)
+
+alias(
+    name = "chip_darjeeling_vcu118_mmi",
+    actual = "@//hw/bitstream/vivado:vcu118_mmi",
+)
+
+alias(
     name = "chip_earlgrey_cw310_hyperdebug_bitstream",
     actual = "@//hw/bitstream/vivado:fpga_cw310_test_rom_hyp",
 )

@@ -47,6 +47,16 @@ jobs:
     with:
       top_name: earlgrey
       design_suffix: cw340
+      vivado_version: '2024.1'
+
+  chip_darjeeling_vcu118:
+    name: Darjeeling for VCU118
+    uses: ./.github/workflows/bitstream.yml
+    secrets: inherit
+    with:
+      top_name: darjeeling
+      design_suffix: vcu118
+      vivado_version: '2024.1'
 
   cache_bitstreams:
     name: Cache bitstreams to GCP
@@ -56,6 +66,7 @@ jobs:
       - chip_earlgrey_cw310
       - chip_earlgrey_cw310_hyperdebug
       - chip_earlgrey_cw340
+      - chip_darjeeling_vcu118
     steps:
       - uses: actions/checkout@v4
       - name: Prepare environment
@@ -63,7 +74,7 @@ jobs:
       - name: Download partial build-bin
         uses: ./.github/actions/download-partial-build-bin
         with:
-          job-patterns: chip_earlgrey_{cw310,cw310_hyperdebug,cw340}
+          job-patterns: chip_{earlgrey_{cw310,cw310_hyperdebug,cw340},darjeeling_vcu118}
       - name: Create bitstream cache archive
         run: |
           shopt -s globstar # Allow use of **
