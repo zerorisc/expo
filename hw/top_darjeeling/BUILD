@@ -114,6 +114,11 @@ fpga_vcu118(
     exec_env = "fpga_vcu118_test_rom",
     mmi = "//hw/bitstream/vcu118:mmi",
     otp = "//hw/top_darjeeling/data/otp:img_rma",
+    param = {
+        "interface": "vcu118",
+        "exit_success": DEFAULT_TEST_SUCCESS_MSG,
+        "exit_failure": DEFAULT_TEST_FAILURE_MSG,
+    },
     rom = "//sw/device/lib/testing/test_rom:test_rom",
     test_cmd = """
         --exec="transport init"

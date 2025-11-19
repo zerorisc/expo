@@ -59,7 +59,7 @@ jobs:
           bazel_package="//hw/bitstream"
           design_name=chip_${{ inputs.top_name }}_${{ inputs.design_suffix }}
           cached_archive="${bazel_package}:${design_name}_cached_archive"
-          ./bazelisk.sh build "${cached_archive}"
+          ./bazelisk.sh --//hw/top=${{ inputs.top_name }} build "${cached_archive}"
           bitstream_archive=$(./bazelisk.sh outquery "${cached_archive}")
           cp -Lv ${bitstream_archive} build-bin.tar
 
@@ -76,8 +76,8 @@ jobs:
             mkdir -p "$OBJ_DIR/$SUB_PATH" "$BIN_DIR/$SUB_PATH"
             # This can fail if the build result is from Bazel cache
             cp -rLvt "$OBJ_DIR/$SUB_PATH/" \
-              $(./bazelisk.sh outquery-all ${bitstream_target}) || true
-            bitstream_archive=$(./bazelisk.sh outquery ${archive_target})
+              $(./bazelisk.sh outquery-all --//hw/top=${{ inputs.top_name }} ${bitstream_target}) || true
+            bitstream_archive=$(./bazelisk.sh outquery --//hw/top=${{ inputs.top_name }} ${archive_target})
             cp -Lv ${bitstream_archive} build-bin.tar
           }
 
