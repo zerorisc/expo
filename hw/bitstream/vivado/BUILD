@@ -271,7 +271,7 @@ fusesoc_build(
     data = ["//hw/ip/otbn:rtl_files"],
     flags = [
         "--BootRomInitFile=" + _VCU118_TESTROM_PATH,
-        "--OtpCtrlMemInitFile=" + _DARJEELING_OTP_RMA_PATH,
+        "--OtpMacroMemInitFile=" + _DARJEELING_OTP_RMA_PATH,
     ],
     output_groups = {
         "bitstream": [_FPGA_PATH_TMPL.format("chip_darjeeling_vcu118", "lowrisc_systems_chip_darjeeling_vcu118_0.1.bit")],

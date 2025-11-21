@@ -12,7 +12,7 @@ module chip_earlgrey_vcu118 #(
   parameter BootRomInitFile = "test_rom_fpga_cw340.32.vmem",
   // Path to a VMEM file containing the contents of the emulated OTP, which will be
   // baked into the FPGA bitstream.
-  parameter OtpCtrlMemInitFile = "otp_img_fpga_cw340.vmem"
+  parameter OtpMacroMemInitFile = "otp_img_fpga_cw340.vmem"
 ) (
   // Dedicated Pads
   inout POR_N, // Manual Pad
@@ -1046,7 +1046,7 @@ module chip_earlgrey_vcu118 #(
     .OtbnRegFile(otbn_pkg::RegFileFPGA),
     .SecOtbnMuteUrnd(1'b0),
     .SecOtbnSkipUrndReseedAtStart(1'b0),
-    .OtpCtrlMemInitFile(OtpCtrlMemInitFile),
+    .OtpMacroMemInitFile(OtpMacroMemInitFile),
     .RvCoreIbexPipeLine(1),
     .SramCtrlRetAonInstrExec(0),
     .UsbdevRcvrWakeTimeUs(10000),
