@@ -5,6 +5,8 @@
 // Core Implementation module for Serial Peripheral Interface (SPI) Host IP.
 //
 
+include 
+
 module spi_host_fsm
   import spi_host_cmd_pkg::*;
 #(
