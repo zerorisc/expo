@@ -130,22 +130,6 @@ module chip_${top["name"]}_${target["name"]} #(
 
   // DFT and Debug signal positions in the pinout.
   localparam pinmux_pkg::target_cfg_t PinmuxTargetCfg = '{
-    tck_idx:           TckPadIdx,
-    tms_idx:           TmsPadIdx,
-    trst_idx:          TrstNPadIdx,
-    tdi_idx:           TdiPadIdx,
-    tdo_idx:           TdoPadIdx,
-    tap_strap0_idx:    Tap0PadIdx,
-    tap_strap1_idx:    Tap1PadIdx,
-    dft_strap0_idx:    Dft0PadIdx,
-    dft_strap1_idx:    Dft1PadIdx,
-    // TODO: check whether there is a better way to pass these USB-specific params
-    // The use of these indexes is gated behind a parameter, but to synthesize they
-    // need to exist even if the code-path is never used (pinmux.sv:UsbWkupModuleEn).
-    // Hence, set to zero.
-    usb_dp_idx:        0,
-    usb_dn_idx:        0,
-    usb_sense_idx:     0,
     // Pad types for attribute WARL behavior
     dio_pad_type: {
 <%
@@ -524,6 +508,7 @@ module chip_${top["name"]}_${target["name"]} #(
   logic [rstmgr_pkg::PowerDomains-1:0] por_n;
   assign por_n = {ast_pwst.main_pok, ast_pwst.aon_pok};
 
+% if target["name"] == "asic":
   wire unused_t0, unused_t1;
   assign unused_t0 = 1'b0;
   assign unused_t1 = 1'b0;
@@ -575,7 +560,6 @@ module chip_${top["name"]}_${target["name"]} #(
 
   ast_pkg::clks_osc_byp_t clks_osc_byp;
   assign clks_osc_byp = '{
-    usb: clk_usb_48mhz,
     sys: clk_main,
   % if target["name"] == "vcu118":
     io:  clk_io,
@@ -1190,12 +1174,6 @@ module chip_${top["name"]}_${target["name"]} #(
     .pwrmgr_ast_req_o             ( base_ast_pwr          ),
     .pwrmgr_ast_rsp_i             ( ast_base_pwr          ),
     .obs_ctrl_i                   ( obs_ctrl              ),
-    .io_clk_byp_req_o             ( io_clk_byp_req        ),
-    .io_clk_byp_ack_i             ( io_clk_byp_ack        ),
-    .all_clk_byp_req_o            ( all_clk_byp_req       ),
-    .all_clk_byp_ack_i            ( all_clk_byp_ack       ),
-    .hi_speed_sel_o               ( hi_speed_sel          ),
-    .div_step_down_req_i          ( div_step_down_req     ),
     .fpga_info_i                  ( fpga_info             ),
     .ast_tl_req_o                 ( base_ast_bus               ),
     .ast_tl_rsp_i                 ( ast_base_bus               ),
@@ -1219,7 +1197,6 @@ module chip_${top["name"]}_${target["name"]} #(
     .es_rng_enable_o              ( es_rng_enable              ),
     .es_rng_valid_i               ( es_rng_valid               ),
     .es_rng_bit_i                 ( es_rng_bit                 ),
-    .calib_rdy_i                  ( ast_init_done              ),
 
     // DMI TL-UL
     .dbg_tl_req_i                 ( dmi_h2d                    ),

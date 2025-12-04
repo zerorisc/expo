@@ -7,7 +7,7 @@ description: "Darjeeling toplevel for the AMD VCU118 board"
 filesets:
   files_rtl_vcu118:
     depend:
-      - lowrisc:prim_xilinx:earlgrey_xilinx_prim_pkg
+      - lowrisc:prim_xilinx:darjeeling_xilinx_prim_pkg
       - lowrisc:systems:top_darjeeling:0.1
       - lowrisc:systems:top_darjeeling_pkg
       - lowrisc:systems:top_darjeeling_ast
