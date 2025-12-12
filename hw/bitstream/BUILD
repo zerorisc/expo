@@ -161,3 +161,25 @@ pkg_tar(
     strip_prefix = "/hw/bitstream/chip_earlgrey_cw340_cached_fragment",
     tags = ["manual"],
 )
+
+bitstream_fragment_from_manifest(
+    name = "chip_darjeeling_vcu118_cached_fragment",
+    testonly = True,
+    srcs = [
+        "@bitstreams//:chip_darjeeling_vcu118_bitstream",
+        "@bitstreams//:chip_darjeeling_vcu118_mmi",
+    ],
+    design = "chip_darjeeling_vcu118",
+    manifest = "@bitstreams//:manifest",
+    tags = ["manual"],
+)
+
+pkg_tar(
+    name = "chip_darjeeling_vcu118_cached_archive",
+    testonly = True,
+    srcs = [":chip_darjeeling_vcu118_cached_fragment"],
+    mode = "0444",
+    package_dir = "build-bin/hw/top_darjeeling/chip_darjeeling_vcu118",
+    strip_prefix = "/hw/bitstream/chip_darjeeling_vcu118_cached_fragment",
+    tags = ["manual"],
+)
