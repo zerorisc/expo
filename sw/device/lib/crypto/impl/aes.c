@@ -12,6 +12,7 @@
 #include "sw/device/lib/crypto/drivers/aes.h"
 #include "sw/device/lib/crypto/drivers/entropy.h"
 #include "sw/device/lib/crypto/drivers/keymgr.h"
+#include "sw/device/lib/crypto/drivers/rv_core_ibex.h"
 #include "sw/device/lib/crypto/impl/integrity.h"
 #include "sw/device/lib/crypto/impl/keyblob.h"
 #include "sw/device/lib/crypto/impl/status.h"
@@ -272,6 +273,10 @@ otcrypto_status_t otcrypto_aes(otcrypto_blinded_key_t *key,
   // Ensure the entropy complex is initialized.
   HARDENED_TRY(entropy_complex_check());
 
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
+
   // Calculate the number of blocks for the input, including the padding for
   // encryption.
   size_t input_nblocks;
@@ -411,5 +416,9 @@ otcrypto_status_t otcrypto_aes(otcrypto_blinded_key_t *key,
   }
 
   // In case the key was sideloaded, clear it.
-  return keymgr_sideload_clear_aes();
+  HARDENED_TRY(keymgr_sideload_clear_aes());
+
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
+  return OTCRYPTO_OK;
 }

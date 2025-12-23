@@ -9,6 +9,7 @@
 #include "sw/device/lib/base/math.h"
 #include "sw/device/lib/crypto/drivers/entropy.h"
 #include "sw/device/lib/crypto/drivers/otbn.h"
+#include "sw/device/lib/crypto/drivers/rv_core_ibex.h"
 #include "sw/device/lib/crypto/impl/integrity.h"
 #include "sw/device/lib/crypto/impl/rsa/rsa_datatypes.h"
 #include "sw/device/lib/crypto/impl/rsa/rsa_encryption.h"
@@ -974,6 +975,10 @@ otcrypto_status_t otcrypto_rsa_sign_async_start(
   // Check that the entropy complex is initialized.
   HARDENED_TRY(entropy_complex_check());
 
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
+
   // Infer the RSA size from the private key.
   otcrypto_rsa_size_t size;
   HARDENED_TRY(rsa_size_from_private_key(private_key, &size));
@@ -995,20 +1000,20 @@ otcrypto_status_t otcrypto_rsa_sign_async_start(
     case kOtcryptoRsaSize2048: {
       rsa_2048_private_key_t *sk =
           (rsa_2048_private_key_t *)private_key->keyblob;
-      return rsa_signature_generate_2048_start(
-          sk, message_digest, (rsa_signature_padding_t)padding_mode);
+      HARDENED_TRY(rsa_signature_generate_2048_start(
+          sk, message_digest, (rsa_signature_padding_t)padding_mode));
     }
     case kOtcryptoRsaSize3072: {
       rsa_3072_private_key_t *sk =
           (rsa_3072_private_key_t *)private_key->keyblob;
-      return rsa_signature_generate_3072_start(
-          sk, message_digest, (rsa_signature_padding_t)padding_mode);
+      HARDENED_TRY(rsa_signature_generate_3072_start(
+          sk, message_digest, (rsa_signature_padding_t)padding_mode));
     }
     case kOtcryptoRsaSize4096: {
       rsa_4096_private_key_t *sk =
           (rsa_4096_private_key_t *)private_key->keyblob;
-      return rsa_signature_generate_4096_start(
-          sk, message_digest, (rsa_signature_padding_t)padding_mode);
+      HARDENED_TRY(rsa_signature_generate_4096_start(
+          sk, message_digest, (rsa_signature_padding_t)padding_mode));
     }
     default:
       // Invalid key size. Since the size was inferred, should be unreachable.
@@ -1016,9 +1021,10 @@ otcrypto_status_t otcrypto_rsa_sign_async_start(
       return OTCRYPTO_FATAL_ERR;
   }
 
-  // Should be unreachable.
-  HARDENED_TRAP();
-  return OTCRYPTO_FATAL_ERR;
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
+
+  return OTCRYPTO_OK;
 }
 
 otcrypto_status_t otcrypto_rsa_sign_async_finalize(
@@ -1122,6 +1128,10 @@ otcrypto_status_t otcrypto_rsa_verify_async_finalize(
   // Check that the entropy complex is initialized.
   HARDENED_TRY(entropy_complex_check());
 
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
+
   // Initialize verification result to false by default.
   *verification_result = kHardenedBoolFalse;
 
@@ -1132,21 +1142,21 @@ otcrypto_status_t otcrypto_rsa_verify_async_finalize(
   switch (size) {
     case kOtcryptoRsaSize2048: {
       rsa_2048_public_key_t *pk = (rsa_2048_public_key_t *)public_key->key;
-      return rsa_signature_verify_2048_finalize(
+      HARDENED_TRY(rsa_signature_verify_2048_finalize(
           pk, message_digest, (rsa_signature_padding_t)padding_mode,
-          verification_result);
+          verification_result));
     }
     case kOtcryptoRsaSize3072: {
       rsa_3072_public_key_t *pk = (rsa_3072_public_key_t *)public_key->key;
-      return rsa_signature_verify_3072_finalize(
+      HARDENED_TRY(rsa_signature_verify_3072_finalize(
           pk, message_digest, (rsa_signature_padding_t)padding_mode,
-          verification_result);
+          verification_result));
     }
     case kOtcryptoRsaSize4096: {
       rsa_4096_public_key_t *pk = (rsa_4096_public_key_t *)public_key->key;
-      return rsa_signature_verify_4096_finalize(
+      HARDENED_TRY(rsa_signature_verify_4096_finalize(
           pk, message_digest, (rsa_signature_padding_t)padding_mode,
-          verification_result);
+          verification_result));
     }
     default:
       // Invalid key size. Since the size was inferred, should be unreachable.
@@ -1154,9 +1164,10 @@ otcrypto_status_t otcrypto_rsa_verify_async_finalize(
       return OTCRYPTO_FATAL_ERR;
   }
 
-  // Should be unreachable.
-  HARDENED_TRAP();
-  return OTCRYPTO_FATAL_ERR;
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
+
+  return OTCRYPTO_OK;
 }
 
 otcrypto_status_t otcrypto_rsa_encrypt_async_start(
@@ -1170,6 +1181,10 @@ otcrypto_status_t otcrypto_rsa_encrypt_async_start(
 
   // Check that the entropy complex is initialized.
   HARDENED_TRY(entropy_complex_check());
+
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
 
   if (message.data == NULL && (message.len != 0)) {
     return OTCRYPTO_BAD_ARGS;
@@ -1202,22 +1217,22 @@ otcrypto_status_t otcrypto_rsa_encrypt_async_start(
       HARDENED_CHECK_EQ(size, kOtcryptoRsaSize2048);
       HARDENED_CHECK_EQ(public_key->key_length, sizeof(rsa_2048_public_key_t));
       rsa_2048_public_key_t *pk = (rsa_2048_public_key_t *)public_key->key;
-      return rsa_encrypt_2048_start(pk, hash_mode, message.data, message.len,
-                                    label.data, label.len);
+      HARDENED_TRY(rsa_encrypt_2048_start(pk, hash_mode, message.data,
+                                          message.len, label.data, label.len));
     }
     case kOtcryptoRsaSize3072: {
       HARDENED_CHECK_EQ(size, kOtcryptoRsaSize3072);
       HARDENED_CHECK_EQ(public_key->key_length, sizeof(rsa_3072_public_key_t));
       rsa_3072_public_key_t *pk = (rsa_3072_public_key_t *)public_key->key;
-      return rsa_encrypt_3072_start(pk, hash_mode, message.data, message.len,
-                                    label.data, label.len);
+      HARDENED_TRY(rsa_encrypt_3072_start(pk, hash_mode, message.data,
+                                          message.len, label.data, label.len));
     }
     case kOtcryptoRsaSize4096: {
       HARDENED_CHECK_EQ(size, kOtcryptoRsaSize4096);
       HARDENED_CHECK_EQ(public_key->key_length, sizeof(rsa_4096_public_key_t));
       rsa_4096_public_key_t *pk = (rsa_4096_public_key_t *)public_key->key;
-      return rsa_encrypt_4096_start(pk, hash_mode, message.data, message.len,
-                                    label.data, label.len);
+      HARDENED_TRY(rsa_encrypt_4096_start(pk, hash_mode, message.data,
+                                          message.len, label.data, label.len));
     }
     default:
       // Invalid key size. Since the size was inferred, should be unreachable.
@@ -1225,9 +1240,10 @@ otcrypto_status_t otcrypto_rsa_encrypt_async_start(
       return OTCRYPTO_FATAL_ERR;
   }
 
-  // Should be unreachable.
-  HARDENED_TRAP();
-  return OTCRYPTO_FATAL_ERR;
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
+
+  return OTCRYPTO_OK;
 }
 
 otcrypto_status_t otcrypto_rsa_encrypt_async_finalize(
@@ -1363,6 +1379,10 @@ otcrypto_status_t otcrypto_rsa_decrypt_async_finalize(
   // Check that the entropy complex is initialized.
   HARDENED_TRY(entropy_complex_check());
 
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
+
   // Call the unified `finalize()` operation, which will infer the RSA size
   // from OTBN.
   HARDENED_TRY(rsa_decrypt_finalize(hash_mode, label.data, label.len,
@@ -1375,6 +1395,9 @@ otcrypto_status_t otcrypto_rsa_decrypt_async_finalize(
     return OTCRYPTO_FATAL_ERR;
   }
   HARDENED_CHECK_LE(*plaintext_bytelen, plaintext.len);
+
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
 
   return OTCRYPTO_OK;
 }

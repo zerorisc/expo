@@ -8,6 +8,7 @@
 
 #include "sw/device/lib/base/hardened_memory.h"
 #include "sw/device/lib/crypto/drivers/hmac.h"
+#include "sw/device/lib/crypto/drivers/rv_core_ibex.h"
 #include "sw/device/lib/crypto/impl/status.h"
 
 // Module ID for status codes.
@@ -31,7 +32,15 @@ otcrypto_status_t otcrypto_sha2_256(otcrypto_const_byte_buf_t message,
   HARDENED_CHECK_EQ(digest->len, kHmacSha256DigestWords);
   digest->mode = kOtcryptoHashModeSha256;
 
-  return hmac_hash_sha256(message.data, message.len, digest->data);
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
+
+  // Compute the hash.
+  HARDENED_TRY(hmac_hash_sha256(message.data, message.len, digest->data));
+
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
 }
 
 otcrypto_status_t otcrypto_sha2_384(otcrypto_const_byte_buf_t message,
@@ -47,7 +56,15 @@ otcrypto_status_t otcrypto_sha2_384(otcrypto_const_byte_buf_t message,
   HARDENED_CHECK_EQ(digest->len, kHmacSha384DigestWords);
   digest->mode = kOtcryptoHashModeSha384;
 
-  return hmac_hash_sha384(message.data, message.len, digest->data);
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
+
+  // Compute the hash.
+  HARDENED_TRY(hmac_hash_sha384(message.data, message.len, digest->data));
+
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
 }
 
 otcrypto_status_t otcrypto_sha2_512(otcrypto_const_byte_buf_t message,
@@ -63,7 +80,15 @@ otcrypto_status_t otcrypto_sha2_512(otcrypto_const_byte_buf_t message,
   HARDENED_CHECK_EQ(digest->len, kHmacSha512DigestWords);
   digest->mode = kOtcryptoHashModeSha512;
 
-  return hmac_hash_sha512(message.data, message.len, digest->data);
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
+
+  // Compute the hash.
+  HARDENED_TRY(hmac_hash_sha512(message.data, message.len, digest->data));
+
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
 }
 
 otcrypto_status_t otcrypto_sha2_init(otcrypto_hash_mode_t hash_mode,
@@ -71,6 +96,10 @@ otcrypto_status_t otcrypto_sha2_init(otcrypto_hash_mode_t hash_mode,
   if (ctx == NULL) {
     return OTCRYPTO_BAD_ARGS;
   }
+
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
 
   hmac_ctx_t hmac_ctx;
   switch (hash_mode) {
@@ -92,6 +121,10 @@ otcrypto_status_t otcrypto_sha2_init(otcrypto_hash_mode_t hash_mode,
   }
 
   memcpy(ctx->data, &hmac_ctx, sizeof(hmac_ctx));
+
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
+
   return OTCRYPTO_OK;
 }
 
@@ -161,5 +194,13 @@ otcrypto_status_t otcrypto_sha2_final(otcrypto_sha2_context_t *ctx,
       return OTCRYPTO_BAD_ARGS;
   }
 
-  return hmac_final(hmac_ctx, digest->data);
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
+
+  // Finalize the SHA2 operation.
+  HARDENED_TRY(hmac_final(hmac_ctx, digest->data));
+
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
 }

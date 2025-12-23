@@ -303,7 +303,7 @@ otcrypto_status_t otcrypto_aes_gcm_encrypt(otcrypto_blinded_key_t *key,
   // Check the tag length.
   HARDENED_TRY(aes_gcm_check_tag_length(auth_tag.len, tag_len));
 
-  // Store the iCache state (on or off) and disable it when it is on.
+  // Store the icache state (on or off) and disable it when it is on.
   hardened_bool_t icache_saved_state;
   HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
 
@@ -319,7 +319,7 @@ otcrypto_status_t otcrypto_aes_gcm_encrypt(otcrypto_blinded_key_t *key,
 
   HARDENED_TRY(clear_key_if_sideloaded(aes_key));
 
-  // Enable the iCache if it was previously enabled.
+  // Enable the icache if it was previously enabled.
   ibex_restore_icache(icache_saved_state);
 
   return OTCRYPTO_OK;
@@ -347,7 +347,7 @@ otcrypto_status_t otcrypto_aes_gcm_decrypt(
   // Ensure entropy complex is initialized.
   HARDENED_TRY(entropy_complex_check());
 
-  // Store the iCache state (on or off) and disable it when it is on.
+  // Store the icache state (on or off) and disable it when it is on.
   hardened_bool_t icache_saved_state;
   HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
 
@@ -372,7 +372,7 @@ otcrypto_status_t otcrypto_aes_gcm_decrypt(
 
   HARDENED_TRY(clear_key_if_sideloaded(aes_key));
 
-  // Enable the iCache if it was previously enabled.
+  // Enable the icache if it was previously enabled.
   ibex_restore_icache(icache_saved_state);
 
   return OTCRYPTO_OK;
@@ -388,7 +388,7 @@ otcrypto_status_t otcrypto_aes_gcm_encrypt_init(
   // Ensure entropy complex is initialized.
   HARDENED_TRY(entropy_complex_check());
 
-  // Store the iCache state (on or off) and disable it when it is on.
+  // Store the icache state (on or off) and disable it when it is on.
   hardened_bool_t icache_saved_state;
   HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
 
@@ -405,7 +405,7 @@ otcrypto_status_t otcrypto_aes_gcm_encrypt_init(
   gcm_context_save(&internal_ctx, ctx);
   HARDENED_TRY(clear_key_if_sideloaded(internal_ctx.key));
 
-  // Enable the iCache if it was previously enabled.
+  // Enable the icache if it was previously enabled.
   ibex_restore_icache(icache_saved_state);
 
   return OTCRYPTO_OK;
@@ -421,7 +421,7 @@ otcrypto_status_t otcrypto_aes_gcm_decrypt_init(
   // Ensure entropy complex is initialized.
   HARDENED_TRY(entropy_complex_check());
 
-  // Store the iCache state (on or off) and disable it when it is on.
+  // Store the icache state (on or off) and disable it when it is on.
   hardened_bool_t icache_saved_state;
   HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
 
@@ -438,7 +438,7 @@ otcrypto_status_t otcrypto_aes_gcm_decrypt_init(
   gcm_context_save(&internal_ctx, ctx);
   HARDENED_TRY(clear_key_if_sideloaded(internal_ctx.key));
 
-  // Enable the iCache if it was previously enabled.
+  // Enable the icache if it was previously enabled.
   ibex_restore_icache(icache_saved_state);
 
   return OTCRYPTO_OK;
@@ -458,7 +458,7 @@ otcrypto_status_t otcrypto_aes_gcm_update_aad(otcrypto_aes_gcm_context_t *ctx,
     return OTCRYPTO_OK;
   }
 
-  // Store the iCache state (on or off) and disable it when it is on.
+  // Store the icache state (on or off) and disable it when it is on.
   hardened_bool_t icache_saved_state;
   HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
 
@@ -474,7 +474,7 @@ otcrypto_status_t otcrypto_aes_gcm_update_aad(otcrypto_aes_gcm_context_t *ctx,
   gcm_context_save(&internal_ctx, ctx);
   HARDENED_TRY(clear_key_if_sideloaded(internal_ctx.key));
 
-  // Enable the iCache if it was previously enabled.
+  // Enable the icache if it was previously enabled.
   ibex_restore_icache(icache_saved_state);
 
   return OTCRYPTO_OK;
@@ -497,7 +497,7 @@ otcrypto_status_t otcrypto_aes_gcm_update_encrypted_data(
     return OTCRYPTO_OK;
   }
 
-  // Store the iCache state (on or off) and disable it when it is on.
+  // Store the icache state (on or off) and disable it when it is on.
   hardened_bool_t icache_saved_state;
   HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
 
@@ -529,7 +529,7 @@ otcrypto_status_t otcrypto_aes_gcm_update_encrypted_data(
   gcm_context_save(&internal_ctx, ctx);
   HARDENED_TRY(clear_key_if_sideloaded(internal_ctx.key));
 
-  // Enable the iCache if it was previously enabled.
+  // Enable the icache if it was previously enabled.
   ibex_restore_icache(icache_saved_state);
 
   return OTCRYPTO_OK;
@@ -551,7 +551,7 @@ otcrypto_status_t otcrypto_aes_gcm_encrypt_final(
   // Ensure entropy complex is initialized.
   HARDENED_TRY(entropy_complex_check());
 
-  // Store the iCache state (on or off) and disable it when it is on.
+  // Store the icache state (on or off) and disable it when it is on.
   hardened_bool_t icache_saved_state;
   HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
 
@@ -581,7 +581,7 @@ otcrypto_status_t otcrypto_aes_gcm_encrypt_final(
   hardened_memshred(ctx->data, ARRAYSIZE(ctx->data));
   HARDENED_TRY(clear_key_if_sideloaded(internal_ctx.key));
 
-  // Enable the iCache if it was previously enabled.
+  // Enable the icache if it was previously enabled.
   ibex_restore_icache(icache_saved_state);
 
   return OTCRYPTO_OK;
@@ -604,7 +604,7 @@ otcrypto_status_t otcrypto_aes_gcm_decrypt_final(
   // Entropy complex needs to be initialized for `memshred`.
   HARDENED_TRY(entropy_complex_check());
 
-  // Store the iCache state (on or off) and disable it when it is on.
+  // Store the icache state (on or off) and disable it when it is on.
   hardened_bool_t icache_saved_state;
   HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
 
@@ -634,7 +634,7 @@ otcrypto_status_t otcrypto_aes_gcm_decrypt_final(
   hardened_memshred(ctx->data, ARRAYSIZE(ctx->data));
   HARDENED_TRY(clear_key_if_sideloaded(internal_ctx.key));
 
-  // Enable the iCache if it was previously enabled.
+  // Enable the icache if it was previously enabled.
   ibex_restore_icache(icache_saved_state);
 
   return OTCRYPTO_OK;

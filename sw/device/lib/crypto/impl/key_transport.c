@@ -8,6 +8,7 @@
 #include "sw/device/lib/base/hardened_memory.h"
 #include "sw/device/lib/base/memory.h"
 #include "sw/device/lib/crypto/drivers/entropy.h"
+#include "sw/device/lib/crypto/drivers/rv_core_ibex.h"
 #include "sw/device/lib/crypto/impl/aes_kwp/aes_kwp.h"
 #include "sw/device/lib/crypto/impl/integrity.h"
 #include "sw/device/lib/crypto/impl/keyblob.h"
@@ -182,6 +183,10 @@ otcrypto_status_t otcrypto_key_wrap(const otcrypto_blinded_key_t *key_to_wrap,
   // Ensure the entropy complex is initialized.
   HARDENED_TRY(entropy_complex_check());
 
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
+
   // Check the integrity of the key material we are wrapping.
   if (launder32(integrity_blinded_key_check(key_to_wrap)) !=
       kHardenedBoolTrue) {
@@ -226,7 +231,13 @@ otcrypto_status_t otcrypto_key_wrap(const otcrypto_blinded_key_t *key_to_wrap,
                   keyblob_words);
 
   // Wrap the key.
-  return aes_kwp_wrap(kek, plaintext, sizeof(plaintext), wrapped_key.data);
+  HARDENED_TRY(
+      aes_kwp_wrap(kek, plaintext, sizeof(plaintext), wrapped_key.data));
+
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
+
+  return OTCRYPTO_OK;
 }
 
 otcrypto_status_t otcrypto_key_unwrap(otcrypto_const_word32_buf_t wrapped_key,
@@ -243,6 +254,10 @@ otcrypto_status_t otcrypto_key_unwrap(otcrypto_const_word32_buf_t wrapped_key,
 
   // Ensure the entropy complex is initialized.
   HARDENED_TRY(entropy_complex_check());
+
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
 
   // Check the integrity/lengths/mode of the key encryption key, and construct
   // an internal AES key.
@@ -291,6 +306,10 @@ otcrypto_status_t otcrypto_key_unwrap(otcrypto_const_word32_buf_t wrapped_key,
 
   // Finally, check the integrity of the key material we unwrapped.
   *success = integrity_blinded_key_check(unwrapped_key);
+
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
+
   return OTCRYPTO_OK;
 }
 

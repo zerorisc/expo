@@ -6,6 +6,7 @@
 #include "sw/device/lib/crypto/drivers/hmac.h"
 
 #include "sw/device/lib/base/hardened_memory.h"
+#include "sw/device/lib/crypto/drivers/rv_core_ibex.h"
 #include "sw/device/lib/crypto/impl/integrity.h"
 #include "sw/device/lib/crypto/impl/keyblob.h"
 #include "sw/device/lib/crypto/impl/status.h"
@@ -147,6 +148,10 @@ otcrypto_status_t otcrypto_hmac(const otcrypto_blinded_key_t *key,
     return OTCRYPTO_BAD_ARGS;
   }
 
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
+
   // Check the key for null pointers or invalid configurations.
   HARDENED_TRY(check_key(key));
 
@@ -156,27 +161,31 @@ otcrypto_status_t otcrypto_hmac(const otcrypto_blinded_key_t *key,
     case kOtcryptoKeyModeHmacSha256:
       HARDENED_CHECK_EQ(key->config.key_mode, kOtcryptoKeyModeHmacSha256);
       HARDENED_TRY(hmac_key_construct(key, kHmacSha256BlockWords, &hmac_key));
-      return hmac_hmac_sha256(&hmac_key, input_message.data, input_message.len,
-                              tag.data);
+      HARDENED_TRY(hmac_hmac_sha256(&hmac_key, input_message.data,
+                                    input_message.len, tag.data));
+      break;
     case kOtcryptoKeyModeHmacSha384: {
       HARDENED_CHECK_EQ(key->config.key_mode, kOtcryptoKeyModeHmacSha384);
       HARDENED_TRY(hmac_key_construct(key, kHmacSha384BlockWords, &hmac_key));
-      return hmac_hmac_sha384(&hmac_key, input_message.data, input_message.len,
-                              tag.data);
+      HARDENED_TRY(hmac_hmac_sha384(&hmac_key, input_message.data,
+                                    input_message.len, tag.data));
+      break;
     }
     case kOtcryptoKeyModeHmacSha512: {
       HARDENED_CHECK_EQ(key->config.key_mode, kOtcryptoKeyModeHmacSha512);
       HARDENED_TRY(hmac_key_construct(key, kHmacSha512BlockWords, &hmac_key));
-      return hmac_hmac_sha512(&hmac_key, input_message.data, input_message.len,
-                              tag.data);
+      HARDENED_TRY(hmac_hmac_sha512(&hmac_key, input_message.data,
+                                    input_message.len, tag.data));
+      break;
     }
     default:
       return OTCRYPTO_BAD_ARGS;
   }
 
-  // Should be unreachable.
-  HARDENED_TRAP();
-  return OTCRYPTO_FATAL_ERR;
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
+
+  return OTCRYPTO_OK;
 }
 
 otcrypto_status_t otcrypto_hmac_init(otcrypto_hmac_context_t *ctx,
@@ -184,6 +193,10 @@ otcrypto_status_t otcrypto_hmac_init(otcrypto_hmac_context_t *ctx,
   if (ctx == NULL) {
     return OTCRYPTO_BAD_ARGS;
   }
+
+  // Store the icache state (on or off) and disable it when it is on.
+  hardened_bool_t icache_saved_state;
+  HARDENED_TRY(ibex_disable_icache(&icache_saved_state));
 
   // Check the key for null pointers or invalid configurations.
   HARDENED_TRY(check_key(key));
@@ -212,6 +225,10 @@ otcrypto_status_t otcrypto_hmac_init(otcrypto_hmac_context_t *ctx,
   }
 
   memcpy(ctx->data, &hmac_ctx, sizeof(hmac_ctx));
+
+  // Enable the icache if it was previously enabled.
+  ibex_restore_icache(icache_saved_state);
+
   return OTCRYPTO_OK;
 }
 
