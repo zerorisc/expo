@@ -11,6 +11,7 @@ serde_annotate = module_extension(
 def _serde_annotate_repo():
     http_archive(
         name = "lowrisc_serde_annotate",
+        build_file = Label("//third_party/rust:BUILD.serde_annotate.bazel"),
         integrity = "sha256-pT+WAj/aVJADXzwHjNmKXIDh+7yWiy8ti8dENmDb7z4=",
         strip_prefix = "serde-annotate-0.0.13",
         url = "https://github.com/lowRISC/serde-annotate/archive/refs/tags/v0.0.13.tar.gz",

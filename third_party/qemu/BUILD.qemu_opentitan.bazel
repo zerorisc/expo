@@ -7,7 +7,7 @@ package(default_visibility = ["//visibility:public"])
 exports_files(glob(["**"]))
 
 filegroup(
-    name = "qemu_src",
+    name = "all_srcs",
     srcs = glob(["**"]),
 )
 

@@ -1,8 +1,19 @@
+# Copyright zeroRISC Inc.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
 # Copyright lowRISC contributors (OpenTitan project).
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+load("//quality/supply_chain:scancode.bzl", "scancode_test")
+
 exports_files(
     glob(["**"]),
     visibility = ["//visibility:public"],
+)
+
+scancode_test(
+    name = "github_license_check",
+    srcs = ["@com_github_gh//:all_srcs"],
 )

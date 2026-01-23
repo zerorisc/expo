@@ -1,10 +1,25 @@
+# Copyright zeroRISC Inc.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
 # Copyright lowRISC contributors (OpenTitan project).
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
 load("@rules_foreign_cc//foreign_cc:configure.bzl", "configure_make")
+load("//quality/supply_chain:scancode.bzl", "scancode_test")
 
 package(default_visibility = ["//visibility:private"])
+
+scancode_test(
+    name = "openocd_license_check",
+    srcs = ["@openocd//:all_srcs"],
+    ignore = [
+        # File that ScanCode fails to scan correctly.
+        "jimtcl/sqlite3/sqlite3.c",
+    ],
+    policy_file = "//quality/supply_chain:dev_policy.yaml",
+)
 
 # Extract the `openocd` binary from :build_openocd. Although the binary itself
 # is executable, Bazel does not believe it is runnable. If you want to run

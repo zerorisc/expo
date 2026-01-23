@@ -1,14 +1,10 @@
-# Copyright lowRISC contributors (OpenTitan project).
+# Copyright zeroRISC Inc.
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
-package(default_visibility = ["//visibility:public"])
+load("//quality/supply_chain:scancode.bzl", "scancode_test")
 
-filegroup(
-    name = "ec_bin",
-    srcs = ["@hyperdebug_firmware//:hyperdebug/ec.bin"],
+scancode_test(
+    name = "hyperdebug_license_check",
+    srcs = ["@hyperdebug_firmware//:all_srcs"],
 )
-
-exports_files([
-    "hyperdebug/ec.bin",
-])

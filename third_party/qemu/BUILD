@@ -2,10 +2,24 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+# Copyright zeroRISC Inc.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
 package(default_visibility = ["//visibility:public"])
 
 load("@ot_python_deps//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library")
+load("//quality/supply_chain:scancode.bzl", "scancode_test")
+
+scancode_test(
+    name = "qemu_opentitan_license_check",
+    srcs = ["@qemu_opentitan//:all_srcs"],
+    ignore = [
+        # Build file ScanCode cannot parse.
+        "build/qemu-system-riscv32",
+    ],
+)
 
 py_binary(
     name = "cfggen",

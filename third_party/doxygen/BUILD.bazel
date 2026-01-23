@@ -1,3 +1,17 @@
-# Copyright lowRISC contributors (OpenTitan project).
+# Copyright zeroRISC Inc.
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
+
+load("//quality/supply_chain:scancode.bzl", "scancode_test")
+
+scancode_test(
+    name = "doxygen_license_check",
+    srcs = ["@doxygen//:all_srcs"],
+    ignore = [
+        # ScanCode fails to process this documentation file.
+        "doxygen_manual-1.13.2.pdf",
+        # ScanCode fails to process this binary file.
+        "bin/doxygen",
+    ],
+    policy_file = "//quality/supply_chain:dev_policy.yaml",
+)
