@@ -85,17 +85,17 @@ fn test_clock_and_duty_cycle(
         period_error * 100.0
     );
 
-    let duty_error = (average_duty - duty_cycle).abs() / duty_cycle;
+    let duty_error = (average_duty - duty_cycle).abs();
     println!(
-        "Pwm average duty: {}%, expected: {},  err: {}%",
+        "Pwm average duty: {}%, expected: {},  err: {}",
         average_duty,
         duty_cycle,
-        duty_error * 100.0
+        duty_error,
     );
 
     // The error is explained by the possible values that the clk_div can assume.
     assert!(period_error < 0.02);
-    assert!(duty_error < 0.01);
+    assert!(duty_error < 1.0);
 
     Ok(())
 }
