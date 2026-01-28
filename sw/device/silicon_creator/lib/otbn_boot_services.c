@@ -9,10 +9,22 @@
 #include "sw/device/silicon_creator/lib/base/sec_mmio.h"
 #include "sw/device/silicon_creator/lib/base/util.h"
 #include "sw/device/silicon_creator/lib/dbg_print.h"
-#include "sw/device/silicon_creator/lib/drivers/flash_ctrl.h"
 #include "sw/device/silicon_creator/lib/drivers/hmac.h"
-#include "sw/device/silicon_creator/lib/drivers/keymgr.h"
 #include "sw/device/silicon_creator/lib/drivers/otbn.h"
+
+#ifdef TOP_EARLGREY
+#include "sw/device/silicon_creator/lib/drivers/flash_ctrl.h"
+#include "sw/device/silicon_creator/lib/drivers/keymgr.h"
+#endif
+#ifdef TOP_DARJEELING
+#include "sw/device/silicon_creator/lib/drivers/keymgr_dpe.h"
+
+#define sc_keymgr_key_type_t sc_keymgr_dpe_key_type_t
+#define sc_keymgr_diversification_t sc_keymgr_dpe_diversification_t
+#define sc_keymgr_ecc_key_t sc_keymgr_dpe_ecc_key_t
+#define sc_keymgr_generate_key_otbn sc_keymgr_dpe_generate_key_otbn
+#define sc_keymgr_state_check sc_keymgr_dpe_state_check
+#endif
 
 #include "hw/top/otbn_regs.h"  // Generated.
 
@@ -83,6 +95,7 @@ enum {
 OT_WARN_UNUSED_RESULT
 static rom_error_t load_attestation_keygen_seed(uint32_t additional_seed_idx,
                                                 uint32_t *seed) {
+#ifdef TOP_EARLGREY
   // Read seed from flash info page.
   uint32_t seed_flash_offset =
       0 + (additional_seed_idx * kAttestationSeedBytes);
@@ -102,6 +115,14 @@ static rom_error_t load_attestation_keygen_seed(uint32_t additional_seed_idx,
     }
     return err;
   }
+#endif
+
+#ifdef TOP_DARJEELING
+  // TODO: Load the additional seed from OTP.
+  //
+  // Temporarily load all-zeroes to the buffer to keep deterministic.
+  memset(seed, 0, kAttestationSeedBytes);
+#endif
 
   return kErrorOk;
 }

@@ -16,9 +16,9 @@ void sigverify_usage_constraints_get(
   lifecycle_device_id_get(&usage_constraints->device_id);
 
   usage_constraints->manuf_state_creator =
-      otp_read32(OTP_CTRL_PARAM_CREATOR_SW_CFG_MANUF_STATE_OFFSET);
+      otp_read32(OTP_CTRL_PARAM_MANUF_STATE_OFFSET);
   usage_constraints->manuf_state_owner =
-      otp_read32(OTP_CTRL_PARAM_OWNER_SW_CFG_MANUF_STATE_OFFSET);
+      otp_read32(OTP_CTRL_PARAM_MANUF_STATE_OFFSET);
   usage_constraints->life_cycle_state = lifecycle_state_get();
 
   static_assert(

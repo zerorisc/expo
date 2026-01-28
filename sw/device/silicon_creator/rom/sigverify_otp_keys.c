@@ -11,24 +11,32 @@
 
 #include "hw/top/otp_ctrl_regs.h"
 
+#ifdef TOP_EARLGREY
 enum {
+  // Offset of the `ROT_CREATOR_AUTH_CODESIGN` partition.
+  kAuthcodesignPartitionOffset =
+      OTP_CTRL_PARAM_ROT_CREATOR_AUTH_CODESIGN_OFFSET,
+
   // The size of the `ROT_CREATOR_AUTH_CODESIGN` partition ignoring the size of
   // the partition digest.
-  kAuthCodesignParitionSize =
+  kAuthCodesignPartitionSize =
       OTP_CTRL_PARAM_ROT_CREATOR_AUTH_CODESIGN_SIZE -
       OTP_CTRL_PARAM_ROT_CREATOR_AUTH_CODESIGN_DIGEST_SIZE,
 
-  kAuthCodesignParitionSizeInWords =
-      kAuthCodesignParitionSize / sizeof(uint32_t),
+  kAuthCodesignPartitionSizeInWords =
+      kAuthCodesignPartitionSize / sizeof(uint32_t),
 
   // The size of the `ROT_CREATOR_AUTH_CODESIGN` region used to store the key
   // material. This is the size of the partition minus the size of the HMAC
   // digest used to measure the integrity of the keys.
   kAuthcodesignPartitionMsgSize =
-      kAuthCodesignParitionSize - sizeof(hmac_digest_t),
+      kAuthCodesignPartitionSize - sizeof(hmac_digest_t),
 
   kAuthcodesignPartitionMsgSizeInWords =
       kAuthcodesignPartitionMsgSize / sizeof(uint32_t),
+
+  // Offset of the `ROT_CREATOR_AUTH_STATE` partition.
+  kAuthStatePartitionOffset = OTP_CTRL_PARAM_ROT_CREATOR_AUTH_STATE_OFFSET,
 
   // The size of the `ROT_CREATOR_AUTH_STATE` partition ignoring the size of the
   // partition digest.
@@ -38,13 +46,51 @@ enum {
   kAuthStatePartitionSizeInWords = kAuthStatePartitionSize / sizeof(uint32_t),
 };
 
-static_assert(sizeof(sigverify_otp_keys_t) == kAuthCodesignParitionSize,
+static_assert(sizeof(sigverify_otp_keys_t) == kAuthCodesignPartitionSize,
               "Size of sigverify_otp_keys_t must match the size of the OTP "
               "partition");
 static_assert(
     sizeof(sigverify_otp_key_states_t) == kAuthStatePartitionSize,
     "Size of sigverify_otp_key_states_t must match the size of the OTP "
     "partition");
+#endif
+
+#ifdef TOP_DARJEELING
+enum {
+  // Offset of the `ROT_OWNER_AUTH_SLOT0_NON_RAW_MFW_CODESIGN` partition.
+  kAuthcodesignPartitionOffset =
+      OTP_CTRL_PARAM_ROT_OWNER_AUTH_SLOT0_NON_RAW_MFW_CODESIGN_KEY_TYPE_OFFSET,
+
+  // Size of the `ROT_OWNER_AUTH_SLOT0_NON_RAW_MFW_CODESIGN` partition.
+  kAuthCodesignPartitionSize =
+      OTP_CTRL_PARAM_ROT_OWNER_AUTH_SLOT0_NON_RAW_MFW_CODESIGN_KEY_TYPE_SIZE +
+      OTP_CTRL_PARAM_ROT_OWNER_AUTH_SLOT0_NON_RAW_MFW_CODESIGN_KEY_ROLE_SIZE +
+      OTP_CTRL_PARAM_ROT_OWNER_AUTH_SLOT0_NON_RAW_MFW_CODESIGN_KEY_SIZE,
+
+  kAuthCodesignPartitionSizeInWords =
+      kAuthCodesignPartitionSize / sizeof(uint32_t),
+
+  // The size of the `ROT_OWNER_AUTH_SLOT0_NON_RAW_MFW_CODESIGN` region used to
+  // store the key material. This is the size of the partition minus the size
+  // of the HMAC digest used to measure the integrity of the keys.
+  kAuthcodesignPartitionMsgSize =
+      kAuthCodesignPartitionSize - sizeof(hmac_digest_t),
+
+  kAuthcodesignPartitionMsgSizeInWords =
+      kAuthcodesignPartitionMsgSize / sizeof(uint32_t),
+
+  kAuthStatePartitionOffset =
+      OTP_CTRL_PARAM_ROT_OWNER_AUTH_SLOT0_ROM2_PATCH_SIGVERIFY_KEY_TYPE_OFFSET,
+
+  // Size of the `ROT_OWNER_AUTH_SLOT0_ROM2_PATCH_SIGVERIFY` partition.
+  kAuthStatePartitionSize =
+      OTP_CTRL_PARAM_ROT_OWNER_AUTH_SLOT0_ROM2_PATCH_SIGVERIFY_KEY_TYPE_SIZE +
+      OTP_CTRL_PARAM_ROT_OWNER_AUTH_SLOT0_ROM2_PATCH_SIGVERIFY_KEY_ROLE_SIZE +
+      OTP_CTRL_PARAM_ROT_OWNER_AUTH_SLOT0_ROM2_PATCH_SIGVERIFY_KEY_SIZE,
+
+  kAuthStatePartitionSizeInWords = kAuthStatePartitionSize / sizeof(uint32_t),
+};
+#endif
 
 /**
  * Determines whether a key is valid in the RMA life cycle state.
@@ -187,16 +233,15 @@ static rom_error_t key_is_valid(sigverify_key_type_t key_type,
 rom_error_t sigverify_otp_keys_init(sigverify_otp_key_ctx_t *ctx) {
   uint32_t *raw_buffer = (uint32_t *)&ctx->keys;
   size_t i;
-  for (i = 0; launder32(i) < kAuthCodesignParitionSizeInWords; ++i) {
-    raw_buffer[i] = otp_read32(OTP_CTRL_PARAM_ROT_CREATOR_AUTH_CODESIGN_OFFSET +
-                               i * sizeof(uint32_t));
+  for (i = 0; launder32(i) < kAuthCodesignPartitionSizeInWords; ++i) {
+    raw_buffer[i] =
+        otp_read32(kAuthcodesignPartitionOffset + i * sizeof(uint32_t));
   }
-  HARDENED_CHECK_EQ(i, kAuthCodesignParitionSizeInWords);
+  HARDENED_CHECK_EQ(i, kAuthCodesignPartitionSizeInWords);
 
   uint32_t *raw_state = (uint32_t *)&ctx->states;
   for (i = 0; launder32(i) < kAuthStatePartitionSizeInWords; ++i) {
-    raw_state[i] = otp_read32(OTP_CTRL_PARAM_ROT_CREATOR_AUTH_STATE_OFFSET +
-                              i * sizeof(uint32_t));
+    raw_state[i] = otp_read32(kAuthStatePartitionOffset + i * sizeof(uint32_t));
   }
   HARDENED_CHECK_EQ(i, kAuthStatePartitionSizeInWords);
   return sigverify_otp_keys_check(ctx);
