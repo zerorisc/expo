@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #ifndef OPENTITAN_SW_DEVICE_SILICON_CREATOR_LIB_ROM_PATCH_H_
-#define OPENTITAN_SW_LIB_SW_DEVICE_SILICON_CREATOR_ROM_PATCH_H_
+#define OPENTITAN_SW_DEVICE_SILICON_CREATOR_LIB_ROM_PATCH_H_
 
 #include "sw/device/lib/base/macros.h"
 #include "sw/device/lib/base/multibits.h"

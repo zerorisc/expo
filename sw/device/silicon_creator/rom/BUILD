@@ -642,7 +642,7 @@ opentitan_test(
 
 # Darjeeling ROM
 cc_library(
-    name = "base_rom",
+    name = "base_rom_lib",
     srcs = [
         "base_rom.c",
         "base_rom.h",
@@ -684,6 +684,90 @@ cc_library(
     ],
 )
 
+opentitan_binary(
+    name = "base_rom",
+    exec_env = [
+        "//hw/top_darjeeling:fpga_vcu118",
+        "//hw/top_darjeeling:sim_dv_base",
+        "//hw/top_darjeeling:sim_verilator_base",
+    ],
+    kind = "rom",
+    linker_script = ":base_rom_linker_script",
+    transitive_features = [
+        "use_lld",
+        "lto",
+        "minsize",
+    ],
+    deps = [
+        ":base_rom_lib",
+    ],
+)
+
+cc_library(
+    name = "second_rom_lib",
+    srcs = [
+        "second_rom.c",
+        "second_rom.h",
+    ],
+    deps = [
+        ":second_rom_epmp",
+        ":sigverify_keys_ecdsa_p256",
+        ":sigverify_keys_spx",
+        "//hw/top:aon_timer_c_regs",
+        "//sw/device/lib/arch:device",
+        "//sw/device/lib/base:bitfield",
+        "//sw/device/lib/base:csr",
+        "//sw/device/lib/base:macros",
+        "//sw/device/lib/base:memory",
+        "//sw/device/lib/base:stdasm",
+        "//sw/device/lib/crt",
+        "//sw/device/lib/runtime:hart",
+        "//sw/device/silicon_creator/lib:cfi",
+        "//sw/device/silicon_creator/lib:dbg_print",
+        "//sw/device/silicon_creator/lib:epmp_state",
+        "//sw/device/silicon_creator/lib:error",
+        "//sw/device/silicon_creator/lib:irq_asm",
+        "//sw/device/silicon_creator/lib:manifest",
+        "//sw/device/silicon_creator/lib:shutdown",
+        "//sw/device/silicon_creator/lib/base:chip",
+        "//sw/device/silicon_creator/lib/base:sec_mmio",
+        "//sw/device/silicon_creator/lib/base:static_critical",
+        "//sw/device/silicon_creator/lib/drivers:alert",
+        "//sw/device/silicon_creator/lib/drivers:ast",
+        "//sw/device/silicon_creator/lib/drivers:ibex",
+        "//sw/device/silicon_creator/lib/drivers:keymgr_dpe",
+        "//sw/device/silicon_creator/lib/drivers:lifecycle",
+        "//sw/device/silicon_creator/lib/drivers:otp",
+        "//sw/device/silicon_creator/lib/drivers:pinmux",
+        "//sw/device/silicon_creator/lib/drivers:pwrmgr",
+        "//sw/device/silicon_creator/lib/drivers:retention_sram",
+        "//sw/device/silicon_creator/lib/drivers:rnd",
+        "//sw/device/silicon_creator/lib/drivers:rstmgr",
+        "//sw/device/silicon_creator/lib/drivers:uart",
+        "//sw/device/silicon_creator/lib/drivers:watchdog",
+        "//sw/device/silicon_creator/lib/sigverify",
+    ],
+)
+
+opentitan_binary(
+    name = "second_rom",
+    exec_env = [
+        "//hw/top_darjeeling:fpga_vcu118",
+        "//hw/top_darjeeling:sim_dv_base",
+        "//hw/top_darjeeling:sim_verilator_base",
+    ],
+    kind = "rom",
+    linker_script = ":second_rom_linker_script",
+    transitive_features = [
+        "use_lld",
+        "lto",
+        "minsize",
+    ],
+    deps = [
+        ":second_rom_lib",
+    ],
+)
+
 cc_library(
     name = "base_rom_epmp",
     srcs = [
@@ -695,5 +779,43 @@ cc_library(
     deps = [
         "//hw/top_darjeeling/sw/autogen:top_darjeeling",
         "//sw/device/silicon_creator/lib:epmp_state",
+    ],
+)
+
+cc_library(
+    name = "second_rom_epmp",
+    srcs = [
+        "second_rom_epmp.c",
+    ],
+    hdrs = ["second_rom_epmp.h"],
+    target_compatible_with = [OPENTITAN_CPU],
+    deps = [
+        "//hw/top_darjeeling/sw/autogen:top_darjeeling",
+        "//sw/device/lib/base:bitfield",
+        "//sw/device/lib/base:csr",
+        "//sw/device/lib/base:memory",
+        "//sw/device/silicon_creator/lib:dbg_print",
+        "//sw/device/silicon_creator/lib:epmp_state",
+        "//sw/device/silicon_creator/lib/drivers:lifecycle",
+    ],
+)
+
+ld_library(
+    name = "base_rom_linker_script",
+    script = "base_rom.ld",
+    deps = [
+        "//hw/top_darjeeling/sw/autogen:top_darjeeling_memory",
+        "//sw/device:info_sections",
+        "//sw/device/silicon_creator/lib/base:static_critical_sections",
+    ],
+)
+
+ld_library(
+    name = "second_rom_linker_script",
+    script = "second_rom.ld",
+    deps = [
+        "//hw/top_darjeeling/sw/autogen:top_darjeeling_memory",
+        "//sw/device:info_sections",
+        "//sw/device/silicon_creator/lib/base:static_critical_sections",
     ],
 )
