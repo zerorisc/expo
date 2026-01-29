@@ -172,7 +172,7 @@ def otp_words_to_updatemem_pieces(otp_size: int, words: List[int]) -> List[str]:
     # the real updatemem would print. We also know how to recover OTP memory
     # contents from INIT_XX strings. Composing these two functions should bring
     # us back to the original `words` input.
-    updatemem_sim = UpdatememSimulator(0x200, 22)
+    updatemem_sim = UpdatememSimulator(otp_size // 2, 22)
     for piece in mem_pieces[1:]:
         updatemem_sim.write_updatemem_hex_string(piece)
     init_lines = updatemem_sim.render_init_lines()
