@@ -122,11 +122,11 @@ def _bitstream_splice_impl(ctx):
     # OTP size in number of 2-byte words.
     top_name = ctx.attr._top[BuildSettingInfo].value
     if top_name == "earlgrey":
-        # Earlgrey: 2K OTP == 1024 2-byte words
+        # Earlgrey: 2K OTP
         otp_size = 1024
     elif top_name == "darjeeling":
-        # Darjeeling: 16K OTP == 8192 2-byte words
-        otp_size = 8192
+        # Darjeeling: 16K OTP
+        otp_size = 16384
     else:
         fail("Top name should be 'earlgrey' or 'darjeeling' for bitstream splice; got `{}`".format(top_name))
     if rom and rom.label.name != "none":
