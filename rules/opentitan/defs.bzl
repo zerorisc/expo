@@ -145,7 +145,7 @@ EARLGREY_CW340_TEST_ENVS = {
 DARJEELING_TEST_ENVS = {
     "//hw/top_darjeeling:sim_dv": None,
     "//hw/top_darjeeling:sim_verilator": None,
-    "//hw/top_darjeeling:fpga_vcu118": None,
+    "//hw/top_darjeeling:fpga_vcu118_base_rom": None,
 }
 
 # Messages we expect for possible test outcomes.

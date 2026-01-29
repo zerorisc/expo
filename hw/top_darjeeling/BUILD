@@ -129,6 +129,45 @@ fpga_vcu118(
     """,
 )
 
+fpga_vcu118(
+    name = "fpga_vcu118_rom_with_fake_keys",
+    testonly = True,
+    base = ":fpga_vcu118",
+    base_bitstream = "//hw/bitstream/vcu118:bitstream",
+    ecdsa_key = {"//sw/device/silicon_creator/rom/keys/fake/ecdsa:test_key_0_ecdsa_p256": "test_key_0"},
+    exec_env = "fpga_vcu118_rom_with_fake_keys",
+    manifest = "//sw/device/silicon_creator/rom_ext:manifest",
+    mmi = "//hw/bitstream/vcu118:mmi",
+    otp = "//hw/top_darjeeling/data/otp:img_rma",
+    param = {
+        "interface": "vcu118",
+        "exit_success": DEFAULT_TEST_SUCCESS_MSG,
+        "exit_failure": DEFAULT_TEST_FAILURE_MSG,
+    },
+    rom = "//sw/device/silicon_creator/rom:base_rom",
+    test_cmd = """
+        --exec="transport init"
+        --exec="fpga load-bitstream {bitstream}"
+        --exec="bootstrap --clear-uart=true {firmware}"
+        --exec="console --non-interactive --exit-success='{exit_success}' --exit-failure='{exit_failure}'"
+        no-op
+    """,
+)
+
+fpga_vcu118(
+    name = "fpga_vcu118_base_rom",
+    testonly = True,
+    base = ":fpga_vcu118_rom_with_fake_keys",
+    ecdsa_key = {"//sw/device/silicon_creator/rom/keys/fake/ecdsa:prod_key_0_ecdsa_p256": "prod_key_0"},
+    exec_env = "fpga_vcu118_base_rom",
+    libs = [
+        "//sw/device/lib/arch:boot_stage_owner",
+        "//sw/device/lib/arch:fpga_vcu118",
+        "//hw/top_darjeeling/sw/dt:fpga_vcu118",
+    ],
+    manifest = "//sw/device/silicon_owner:manifest",
+)
+
 ###########################################################################
 # Sim DV Environments
 #
