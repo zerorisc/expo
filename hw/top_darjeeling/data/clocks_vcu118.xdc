@@ -2,6 +2,9 @@
 ## Licensed under the Apache License, Version 2.0, see LICENSE for details.
 ## SPDX-License-Identifier: Apache-2.0
 
+# Get around [Place 30-675]
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets u_padring/gen_dio_pads[1].u_dio_pad/gen_input_only.u_ibuf/O]
+
 ## Clock Signal
 create_clock -add -name sys_clk_pin -period 3.333 -waveform {0 1.667} [get_ports IO_CLK_P]
 
@@ -11,23 +14,6 @@ create_generated_clock -name clk_main [get_pin clkgen/pll/CLKOUT0]
 create_generated_clock -name clk_io_pre [get_pin clkgen/pll/CLKOUT2]
 create_generated_clock -name clk_usb_48 [get_pin clkgen/pll/CLKOUT1]
 create_generated_clock -name clk_aon [get_pin clkgen/pll/CLKOUT4]
-
-# Create separate sets of clocks for the 48 MHz ext clock tree and the 96 MHz
-# I/O clock tree. Then make them physically exclusive, so they don't produce
-# invalid combinations.
-# The 48 MHz ext clocks all have a _lc suffix.
-create_generated_clock -name clk_io -divide_by 1 \
-    -source [get_pins u_ast/u_ast_clks_byp/u_no_scan_clk_src_io_d1ord2/gen_div_bufg.u_bufg_div_stepdown/I] \
-    [get_pins u_ast/u_ast_clks_byp/u_no_scan_clk_src_io_d1ord2/gen_div_bufg.u_bufg_div_stepdown/O]
-
-create_generated_clock -name clk_io_ext_lc -divide_by 2 \
-    -source [get_pins u_ast/u_ast_clks_byp/u_no_scan_clk_src_io_d1ord2/gen_div_bufg.u_bufg_div_full/I] \
-    [get_pins u_ast/u_ast_clks_byp/u_no_scan_clk_src_io_d1ord2/gen_div_bufg.u_bufg_div_full/O]
-
-set_clock_groups -physically_exclusive \
-    -group [get_clocks [list clk_io]] \
-    -group [get_clocks [list clk_io_ext_lc]]
-
 
 ## Muxed I/Os
 set mio_muxed_ports [get_ports MIO*]
@@ -206,7 +192,7 @@ set spi_host_0_peri [get_pins top_darjeeling/u_clkmgr_aon/u_clk_io_peri_cg/gen_g
 # analysis by the proper amount to effect "half-cycle sampling" of SPI.
 create_generated_clock -name clk_spi_host0 -divide_by 2 -add \
   -source ${spi_host_0_peri} \
-  -master_clock [get_clocks clk_io] \
+  -master_clock [get_clocks clk_io_pre] \
   [get_ports SPI_HOST_CLK]
 
 # Multi-cycle path to adjust the hold edge, since launch and capture edges are
@@ -241,7 +227,7 @@ set_input_delay  -clock clk_spi_host0 -clock_fall -max ${spi_host_in_delay_max} 
 set_clock_groups -asynchronous \
     -group clk_main \
     -group clk_aon \
-    -group {clk_io_pre clk_io clk_io_ext_lc clk_spi_host0} \
+    -group {clk_io_pre clk_spi_host0} \
     -group [get_clocks -include_generated_clocks jtag_tck] \
     -group {clk_spi clk_spi_in clk_spi_out clk_spi_pt clk_spid_csb clk_spi_tpm clk_spi_tpm_in clk_spi_tpm_out} \
     -group sys_clk_pin
