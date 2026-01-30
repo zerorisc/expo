@@ -23,3 +23,11 @@ DARJEELING = opentitan_top(
         "testing": "//hw/top_darjeeling/data/autogen:top_darjeeling.secrets.testing.gen.hjson",
     },
 )
+
+DARJEELING_SLOTS = {
+    "second_rom": "0x20000",
+    "rom_ext_ctn": "0x40000000",
+    "owner_ctn": "0x40010000",
+    "second_rom_size": "0x10000",
+    "rom_ext_size": "0x10000",
+}

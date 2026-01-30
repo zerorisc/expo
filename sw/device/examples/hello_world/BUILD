@@ -2,7 +2,8 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
-load("//rules/opentitan:defs.bzl", "opentitan_binary")
+load("@bazel_skylib//lib:dicts.bzl", "dicts")
+load("//rules/opentitan:defs.bzl", "opentitan_binary", "opentitan_test", "DARJEELING_TEST_ENVS")
 load("//rules:files.bzl", "exclude_files")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_files")
 
@@ -23,6 +24,24 @@ opentitan_binary(
         "//hw/top_earlgrey:sim_verilator",
         # For some reason, this target makes englishbreakfast builds fail.
         #"//hw/top_earlgrey:silicon_owner_sival_rom_ext",
+        "//hw/top_darjeeling:fpga_vcu118_base_rom",
+    ],
+    deps = [
+        ":hello_world_lib",
+        "//sw/device/lib/base:mmio",
+    ],
+)
+
+opentitan_binary(
+    name = "hello_world_rom_ext",
+    testonly = True,
+    srcs = ["hello_world.c"],
+    copts = [
+        # Disable the date-time warning only for the hello world program.
+        "-Wno-date-time",
+    ],
+    ecdsa_key = {"//sw/device/silicon_creator/rom/keys/fake/ecdsa:test_key_0_ecdsa_p256": "prod_key_0"},
+    exec_env = [
         "//hw/top_darjeeling:fpga_vcu118_base_rom",
     ],
     deps = [
@@ -66,4 +85,21 @@ pkg_files(
     testonly = True,
     srcs = [":hello_world"],
     prefix = "earlgrey/examples",
+)
+
+opentitan_test(
+    name = "hello_world_rom_ext_test",
+    srcs = ["hello_world.c"],
+    ecdsa_key = {"//sw/device/silicon_creator/rom/keys/fake/ecdsa:test_key_0_ecdsa_p256": "prod_key_0"},
+    exec_env = dicts.add(
+        DARJEELING_TEST_ENVS,
+    ),
+    copts = [
+        # Disable the date-time warning only for the hello world program.
+        "-Wno-date-time",
+    ],
+    deps = [
+        ":hello_world_lib",
+        "//sw/device/lib/base:mmio",
+    ],
 )

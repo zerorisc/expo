@@ -497,6 +497,10 @@ opentitan_test = rv_rule(
             allow_files = True,
             doc = "ROM image override for this test",
         ),
+        "second_rom": attr.label(
+            allow_files = True,
+            doc = "Second ROM image override for this test",
+        ),
         "rom_ext": attr.label(
             allow_files = True,
             doc = "ROM_EXT image override for this test",

@@ -2,6 +2,7 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+load("//hw/top_darjeeling:defs.bzl", "DARJEELING_SLOTS")
 load(
     "//rules/opentitan:defs.bzl",
     "DEFAULT_TEST_FAILURE_MSG",
@@ -56,6 +57,7 @@ sim_verilator(
         "//hw/top_darjeeling/sw/dt:sim_verilator",
     ],
     linker_script = "//sw/device/lib/testing/test_framework:ottf_ld_silicon_creator_slot_a",
+    slot_spec = DARJEELING_SLOTS,
     otp = "//hw/top_darjeeling/data/otp:img_rma",
     test_cmd = "testing-not-supported",
 )
@@ -102,6 +104,7 @@ fpga_vcu118(
         "//hw/top_darjeeling/sw/dt:fpga_vcu118",
     ],
     linker_script = "//sw/device/lib/testing/test_framework:ottf_ld_silicon_creator_slot_a",
+    slot_spec = DARJEELING_SLOTS,
     otp_mmap = "//hw/top_darjeeling/data/otp:otp_ctrl_mmap.hjson",
     test_cmd = "testing-not-supported",
 )
@@ -143,8 +146,12 @@ fpga_vcu118(
         "interface": "vcu118",
         "exit_success": DEFAULT_TEST_SUCCESS_MSG,
         "exit_failure": DEFAULT_TEST_FAILURE_MSG,
+        # Place the firmware in the ROM_EXT stage, because this exec_env
+        # doesn't run with a real ROM_EXT.
+        "assemble": "{second_rom}@{second_rom} {firmware}@{rom_ext_ctn}",
     },
     rom = "//sw/device/silicon_creator/rom:base_rom",
+    second_rom = "//sw/device/silicon_creator/rom:second_rom",
     test_cmd = """
         --exec="transport init"
         --exec="fpga load-bitstream {bitstream}"
@@ -168,6 +175,21 @@ fpga_vcu118(
     manifest = "//sw/device/silicon_owner:manifest",
 )
 
+fpga_vcu118(
+    name = "fpga_vcu118_rom_ext",
+    testonly = True,
+    base = ":fpga_vcu118_rom_with_base_rom",
+    exec_env = "fpga_vcu118_rom_ext",
+    manifest = "//sw/device/silicon_owner:manifest",
+    param = {
+        "interface": "vcu118",
+        "exit_success": DEFAULT_TEST_SUCCESS_MSG,
+        "exit_failure": DEFAULT_TEST_FAILURE_MSG,
+        "assemble": "{second_rom}@{second_rom} {rom_ext}@{rom_ext_ctn} {firmware}@{owner_ctn}",
+    },
+    rom_ext = "//sw/device/silicon_creator/rom_ext:rom_ext_dice_x509",
+)
+
 ###########################################################################
 # Sim DV Environments
 #
@@ -188,6 +210,7 @@ sim_dv(
         "//hw/top_darjeeling/sw/dt:sim_dv",
     ],
     linker_script = "//sw/device/lib/testing/test_framework:ottf_ld_silicon_creator_slot_a",
+    slot_spec = DARJEELING_SLOTS,
     otp_mmap = "//hw/top_darjeeling/data/otp:otp_ctrl_mmap.hjson",
 )
 

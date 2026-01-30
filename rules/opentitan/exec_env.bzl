@@ -18,6 +18,7 @@ _FIELDS = {
     "spx_key": ("attr.spx_key", False),
     "manifest": ("file.manifest", False),
     "rom": ("attr.rom", False),
+    "second_rom": ("attr.second_rom", False),
     "rom_ext": ("attr.rom_ext", False),
     "otp": ("file.otp", False),
     "mmi": ("file.mmi", False),
@@ -145,6 +146,11 @@ def exec_env_common_attrs(**kwargs):
             default = kwargs.get("rom"),
             allow_files = True,
             doc = "ROM image to use in this environment",
+        ),
+        "second_rom": attr.label(
+            default = kwargs.get("second_rom"),
+            allow_files = True,
+            doc = "Second ROM image to use in this environment",
         ),
         "rom_ext": attr.label(
             default = kwargs.get("rom_ext"),
@@ -387,6 +393,9 @@ def common_test_setup(ctx, exec_env, firmware):
     else:
         rom = get_fallback(ctx, "attr.rom", exec_env)
         update_file_attr(ctx, "rom", rom, exec_env, data_files, param, action_param, default = "rom")
+
+    second_rom = get_fallback(ctx, "attr.second_rom", exec_env)
+    update_file_attr(ctx, "second_rom", second_rom, exec_env, data_files, param, action_param)
 
     rom_ext = get_fallback(ctx, "attr.rom_ext", exec_env)
     update_file_attr(ctx, "rom_ext", rom_ext, exec_env, data_files, param, action_param)
