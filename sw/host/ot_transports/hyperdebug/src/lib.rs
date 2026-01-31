@@ -40,8 +40,6 @@ use std::process::Command;
 
 extern crate tempfile;
 use std::fs::File;
-use std::fs::OpenOptions;
-use std::os::unix::fs::OpenOptionsExt;
 use tempfile::tempdir;
 
 pub mod c2d2;
@@ -1025,6 +1023,8 @@ impl Flavor for VCU118Flavor {
     }
     fn load_bitstream(fpga_program: &FpgaProgram) -> Result<()> {
         log::info!("Programming the FPGA bitstream.");
+        let vivado = fpga_program.vivado.as_ref()
+            .expect("Argument --vivado is required for loading VCU118 bitstreams.");
         let tmp_dir = tempdir()?;
 
         let vcu118_bit_path = tmp_dir.path().join("vcu118.bit");
@@ -1033,22 +1033,26 @@ impl Flavor for VCU118Flavor {
         drop(vcu118_bit_file); // close vcu118.bit before use
 
         let program_vcu118_tcl_path = tmp_dir.path().join("program_vcu118.tcl");
-        let mut program_vcu118_tcl_file = File::create(program_vcu118_tcl_path)?; // default permissions (0o644) are enough
+        let mut program_vcu118_tcl_file = File::create(&program_vcu118_tcl_path)?; // default permissions (0o644) are enough
         program_vcu118_tcl_file.write_all(include_str!(env!("program_vcu118_tcl")).as_bytes())?;
         drop(program_vcu118_tcl_file); // close program_vcu118.tcl before executing
 
-        let program_vcu118_sh_path = tmp_dir.path().join("program_vcu118.sh");
-        let mut program_vcu118_sh_file = OpenOptions::new()
-            .create(true)
-            .truncate(true)
-            .write(true)
-            .mode(0o755)
-            .open(program_vcu118_sh_path.clone())?;
-        program_vcu118_sh_file.write_all(include_str!(env!("program_vcu118_sh")).as_bytes())?;
-        drop(program_vcu118_sh_file); // close program_vcu118.sh before executing
-
-        let status = Command::new(program_vcu118_sh_path)
-            .arg(vcu118_bit_path)
+        let status = Command::new(vivado)
+            .args([
+                "-mode",
+                "batch",
+                "-nojournal",
+                "-nolog",
+                "-source",
+                // PANIC: tempdir() will not return a non-UTF-8 path.
+                program_vcu118_tcl_path.to_str().unwrap(),
+                "-tclargs",
+                vcu118_bit_path.to_str().expect("VCU118 bitstream path was not valid UTF-8."),
+            ])
+            // Vivado requires HOME to be set, so we set it to our temporary directory.
+            //
+            // PANIC: tempdir() will not return a non-UTF-8 path.
+            .env("HOME", tmp_dir.path().to_str().unwrap())
             .status()
             .expect("Failed to execute program_vcu118.sh");
         if status.success() {

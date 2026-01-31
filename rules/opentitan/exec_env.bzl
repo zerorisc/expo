@@ -5,6 +5,7 @@
 load("@bazel_skylib//lib:types.bzl", "types")
 load("@lowrisc_opentitan//rules/opentitan:providers.bzl", "OpenTitanBinaryInfo")
 load("@lowrisc_opentitan//rules/opentitan:util.bzl", "get_fallback", "get_files")
+load("@nonhermetic//:env.bzl", "BIN_PATHS", "ENV")
 load("//rules/opentitan:toolchain.bzl", "LOCALTOOLS_TOOLCHAIN")
 
 # ExecEnvInfo provider fields and whether the field is required.
@@ -428,5 +429,8 @@ def common_test_setup(ctx, exec_env, firmware):
     slot_spec.update(ctx.attr.slot_spec)
     action_param.update(slot_spec)
     param.update(slot_spec)
+
+    # Set the Vivado path for VCU118 environments.
+    param["vivado"] = BIN_PATHS["vivado"] + "/vivado"
 
     return test_harness, data_labels, data_files, param, action_param

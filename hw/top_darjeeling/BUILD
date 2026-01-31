@@ -57,8 +57,8 @@ sim_verilator(
         "//hw/top_darjeeling/sw/dt:sim_verilator",
     ],
     linker_script = "//sw/device/lib/testing/test_framework:ottf_ld_silicon_creator_slot_a",
-    slot_spec = DARJEELING_SLOTS,
     otp = "//hw/top_darjeeling/data/otp:img_rma",
+    slot_spec = DARJEELING_SLOTS,
     test_cmd = "testing-not-supported",
 )
 
@@ -104,11 +104,13 @@ fpga_vcu118(
         "//hw/top_darjeeling/sw/dt:fpga_vcu118",
     ],
     linker_script = "//sw/device/lib/testing/test_framework:ottf_ld_silicon_creator_slot_a",
-    slot_spec = DARJEELING_SLOTS,
     otp_mmap = "//hw/top_darjeeling/data/otp:otp_ctrl_mmap.hjson",
+    slot_spec = DARJEELING_SLOTS,
     test_cmd = "testing-not-supported",
 )
 
+# VCU118 with the test ROM spliced, no second ROM; firmware is bootstrapped and
+# executed in the ROM_EXT stage.
 fpga_vcu118(
     name = "fpga_vcu118_test_rom",
     testonly = True,
@@ -116,22 +118,27 @@ fpga_vcu118(
     base_bitstream = "//hw/bitstream/vcu118:bitstream",
     exec_env = "fpga_vcu118_test_rom",
     mmi = "//hw/bitstream/vcu118:mmi",
-    otp = "//hw/top_darjeeling/data/otp:img_rma",
+    otp = "//hw/top_darjeeling/data/otp:img_prod",
     param = {
         "interface": "vcu118",
         "exit_success": DEFAULT_TEST_SUCCESS_MSG,
         "exit_failure": DEFAULT_TEST_FAILURE_MSG,
+        # Place the firmware in the ROM_EXT stage, because this exec_env
+        # doesn't run with a real ROM_EXT.
+        "assemble": "{firmware}@{rom_ext_ctn}",
     },
     rom = "//sw/device/lib/testing/test_rom:test_rom",
     test_cmd = """
         --exec="transport init"
-        --exec="fpga load-bitstream {bitstream}"
+        --exec="fpga load-bitstream --vivado {vivado} {bitstream}"
         --exec="bootstrap --clear-uart=true {firmware}"
         --exec="console --non-interactive --exit-success='{exit_success}' --exit-failure='{exit_failure}'"
         no-op
     """,
 )
 
+# VCU118 with `rom_with_fake_keys` and second ROM spliced; firmware is
+# bootstrapped to CTN SRAM and executed in the ROM_EXT stage.
 fpga_vcu118(
     name = "fpga_vcu118_rom_with_fake_keys",
     testonly = True,
@@ -148,19 +155,21 @@ fpga_vcu118(
         "exit_failure": DEFAULT_TEST_FAILURE_MSG,
         # Place the firmware in the ROM_EXT stage, because this exec_env
         # doesn't run with a real ROM_EXT.
-        "assemble": "{second_rom}@{second_rom} {firmware}@{rom_ext_ctn}",
+        "assemble": "{firmware}@{rom_ext_ctn}",
     },
     rom = "//sw/device/silicon_creator/rom:base_rom",
     second_rom = "//sw/device/silicon_creator/rom:second_rom",
     test_cmd = """
         --exec="transport init"
-        --exec="fpga load-bitstream {bitstream}"
+        --exec="fpga load-bitstream --vivado {vivado} {bitstream}"
         --exec="bootstrap --clear-uart=true {firmware}"
         --exec="console --non-interactive --exit-success='{exit_success}' --exit-failure='{exit_failure}'"
         no-op
     """,
 )
 
+# VCU118 with base ROM and second ROM spliced; firmware is bootstrapped to CTN
+# SRAM and executed in the ROM_EXT stage.
 fpga_vcu118(
     name = "fpga_vcu118_base_rom",
     testonly = True,
@@ -175,6 +184,8 @@ fpga_vcu118(
     manifest = "//sw/device/silicon_owner:manifest",
 )
 
+# VCU118 with base ROM and second ROM spliced; ROM_EXT and firmware are
+# bootstrapped. Firmware executes in the `owner` stage.
 fpga_vcu118(
     name = "fpga_vcu118_rom_ext",
     testonly = True,
@@ -185,7 +196,7 @@ fpga_vcu118(
         "interface": "vcu118",
         "exit_success": DEFAULT_TEST_SUCCESS_MSG,
         "exit_failure": DEFAULT_TEST_FAILURE_MSG,
-        "assemble": "{second_rom}@{second_rom} {rom_ext}@{rom_ext_ctn} {firmware}@{owner_ctn}",
+        "assemble": "{rom_ext}@{rom_ext_ctn} {firmware}@{owner_ctn}",
     },
     rom_ext = "//sw/device/silicon_creator/rom_ext:rom_ext_dice_x509",
 )
@@ -210,8 +221,8 @@ sim_dv(
         "//hw/top_darjeeling/sw/dt:sim_dv",
     ],
     linker_script = "//sw/device/lib/testing/test_framework:ottf_ld_silicon_creator_slot_a",
-    slot_spec = DARJEELING_SLOTS,
     otp_mmap = "//hw/top_darjeeling/data/otp:otp_ctrl_mmap.hjson",
+    slot_spec = DARJEELING_SLOTS,
 )
 
 sim_dv(

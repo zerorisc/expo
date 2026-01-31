@@ -25,6 +25,9 @@ pub struct LoadBitstream {
     /// Duration of ROM detection timeout.
     #[arg(long, value_parser = humantime::parse_duration, default_value = "2s")]
     pub rom_timeout: Duration,
+    /// Vivado / Vivado Lab binary for bootstrapping the VCU118.
+    #[arg(long, value_name = "FILE")]
+    pub vivado: Option<PathBuf>,
 }
 
 impl CommandDispatch for LoadBitstream {
@@ -41,6 +44,7 @@ impl CommandDispatch for LoadBitstream {
             rom_reset_pulse: self.rom_reset_pulse,
             rom_timeout: self.rom_timeout,
             progress: Box::new(progress),
+            vivado: self.vivado.clone(),
         };
 
         if operation.should_skip(transport)? {

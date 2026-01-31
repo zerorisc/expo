@@ -642,7 +642,7 @@ opentitan_test(
 
 # Darjeeling ROM
 cc_library(
-    name = "base_rom_lib",
+    name = "base_rom_common",
     srcs = [
         "base_rom.c",
         "base_rom.h",
@@ -682,6 +682,35 @@ cc_library(
         "//sw/device/silicon_creator/lib/drivers:watchdog",
         "//sw/device/silicon_creator/lib/sigverify",
     ],
+)
+
+cc_library(
+    name = "base_rom_lib",
+    srcs = ["base_rom_start.S"],
+    target_compatible_with = [OPENTITAN_CPU],
+    deps = [
+        ":base_rom_common",
+        ":base_rom_epmp",
+        "//hw/top:aon_timer_c_regs",
+        "//hw/top:ast_c_regs",
+        "//hw/top:clkmgr_c_regs",
+        "//hw/top:csrng_c_regs",
+        "//hw/top:edn_c_regs",
+        "//hw/top:entropy_src_c_regs",
+        "//hw/top:gpio_c_regs",
+        "//hw/top:lc_ctrl_c_regs",
+        "//hw/top:otp_ctrl_c_regs",
+        "//hw/top:pinmux_c_regs",
+        "//hw/top:pwrmgr_c_regs",
+        "//hw/top:rstmgr_c_regs",
+        "//hw/top:rv_core_ibex_c_regs",
+        "//hw/top:sram_ctrl_c_regs",
+        "//hw/top_darjeeling/sw/autogen:top_darjeeling",
+        "//sw/device/lib/base:hardened",
+        "//sw/device/lib/base:multibits",
+        "//sw/device/silicon_creator/lib/base:chip",
+    ],
+    alwayslink = True,
 )
 
 opentitan_binary(
@@ -749,6 +778,27 @@ cc_library(
     ],
 )
 
+# Create the legacy ROM target names so that existing splicing rules can find
+# the rom VMEM files.
+legacy_rom_targets(
+    suffixes = {
+        "fpga_vcu118": ["//hw/top_darjeeling:fpga_vcu118"],
+    },
+    target = "base_rom",
+)
+
+[
+    filegroup(
+        name = "base_rom_{}_hashfile".format(dev),
+        testonly = True,
+        srcs = [":base_rom"],
+        output_group = "{}_hashfile".format(dev),
+    )
+    for dev in [
+        "fpga_vcu118",
+    ]
+]
+
 opentitan_binary(
     name = "second_rom",
     exec_env = [
@@ -767,6 +817,28 @@ opentitan_binary(
         ":second_rom_lib",
     ],
 )
+
+# Create the legacy ROM target names so that existing splicing rules can find
+# the rom VMEM files.
+legacy_rom_targets(
+    suffixes = {
+        "fpga_vcu118": ["//hw/top_darjeeling:fpga_vcu118"],
+    },
+    target = "second_rom",
+)
+
+[
+    filegroup(
+        name = "second_rom_{}_hashfile".format(dev),
+        testonly = True,
+        srcs = [":second_rom"],
+        output_group = "{}_hashfile".format(dev),
+    )
+    for dev in [
+        "fpga_vcu118",
+    ]
+]
+
 
 cc_library(
     name = "base_rom_epmp",

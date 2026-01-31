@@ -273,12 +273,22 @@ fusesoc_build(
         "--BootRomInitFile=" + _VCU118_TESTROM_PATH,
         "--OtpMacroMemInitFile=" + _DARJEELING_OTP_RMA_PATH,
     ],
-    output_groups = {
-        "bitstream": [_FPGA_PATH_TMPL.format("chip_darjeeling_vcu118", "lowrisc_systems_chip_darjeeling_vcu118_0.1.bit")],
-        "mmi": [_FPGA_PATH_TMPL.format("chip_darjeeling_vcu118", "memories.mmi")],
-        "logs": [_FPGA_PATH_TMPL.format("chip_darjeeling_vcu118", "lowrisc_systems_chip_darjeeling_vcu118_0.1.runs/")],
-    },
-    systems = ["lowrisc:systems:chip_darjeeling_vcu118"],
+    output_groups = select({
+        "//hw/top:earlgrey": {
+            "bitstream": [_FPGA_PATH_TMPL.format("chip_earlgrey_vcu118", "lowrisc_systems_chip_earlgrey_vcu118_0.1.bit")],
+            "mmi": [_FPGA_PATH_TMPL.format("chip_earlgrey_vcu118", "memories.mmi")],
+            "logs": [_FPGA_PATH_TMPL.format("chip_earlgrey_vcu118", "lowrisc_systems_chip_earlgrey_vcu118_0.1.runs/")],
+        },
+        "//hw/top:darjeeling": {
+            "bitstream": [_FPGA_PATH_TMPL.format("chip_darjeeling_vcu118", "lowrisc_systems_chip_darjeeling_vcu118_0.1.bit")],
+            "mmi": [_FPGA_PATH_TMPL.format("chip_darjeeling_vcu118", "memories.mmi")],
+            "logs": [_FPGA_PATH_TMPL.format("chip_darjeeling_vcu118", "lowrisc_systems_chip_darjeeling_vcu118_0.1.runs/")],
+        },
+    }),
+    systems = select({
+        "//hw/top:earlgrey": ["lowrisc:systems:chip_earlgrey_vcu118"],
+        "//hw/top:darjeeling": ["lowrisc:systems:chip_darjeeling_vcu118"],
+    }),
     tags = ["manual"],
     target = "synth",
 )
@@ -309,7 +319,7 @@ bitstream_manifest_fragment(
         "rom",
         "otp",
     ],
-    memory_map_file = ":vcu118_mmi",
+    memory_map_file = "//hw/bitstream/vcu118:mmi",
     tags = ["manual"],
 )
 

@@ -74,17 +74,6 @@ filegroup(
 )
 
 filegroup(
-    name = "vcu118_mmi",
-    testonly = True,
-    srcs = select({
-        "bitstream_skip": ["//hw/bitstream/universal:none"],
-        "bitstream_vivado": ["//hw/bitstream/vivado:vcu118_mmi"],
-        "//conditions:default": ["//hw/bitstream/vivado:vcu118_mmi"],
-    }),
-    tags = ["manual"],
-)
-
-filegroup(
     name = "cw310_mmi",
     testonly = True,
     srcs = select({

@@ -4,6 +4,7 @@
 
 use anyhow::Result;
 use std::time::Duration;
+use std::path::PathBuf;
 
 use crate::app::TransportWrapper;
 use crate::io::gpio::GpioPin;
@@ -22,6 +23,8 @@ pub struct FpgaProgram {
     /// A progress function to provide user feedback.
     /// Will be called with the address and length of each chunk sent to the target device.
     pub progress: Box<dyn ProgressIndicator>,
+    /// Path to the Vivado binary for loading bitstreams to the VCU118.
+    pub vivado: Option<PathBuf>,
 }
 
 impl FpgaProgram {
