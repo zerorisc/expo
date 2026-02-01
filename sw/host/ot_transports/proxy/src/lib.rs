@@ -223,7 +223,7 @@ impl ProxyOps for Proxy {
 
     fn bootstrap(&self, options: &BootstrapOptions, payload: &[u8]) -> Result<()> {
         match self.inner.execute_proxy_command(ProxyRequest::Bootstrap {
-            options: options.clone(),
+            options: Box::new(options.clone()),
             payload: payload.to_vec(),
         })? {
             ProxyResponse::Bootstrap => Ok(()),

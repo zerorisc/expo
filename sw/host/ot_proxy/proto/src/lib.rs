@@ -391,7 +391,7 @@ pub enum EmuResponse {
 pub enum ProxyRequest {
     Provides,
     Bootstrap {
-        options: BootstrapOptions,
+        options: Box<BootstrapOptions>,
         payload: Vec<u8>,
     },
     ApplyPinStrapping {

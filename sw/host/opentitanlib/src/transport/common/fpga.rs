@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use std::time::Duration;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use crate::app::TransportWrapper;
 use crate::io::gpio::GpioPin;

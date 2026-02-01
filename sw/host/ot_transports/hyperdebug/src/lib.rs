@@ -1023,7 +1023,9 @@ impl Flavor for VCU118Flavor {
     }
     fn load_bitstream(fpga_program: &FpgaProgram) -> Result<()> {
         log::info!("Programming the FPGA bitstream.");
-        let vivado = fpga_program.vivado.as_ref()
+        let vivado = fpga_program
+            .vivado
+            .as_ref()
             .expect("Argument --vivado is required for loading VCU118 bitstreams.");
         let tmp_dir = tempdir()?;
 
@@ -1047,7 +1049,9 @@ impl Flavor for VCU118Flavor {
                 // PANIC: tempdir() will not return a non-UTF-8 path.
                 program_vcu118_tcl_path.to_str().unwrap(),
                 "-tclargs",
-                vcu118_bit_path.to_str().expect("VCU118 bitstream path was not valid UTF-8."),
+                vcu118_bit_path
+                    .to_str()
+                    .expect("VCU118 bitstream path was not valid UTF-8."),
             ])
             // Vivado requires HOME to be set, so we set it to our temporary directory.
             //
