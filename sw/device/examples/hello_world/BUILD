@@ -24,7 +24,7 @@ opentitan_binary(
         "//hw/top_earlgrey:sim_verilator",
         # For some reason, this target makes englishbreakfast builds fail.
         #"//hw/top_earlgrey:silicon_owner_sival_rom_ext",
-        "//hw/top_darjeeling:fpga_vcu118_rom_with_fake_keys_spliced",
+        "//hw/top_darjeeling:fpga_vcu118_test_rom",
     ],
     deps = [
         ":hello_world_lib",
@@ -78,8 +78,8 @@ opentitan_test(
     ],
     ecdsa_key = {"//sw/device/silicon_creator/rom/keys/fake/ecdsa:test_key_0_ecdsa_p256": "test_key_0"},
     exec_env = {
-        "//hw/top_darjeeling:fpga_vcu118_rom_with_fake_keys_spliced": None,
-        "//hw/top_darjeeling:fpga_vcu118_test_rom_spliced": None,
+        "//hw/top_darjeeling:fpga_vcu118_rom_with_fake_keys": None,
+        "//hw/top_darjeeling:fpga_vcu118_test_rom": None,
     },
     deps = [
         ":hello_world_lib",

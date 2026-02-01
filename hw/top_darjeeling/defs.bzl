@@ -25,9 +25,8 @@ DARJEELING = opentitan_top(
 )
 
 DARJEELING_SLOTS = {
-    "second_rom": "0x20000",
-    "rom_ext_ctn": "0x40000000",
-    "owner_ctn": "0x40010000",
-    "second_rom_size": "0x10000",
+    "ctn_addr": "0x40000000",
+    "rom_ext_ctn": "0x0",
+    "owner_ctn": "0x10000",
     "rom_ext_size": "0x10000",
 }

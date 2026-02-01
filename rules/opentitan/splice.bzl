@@ -150,33 +150,34 @@ def _bitstream_splice_impl(ctx):
             update = mem,
             debug = ctx.attr.debug,
         )
-#
-#    # Splice in a Second ROM image if we have one either in attrs or the exec_env.
-#    if not ctx.attr.second_rom or ctx.attr.second_rom.label.name == "none":
-#        second_rom = exec_env.second_rom
-#    else:
-#        second_rom = ctx.attr.second_rom
-#
-#    if second_rom and second_rom.label.name != "none":
-#        second_rom = get_one_binary_file(second_rom, field = "rom", providers = [exec_env.provider])
-#        mem = gen_vivado_mem_file(
-#            ctx = ctx,
-#            name = "{}-second-rom".format(ctx.label.name),
-#            src = second_rom,
-#            tool = tc.tools.gen_mem_image,
-#            otp_size = otp_size,
-#            swap_nibbles = ctx.attr.swap_nibbles,
-#        )
-#        src = vivado_updatemem(
-#            ctx = ctx,
-#            name = "{}-second-rom".format(ctx.label.name),
-#            src = src,
-#            instance = "rom",
-#            mmi = get_fallback(ctx, "file.mmi", exec_env),
-#            update = mem,
-#            debug = ctx.attr.debug,
-#        )
-#
+
+    #
+    #    # Splice in a Second ROM image if we have one either in attrs or the exec_env.
+    #    if not ctx.attr.second_rom or ctx.attr.second_rom.label.name == "none":
+    #        second_rom = exec_env.second_rom
+    #    else:
+    #        second_rom = ctx.attr.second_rom
+    #
+    #    if second_rom and second_rom.label.name != "none":
+    #        second_rom = get_one_binary_file(second_rom, field = "rom", providers = [exec_env.provider])
+    #        mem = gen_vivado_mem_file(
+    #            ctx = ctx,
+    #            name = "{}-second-rom".format(ctx.label.name),
+    #            src = second_rom,
+    #            tool = tc.tools.gen_mem_image,
+    #            otp_size = otp_size,
+    #            swap_nibbles = ctx.attr.swap_nibbles,
+    #        )
+    #        src = vivado_updatemem(
+    #            ctx = ctx,
+    #            name = "{}-second-rom".format(ctx.label.name),
+    #            src = src,
+    #            instance = "rom",
+    #            mmi = get_fallback(ctx, "file.mmi", exec_env),
+    #            update = mem,
+    #            debug = ctx.attr.debug,
+    #        )
+    #
     # Splice in an OTP image if we have one either in attrs or the exec_env.
     if not ctx.attr.otp or ctx.attr.otp.label.name == "none":
         otp = exec_env.otp

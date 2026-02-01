@@ -94,6 +94,9 @@ sim_verilator(
 ###########################################################################
 # FPGA VCU118 Environments
 ###########################################################################
+
+BOOTSTRAP_COMMAND = '--exec "bootstrap --clear-uart=true --protocol=jtag {openocd} --target-addr=' + DARJEELING_SLOTS["ctn_addr"] + ' {firmware}"'
+
 fpga_vcu118(
     name = "fpga_vcu118",
     design = "darjeeling",
@@ -118,7 +121,8 @@ fpga_vcu118(
     base_bitstream = "//hw/bitstream/vcu118:bitstream",
     exec_env = "fpga_vcu118_test_rom",
     mmi = "//hw/bitstream/vcu118:mmi",
-    otp = "//hw/top_darjeeling/data/otp:img_prod",
+    needs_jtag = True,
+    otp = "//hw/top_darjeeling/data/otp:img_rma",
     param = {
         "interface": "vcu118",
         "exit_success": DEFAULT_TEST_SUCCESS_MSG,
@@ -131,7 +135,7 @@ fpga_vcu118(
     test_cmd = """
         --exec="transport init"
         --exec="fpga load-bitstream --vivado {vivado} {bitstream}"
-        --exec="bootstrap --clear-uart=true {firmware}"
+    """ + BOOTSTRAP_COMMAND + """
         --exec="console --non-interactive --exit-success='{exit_success}' --exit-failure='{exit_failure}'"
         no-op
     """,
@@ -148,6 +152,7 @@ fpga_vcu118(
     exec_env = "fpga_vcu118_rom_with_fake_keys",
     manifest = "//sw/device/silicon_creator/rom_ext:manifest",
     mmi = "//hw/bitstream/vcu118:mmi",
+    needs_jtag = True,
     otp = "//hw/top_darjeeling/data/otp:img_rma",
     param = {
         "interface": "vcu118",
@@ -162,7 +167,7 @@ fpga_vcu118(
     test_cmd = """
         --exec="transport init"
         --exec="fpga load-bitstream --vivado {vivado} {bitstream}"
-        --exec="bootstrap --clear-uart=true {firmware}"
+    """ + BOOTSTRAP_COMMAND + """
         --exec="console --non-interactive --exit-success='{exit_success}' --exit-failure='{exit_failure}'"
         no-op
     """,

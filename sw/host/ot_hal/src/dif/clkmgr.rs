@@ -2,10 +2,13 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
+#[cfg(feature = "earlgrey")]
 use bitflags::bitflags;
 
+#[cfg(any(feature = "earlgrey", feature = "darjeeling"))]
 use ot_bindgen_dif as dif;
 
+#[cfg(feature = "earlgrey")]
 use crate::util::bitfield::BitField;
 
 #[cfg(feature = "earlgrey")]

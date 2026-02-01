@@ -33,8 +33,8 @@ rust_library(
     }),
     crate_features = select({
         "//sw/device:is_english_breakfast": ["english_breakfast"],
-	"//hw/top:earlgrey": ["earlgrey"],
-	"//hw/top:darjeeling": ["darjeeling"],
+        "//hw/top:earlgrey": ["earlgrey"],
+        "//hw/top:darjeeling": ["darjeeling"],
     }),
     deps = [
         "//hw/top_earlgrey/sw/autogen/chip:top_earlgrey",

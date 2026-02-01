@@ -236,6 +236,7 @@ dependencies = [
  "byteorder",
  "chrono",
  "clap",
+ "clap-num",
  "const-oid",
  "crc",
  "cryptoki",
@@ -351,6 +352,15 @@ checksum = "e2134bb3ea021b78629caa971416385309e0131b351b25e01dc16fb54e1b5fae"
 dependencies = [
  "clap_builder",
  "clap_derive",
+]
+
+[[package]]
+name = "clap-num"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "822c4000301ac390e65995c62207501e3ef800a1fc441df913a5e8e4dc374816"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]

@@ -839,7 +839,6 @@ legacy_rom_targets(
     ]
 ]
 
-
 cc_library(
     name = "base_rom_epmp",
     srcs = [

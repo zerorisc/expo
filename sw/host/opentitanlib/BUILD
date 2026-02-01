@@ -76,6 +76,7 @@ rust_library(
         "src/app/spi.rs",
         "src/backend/mod.rs",
         "src/bootstrap/eeprom.rs",
+        "src/bootstrap/jtag.rs",
         "src/bootstrap/legacy.rs",
         "src/bootstrap/legacy_rescue.rs",
         "src/bootstrap/mod.rs",
@@ -199,11 +200,11 @@ rust_library(
         "src/util/voltage.rs",
     ] + select({
         "//sw/device:is_english_breakfast": [],
-	"//hw/top:earlgrey": [
+        "//hw/top:earlgrey": [
             "src/test_utils/extclk.rs",
             "src/test_utils/pinmux_config.rs",
         ],
-	"//hw/top:darjeeling": [
+        "//hw/top:darjeeling": [
             "src/test_utils/pinmux_config.rs",
         ],
     }),
@@ -239,18 +240,18 @@ rust_library(
     rustc_env = select({
         "//hw/top:earlgrey": dicts.add(
             RUSTC_ENV,
-	    {
+            {
                 "openocd_riscv_target_cfg": "$(location //util/openocd/target:lowrisc-earlgrey.cfg)",
                 "openocd_lc_target_cfg": "$(location //util/openocd/target:lowrisc-earlgrey-lc.cfg)",
-	    },
-	),
+            },
+        ),
         "//hw/top:darjeeling": dicts.add(
             RUSTC_ENV,
-	    {
+            {
                 "openocd_riscv_target_cfg": "$(location //util/openocd/target:lowrisc-darjeeling.cfg)",
                 "openocd_lc_target_cfg": "$(location //util/openocd/target:lowrisc-darjeeling-lc.cfg)",
-	    },
-	),
+            },
+        ),
     }),
     deps = [
         "//sw/host/opentitanlib/bindgen",
@@ -263,6 +264,7 @@ rust_library(
         "@crate_index//:byteorder",
         "@crate_index//:chrono",
         "@crate_index//:clap",
+        "@crate_index//:clap-num",
         "@crate_index//:crc",
         "@crate_index//:deser-hjson",
         "@crate_index//:directories",
