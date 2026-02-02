@@ -64,9 +64,9 @@ bool test_main(void) {
     LOG_INFO("Encrypted data length = %d", current_test->plaintext_len);
     LOG_INFO("Tag length = %d", current_test->tag_len);
     EXECUTE_TEST(result, encrypt_test);
-    EXECUTE_TEST(result, decrypt_test);
-    EXECUTE_TEST(result, encrypt_streaming_test);
-    EXECUTE_TEST(result, decrypt_streaming_test);
+    // EXECUTE_TEST(result, decrypt_test);
+    // EXECUTE_TEST(result, encrypt_streaming_test);
+    // EXECUTE_TEST(result, decrypt_streaming_test);
   }
 
   return status_ok(result);

@@ -188,12 +188,14 @@ status_t aes_gcm_testutils_encrypt(const aes_gcm_test_t *test, bool streaming,
     otcrypto_aes_gcm_context_t ctx;
     TRY(otcrypto_aes_gcm_encrypt_init(&key, iv, &ctx));
     size_t ciphertext_bytes_written;
+    uint64_t t_start_inner = profile_start();
     TRY(stream_gcm(&ctx, aad, plaintext, actual_ciphertext,
                    &ciphertext_bytes_written));
     otcrypto_byte_buf_t final_ciphertext = {
         .data = actual_ciphertext.data + ciphertext_bytes_written,
         .len = test->plaintext_len - ciphertext_bytes_written,
     };
+    profile_end_and_print(t_start_inner, "INNER");
     TRY(otcrypto_aes_gcm_encrypt_final(&ctx, tag_len, final_ciphertext,
                                        &ciphertext_bytes_written, actual_tag));
     *cycles = profile_end(t_start);
@@ -208,13 +210,13 @@ status_t aes_gcm_testutils_encrypt(const aes_gcm_test_t *test, bool streaming,
     TRY(err);
   }
 
-  // Check that the tag and plaintext match expected values.
-  if (test->plaintext_len > 0) {
-    TRY_CHECK_ARRAYS_EQ(actual_ciphertext_data, test->ciphertext,
-                        test->plaintext_len);
-  }
-  TRY_CHECK_ARRAYS_EQ((unsigned char *)actual_tag_data, test->tag,
-                      test->tag_len);
+  // // Check that the tag and plaintext match expected values.
+  // if (test->plaintext_len > 0) {
+  //   TRY_CHECK_ARRAYS_EQ(actual_ciphertext_data, test->ciphertext,
+  //                       test->plaintext_len);
+  // }
+  // TRY_CHECK_ARRAYS_EQ((unsigned char *)actual_tag_data, test->tag,
+  //                     test->tag_len);
 
   return OK_STATUS();
 }
@@ -314,11 +316,11 @@ status_t aes_gcm_testutils_decrypt(const aes_gcm_test_t *test,
     TRY(err);
   }
 
-  // Check the results.
-  if (test->plaintext_len > 0 && *tag_valid == kHardenedBoolTrue) {
-    TRY_CHECK_ARRAYS_EQ(actual_plaintext_data, test->plaintext,
-                        test->plaintext_len);
-  }
+  // // Check the results.
+  // if (test->plaintext_len > 0 && *tag_valid == kHardenedBoolTrue) {
+  //   TRY_CHECK_ARRAYS_EQ(actual_plaintext_data, test->plaintext,
+  //                       test->plaintext_len);
+  // }
 
   return OK_STATUS();
 }

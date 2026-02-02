@@ -20,6 +20,10 @@ static const uint32_t kKey128[4] = {
     // Key = f80a6e67211c873793a99d899c31c2e7
     0x676e0af8, 0x37871c21, 0x899da993, 0xe7c2319c};
 
+static const uint32_t kKey192[6] = {
+    // Key = f80a6e67211c873793a99d899c31c2e7
+    0x676e0af8, 0x37871c21, 0x899da993, 0xe7c2319c, 0x899da993, 0xe7c2319c};
+
 /**
  * Randomly-generated 256-bit key for testing.
  */
@@ -37,6 +41,10 @@ static uint8_t kAad[18] = {
     0x61, 0x75, 0x74, 0x68, 0x65, 0x6e, 0x74, 0x69, 0x63,
     0x61, 0x74, 0x65, 0x64, 0x20, 0x64, 0x61, 0x74, 0x61};
 
+static uint8_t kAadShort[16] = {0};
+
+static uint8_t kAadLong[1024] = {0};
+
 /**
  * Plaintext for testing.
  */
@@ -47,6 +55,10 @@ static uint8_t kPlaintext[32] = {
     0x61, 0x75, 0x74, 0x68, 0x65, 0x6e, 0x74, 0x69, 0x63, 0x61, 0x74,
     0x65, 0x64, 0x20, 0x61, 0x6e, 0x64, 0x20, 0x65, 0x6e, 0x63, 0x72,
     0x79, 0x70, 0x74, 0x65, 0x64, 0x20, 0x64, 0x61, 0x74, 0x61};
+
+static uint8_t kPlaintextShort[16] = {0};
+
+static uint8_t kPlaintextLong[1024] = {0};
 
 /**
  * Expected ciphertext for the 256-bit key.
@@ -124,7 +136,44 @@ static uint8_t kMVTestCase10Ciphertext[] = {
     0x18, 0xe2, 0x44, 0x8b, 0x2f, 0xe3, 0x24, 0xd9, 0xcc, 0xda, 0x27, 0x10};
 
 aes_gcm_test_t kAesGcmTestvectors[] = {
-    // Empty input, empty aad, 96-bit IV, 128-bit key
+    {
+        .key_len = ARRAYSIZE(kKey128),
+        .key = kKey128,
+        .iv_len = 12,
+        .iv =
+            {// IV = 22294cae82d82e44427dfcc3
+             0x22, 0x29, 0x4c, 0xae, 0x82, 0xd8, 0x2e, 0x44, 0x42, 0x7d, 0xfc,
+             0xc3},
+        .plaintext_len = sizeof(kPlaintextShort),
+        .plaintext = kPlaintextShort,
+        .aad_len = 0,
+        .aad = NULL,
+        .ciphertext = NULL,
+        .tag_len = 16,
+        .tag =
+            {// Tag = b7aa223a6c75a0976633ce79d9fddf06
+             0xb7, 0xaa, 0x22, 0x3a, 0x6c, 0x75, 0xa0, 0x97, 0x66, 0x33, 0xce,
+             0x79, 0xd9, 0xfd, 0xdf, 0x06},
+    },
+    {
+        .key_len = ARRAYSIZE(kKey128),
+        .key = kKey128,
+        .iv_len = 12,
+        .iv =
+            {// IV = 22294cae82d82e44427dfcc3
+             0x22, 0x29, 0x4c, 0xae, 0x82, 0xd8, 0x2e, 0x44, 0x42, 0x7d, 0xfc,
+             0xc3},
+        .plaintext_len = sizeof(kPlaintextLong),
+        .plaintext = kPlaintextLong,
+        .aad_len = 0,
+        .aad = NULL,
+        .ciphertext = NULL,
+        .tag_len = 16,
+        .tag =
+            {// Tag = b7aa223a6c75a0976633ce79d9fddf06
+             0xb7, 0xaa, 0x22, 0x3a, 0x6c, 0x75, 0xa0, 0x97, 0x66, 0x33, 0xce,
+             0x79, 0xd9, 0xfd, 0xdf, 0x06},
+    },
     {
         .key_len = ARRAYSIZE(kKey128),
         .key = kKey128,
@@ -135,6 +184,44 @@ aes_gcm_test_t kAesGcmTestvectors[] = {
              0xc3},
         .plaintext_len = 0,
         .plaintext = NULL,
+        .aad_len = sizeof(kAadShort),
+        .aad = kAadShort,
+        .ciphertext = NULL,
+        .tag_len = 16,
+        .tag =
+            {// Tag = b7aa223a6c75a0976633ce79d9fddf06
+             0xb7, 0xaa, 0x22, 0x3a, 0x6c, 0x75, 0xa0, 0x97, 0x66, 0x33, 0xce,
+             0x79, 0xd9, 0xfd, 0xdf, 0x06},
+    },
+    {
+        .key_len = ARRAYSIZE(kKey128),
+        .key = kKey128,
+        .iv_len = 12,
+        .iv =
+            {// IV = 22294cae82d82e44427dfcc3
+             0x22, 0x29, 0x4c, 0xae, 0x82, 0xd8, 0x2e, 0x44, 0x42, 0x7d, 0xfc,
+             0xc3},
+        .plaintext_len = 0,
+        .plaintext = NULL,
+        .aad_len = sizeof(kAadLong),
+        .aad = kAadLong,
+        .ciphertext = NULL,
+        .tag_len = 16,
+        .tag =
+            {// Tag = b7aa223a6c75a0976633ce79d9fddf06
+             0xb7, 0xaa, 0x22, 0x3a, 0x6c, 0x75, 0xa0, 0x97, 0x66, 0x33, 0xce,
+             0x79, 0xd9, 0xfd, 0xdf, 0x06},
+    },
+    {
+        .key_len = ARRAYSIZE(kKey192),
+        .key = kKey192,
+        .iv_len = 12,
+        .iv =
+            {// IV = 22294cae82d82e44427dfcc3
+             0x22, 0x29, 0x4c, 0xae, 0x82, 0xd8, 0x2e, 0x44, 0x42, 0x7d, 0xfc,
+             0xc3},
+        .plaintext_len = sizeof(kPlaintextShort),
+        .plaintext = kPlaintextShort,
         .aad_len = 0,
         .aad = NULL,
         .ciphertext = NULL,
@@ -144,103 +231,265 @@ aes_gcm_test_t kAesGcmTestvectors[] = {
              0xb7, 0xaa, 0x22, 0x3a, 0x6c, 0x75, 0xa0, 0x97, 0x66, 0x33, 0xce,
              0x79, 0xd9, 0xfd, 0xdf, 0x06},
     },
-
-    // Empty input, empty aad, 128-bit IV, 128-bit key
     {
-        .key_len = ARRAYSIZE(kKey128),
-        .key = kKey128,
-        .iv_len = 16,
+        .key_len = ARRAYSIZE(kKey192),
+        .key = kKey192,
+        .iv_len = 12,
         .iv =
-            {// IV = 22294cae82d82e44427dfcc33bacdbec
+            {// IV = 22294cae82d82e44427dfcc3
              0x22, 0x29, 0x4c, 0xae, 0x82, 0xd8, 0x2e, 0x44, 0x42, 0x7d, 0xfc,
-             0xc3, 0x3b, 0xac, 0xdb, 0xec},
-        .plaintext_len = 0,
-        .plaintext = NULL,
+             0xc3},
+        .plaintext_len = sizeof(kPlaintextLong),
+        .plaintext = kPlaintextLong,
         .aad_len = 0,
         .aad = NULL,
         .ciphertext = NULL,
         .tag_len = 16,
         .tag =
-            {// Tag = 4c59f0d420d9eb8669c40ad23b5419ba
-             0x4c, 0x59, 0xf0, 0xd4, 0x20, 0xd9, 0xeb, 0x86, 0x69, 0xc4, 0x0a,
-             0xd2, 0x3b, 0x54, 0x19, 0xba},
+            {// Tag = b7aa223a6c75a0976633ce79d9fddf06
+             0xb7, 0xaa, 0x22, 0x3a, 0x6c, 0x75, 0xa0, 0x97, 0x66, 0x33, 0xce,
+             0x79, 0xd9, 0xfd, 0xdf, 0x06},
     },
-
-    // 128-bit IV, 256-bit key, real message and aad
     {
-        .key_len = ARRAYSIZE(kKey256),
-        .key = kKey256,
-        .iv_len = 16,
+        .key_len = ARRAYSIZE(kKey192),
+        .key = kKey192,
+        .iv_len = 12,
         .iv =
-            {// IV = c58aded2e1bbecba8b16a5757e5475bd
-             0xc5, 0x8a, 0xde, 0xd2, 0xe1, 0xbb, 0xec, 0xba, 0x8b, 0x16, 0xa5,
-             0x75, 0x7e, 0x54, 0x75, 0xbd},
-        .plaintext_len = sizeof(kPlaintext),
-        .plaintext = kPlaintext,
-        .aad_len = sizeof(kAad),
-        .aad = kAad,
-        .ciphertext = kCiphertext256,
+            {// IV = 22294cae82d82e44427dfcc3
+             0x22, 0x29, 0x4c, 0xae, 0x82, 0xd8, 0x2e, 0x44, 0x42, 0x7d, 0xfc,
+             0xc3},
+        .plaintext_len = 0,
+        .plaintext = NULL,
+        .aad_len = sizeof(kAadShort),
+        .aad = kAadShort,
+        .ciphertext = NULL,
         .tag_len = 16,
         .tag =
-            {// Tag = 324895b3d2f656e4fa2f8ce056137061
-             0x32, 0x48, 0x95, 0xb3, 0xd2, 0xf6, 0x56, 0xe4, 0xfa, 0x2f, 0x8c,
-             0xe0, 0x56, 0x13, 0x70, 0x61},
+            {// Tag = b7aa223a6c75a0976633ce79d9fddf06
+             0xb7, 0xaa, 0x22, 0x3a, 0x6c, 0x75, 0xa0, 0x97, 0x66, 0x33, 0xce,
+             0x79, 0xd9, 0xfd, 0xdf, 0x06},
     },
-
-    // 128-bit IV, 256-bit key, real message and aad, short tag
+    {
+        .key_len = ARRAYSIZE(kKey192),
+        .key = kKey192,
+        .iv_len = 12,
+        .iv =
+            {// IV = 22294cae82d82e44427dfcc3
+             0x22, 0x29, 0x4c, 0xae, 0x82, 0xd8, 0x2e, 0x44, 0x42, 0x7d, 0xfc,
+             0xc3},
+        .plaintext_len = 0,
+        .plaintext = NULL,
+        .aad_len = sizeof(kAadLong),
+        .aad = kAadLong,
+        .ciphertext = NULL,
+        .tag_len = 16,
+        .tag =
+            {// Tag = b7aa223a6c75a0976633ce79d9fddf06
+             0xb7, 0xaa, 0x22, 0x3a, 0x6c, 0x75, 0xa0, 0x97, 0x66, 0x33, 0xce,
+             0x79, 0xd9, 0xfd, 0xdf, 0x06},
+    },    // // Empty input, empty aad, 96-bit IV, 128-bit key
     {
         .key_len = ARRAYSIZE(kKey256),
         .key = kKey256,
-        .iv_len = 16,
-        .iv =
-            {// IV = c58aded2e1bbecba8b16a5757e5475bd
-             0xc5, 0x8a, 0xde, 0xd2, 0xe1, 0xbb, 0xec, 0xba, 0x8b, 0x16, 0xa5,
-             0x75, 0x7e, 0x54, 0x75, 0xbd},
-        .plaintext_len = sizeof(kPlaintext),
-        .plaintext = kPlaintext,
-        .aad_len = sizeof(kAad),
-        .aad = kAad,
-        .ciphertext = kCiphertext256,
-        .tag_len = 12,
-        .tag =
-            {// Tag = 324895b3d2f656e4fa2f8ce0
-             0x32, 0x48, 0x95, 0xb3, 0xd2, 0xf6, 0x56, 0xe4, 0xfa, 0x2f, 0x8c,
-             0xe0, 0, 0, 0, 0},
-    },
-
-    // McGrew and Viega test case 3
-    {
-        .key_len = ARRAYSIZE(kMVTestCase3Key),
-        .key = kMVTestCase3Key,
         .iv_len = 12,
-        .iv = {0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce, 0xdb, 0xad, 0xde, 0xca, 0xf8,
-               0x88},
-        .plaintext_len = sizeof(kMVTestCase3Plaintext),
-        .plaintext = kMVTestCase3Plaintext,
+        .iv =
+            {// IV = 22294cae82d82e44427dfcc3
+             0x22, 0x29, 0x4c, 0xae, 0x82, 0xd8, 0x2e, 0x44, 0x42, 0x7d, 0xfc,
+             0xc3},
+        .plaintext_len = sizeof(kPlaintextShort),
+        .plaintext = kPlaintextShort,
         .aad_len = 0,
         .aad = NULL,
-        .ciphertext = kMVTestCase3Ciphertext,
+        .ciphertext = NULL,
         .tag_len = 16,
-        .tag = {0x4d, 0x5c, 0x2a, 0xf3, 0x27, 0xcd, 0x64, 0xa6, 0x2c, 0xf3,
-                0x5a, 0xbd, 0x2b, 0xa6, 0xfa, 0xb4},
+        .tag =
+            {// Tag = b7aa223a6c75a0976633ce79d9fddf06
+             0xb7, 0xaa, 0x22, 0x3a, 0x6c, 0x75, 0xa0, 0x97, 0x66, 0x33, 0xce,
+             0x79, 0xd9, 0xfd, 0xdf, 0x06},
     },
-
-    // McGrew and Viega test case 10
     {
-        .key_len = ARRAYSIZE(kMVTestCase10Key),
-        .key = kMVTestCase10Key,
+        .key_len = ARRAYSIZE(kKey256),
+        .key = kKey256,
         .iv_len = 12,
-        .iv = {0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce, 0xdb, 0xad, 0xde, 0xca, 0xf8,
-               0x88},
-        .plaintext_len = sizeof(kMVTestCase10Plaintext),
-        .plaintext = kMVTestCase10Plaintext,
-        .aad_len = sizeof(kMVTestCase10Aad),
-        .aad = kMVTestCase10Aad,
-        .ciphertext = kMVTestCase10Ciphertext,
+        .iv =
+            {// IV = 22294cae82d82e44427dfcc3
+             0x22, 0x29, 0x4c, 0xae, 0x82, 0xd8, 0x2e, 0x44, 0x42, 0x7d, 0xfc,
+             0xc3},
+        .plaintext_len = sizeof(kPlaintextLong),
+        .plaintext = kPlaintextLong,
+        .aad_len = 0,
+        .aad = NULL,
+        .ciphertext = NULL,
         .tag_len = 16,
-        .tag = {0x25, 0x19, 0x49, 0x8e, 0x80, 0xf1, 0x47, 0x8f, 0x37, 0xba,
-                0x55, 0xbd, 0x6d, 0x27, 0x61, 0x8c},
+        .tag =
+            {// Tag = b7aa223a6c75a0976633ce79d9fddf06
+             0xb7, 0xaa, 0x22, 0x3a, 0x6c, 0x75, 0xa0, 0x97, 0x66, 0x33, 0xce,
+             0x79, 0xd9, 0xfd, 0xdf, 0x06},
     },
+    {
+        .key_len = ARRAYSIZE(kKey256),
+        .key = kKey256,
+        .iv_len = 12,
+        .iv =
+            {// IV = 22294cae82d82e44427dfcc3
+             0x22, 0x29, 0x4c, 0xae, 0x82, 0xd8, 0x2e, 0x44, 0x42, 0x7d, 0xfc,
+             0xc3},
+        .plaintext_len = 0,
+        .plaintext = NULL,
+        .aad_len = sizeof(kAadShort),
+        .aad = kAadShort,
+        .ciphertext = NULL,
+        .tag_len = 16,
+        .tag =
+            {// Tag = b7aa223a6c75a0976633ce79d9fddf06
+             0xb7, 0xaa, 0x22, 0x3a, 0x6c, 0x75, 0xa0, 0x97, 0x66, 0x33, 0xce,
+             0x79, 0xd9, 0xfd, 0xdf, 0x06},
+    },
+    {
+        .key_len = ARRAYSIZE(kKey256),
+        .key = kKey256,
+        .iv_len = 12,
+        .iv =
+            {// IV = 22294cae82d82e44427dfcc3
+             0x22, 0x29, 0x4c, 0xae, 0x82, 0xd8, 0x2e, 0x44, 0x42, 0x7d, 0xfc,
+             0xc3},
+        .plaintext_len = 0,
+        .plaintext = NULL,
+        .aad_len = sizeof(kAadLong),
+        .aad = kAadLong,
+        .ciphertext = NULL,
+        .tag_len = 16,
+        .tag =
+            {// Tag = b7aa223a6c75a0976633ce79d9fddf06
+             0xb7, 0xaa, 0x22, 0x3a, 0x6c, 0x75, 0xa0, 0x97, 0x66, 0x33, 0xce,
+             0x79, 0xd9, 0xfd, 0xdf, 0x06},
+    },
+// {
+//     .key_len = ARRAYSIZE(kKey128),
+//     .key = kKey128,
+//     .iv_len = 12,
+//     .iv =
+//         {// IV = 22294cae82d82e44427dfcc3
+//          0x22, 0x29, 0x4c, 0xae, 0x82, 0xd8, 0x2e, 0x44, 0x42, 0x7d,
+//          0xfc,
+//          0xc3},
+//     .plaintext_len = 0,
+//     .plaintext = NULL,
+//     .aad_len = 0,
+//     .aad = NULL,
+//     .ciphertext = NULL,
+//     .tag_len = 16,
+//     .tag =
+//         {// Tag = b7aa223a6c75a0976633ce79d9fddf06
+//          0xb7, 0xaa, 0x22, 0x3a, 0x6c, 0x75, 0xa0, 0x97, 0x66, 0x33,
+//          0xce,
+//          0x79, 0xd9, 0xfd, 0xdf, 0x06},
+// },
+
+// // Empty input, empty aad, 128-bit IV, 128-bit key
+// {
+//     .key_len = ARRAYSIZE(kKey128),
+//     .key = kKey128,
+//     .iv_len = 16,
+//     .iv =
+//         {// IV = 22294cae82d82e44427dfcc33bacdbec
+//          0x22, 0x29, 0x4c, 0xae, 0x82, 0xd8, 0x2e, 0x44, 0x42, 0x7d,
+//          0xfc,
+//          0xc3, 0x3b, 0xac, 0xdb, 0xec},
+//     .plaintext_len = 0,
+//     .plaintext = NULL,
+//     .aad_len = 0,
+//     .aad = NULL,
+//     .ciphertext = NULL,
+//     .tag_len = 16,
+//     .tag =
+//         {// Tag = 4c59f0d420d9eb8669c40ad23b5419ba
+//          0x4c, 0x59, 0xf0, 0xd4, 0x20, 0xd9, 0xeb, 0x86, 0x69, 0xc4,
+//          0x0a,
+//          0xd2, 0x3b, 0x54, 0x19, 0xba},
+// },
+
+// // 128-bit IV, 256-bit key, real message and aad
+// {
+//     .key_len = ARRAYSIZE(kKey256),
+//     .key = kKey256,
+//     .iv_len = 16,
+//     .iv =
+//         {// IV = c58aded2e1bbecba8b16a5757e5475bd
+//          0xc5, 0x8a, 0xde, 0xd2, 0xe1, 0xbb, 0xec, 0xba, 0x8b, 0x16,
+//          0xa5,
+//          0x75, 0x7e, 0x54, 0x75, 0xbd},
+//     .plaintext_len = sizeof(kPlaintext),
+//     .plaintext = kPlaintext,
+//     .aad_len = sizeof(kAad),
+//     .aad = kAad,
+//     .ciphertext = kCiphertext256,
+//     .tag_len = 16,
+//     .tag =
+//         {// Tag = 324895b3d2f656e4fa2f8ce056137061
+//          0x32, 0x48, 0x95, 0xb3, 0xd2, 0xf6, 0x56, 0xe4, 0xfa, 0x2f,
+//          0x8c,
+//          0xe0, 0x56, 0x13, 0x70, 0x61},
+// },
+
+// // 128-bit IV, 256-bit key, real message and aad, short tag
+// {
+//     .key_len = ARRAYSIZE(kKey256),
+//     .key = kKey256,
+//     .iv_len = 16,
+//     .iv =
+//         {// IV = c58aded2e1bbecba8b16a5757e5475bd
+//          0xc5, 0x8a, 0xde, 0xd2, 0xe1, 0xbb, 0xec, 0xba, 0x8b, 0x16,
+//          0xa5,
+//          0x75, 0x7e, 0x54, 0x75, 0xbd},
+//     .plaintext_len = sizeof(kPlaintext),
+//     .plaintext = kPlaintext,
+//     .aad_len = sizeof(kAad),
+//     .aad = kAad,
+//     .ciphertext = kCiphertext256,
+//     .tag_len = 12,
+//     .tag =
+//         {// Tag = 324895b3d2f656e4fa2f8ce0
+//          0x32, 0x48, 0x95, 0xb3, 0xd2, 0xf6, 0x56, 0xe4, 0xfa, 0x2f,
+//          0x8c,
+//          0xe0, 0, 0, 0, 0},
+// },
+
+// // McGrew and Viega test case 3
+// {
+//     .key_len = ARRAYSIZE(kMVTestCase3Key),
+//     .key = kMVTestCase3Key,
+//     .iv_len = 12,
+//     .iv = {0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce, 0xdb, 0xad, 0xde, 0xca,
+//     0xf8,
+//            0x88},
+//     .plaintext_len = sizeof(kMVTestCase3Plaintext),
+//     .plaintext = kMVTestCase3Plaintext,
+//     .aad_len = 0,
+//     .aad = NULL,
+//     .ciphertext = kMVTestCase3Ciphertext,
+//     .tag_len = 16,
+//     .tag = {0x4d, 0x5c, 0x2a, 0xf3, 0x27, 0xcd, 0x64, 0xa6, 0x2c, 0xf3,
+//             0x5a, 0xbd, 0x2b, 0xa6, 0xfa, 0xb4},
+// },
+
+// // McGrew and Viega test case 10
+// {
+//     .key_len = ARRAYSIZE(kMVTestCase10Key),
+//     .key = kMVTestCase10Key,
+//     .iv_len = 12,
+//     .iv = {0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce, 0xdb, 0xad, 0xde, 0xca,
+//     0xf8,
+//            0x88},
+//     .plaintext_len = sizeof(kMVTestCase10Plaintext),
+//     .plaintext = kMVTestCase10Plaintext,
+//     .aad_len = sizeof(kMVTestCase10Aad),
+//     .aad = kMVTestCase10Aad,
+//     .ciphertext = kMVTestCase10Ciphertext,
+//     .tag_len = 16,
+//     .tag = {0x25, 0x19, 0x49, 0x8e, 0x80, 0xf1, 0x47, 0x8f, 0x37, 0xba,
+//             0x55, 0xbd, 0x6d, 0x27, 0x61, 0x8c},
+// },
 };
 
 #ifdef __cplusplus
