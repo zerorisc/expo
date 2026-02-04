@@ -24,7 +24,8 @@ opentitan_binary(
         "//hw/top_earlgrey:sim_verilator",
         # For some reason, this target makes englishbreakfast builds fail.
         #"//hw/top_earlgrey:silicon_owner_sival_rom_ext",
-        "//hw/top_darjeeling:fpga_vcu118_test_rom",
+        #"//hw/top_darjeeling:fpga_vcu118_test_rom",
+        "//hw/top_darjeeling:fpga_vcu118_rom_with_fake_keys",
     ],
     deps = [
         ":hello_world_lib",

@@ -95,7 +95,20 @@ sim_verilator(
 # FPGA VCU118 Environments
 ###########################################################################
 
-BOOTSTRAP_COMMAND = '--exec "bootstrap --clear-uart=true --protocol=jtag {openocd} --target-addr=' + DARJEELING_SLOTS["ctn_addr"] + ' {firmware}"'
+TARGET_ADDR = str(int(
+    DARJEELING_SLOTS["sram_main"],
+    16,
+))
+
+PAYLOAD_SIZE = str(int(
+    DARJEELING_SLOTS["sram_main_size"],
+    16,
+) - int(
+    DARJEELING_SLOTS["rom_ext_sram_main"],
+    16,
+))
+
+BOOTSTRAP_COMMAND = '--exec "bootstrap --clear-uart=true --protocol=jtag {openocd} --size=' + PAYLOAD_SIZE + " --target-addr=" + TARGET_ADDR + ' {firmware}"'
 
 fpga_vcu118(
     name = "fpga_vcu118",
@@ -106,7 +119,7 @@ fpga_vcu118(
         "//sw/device/lib/arch:fpga_vcu118",
         "//hw/top_darjeeling/sw/dt:fpga_vcu118",
     ],
-    linker_script = "//sw/device/lib/testing/test_framework:ottf_ld_silicon_creator_slot_a",
+    linker_script = "//sw/device/lib/testing/test_framework:ottf_ld_silicon_creator_ram",
     otp_mmap = "//hw/top_darjeeling/data/otp:otp_ctrl_mmap.hjson",
     slot_spec = DARJEELING_SLOTS,
     test_cmd = "testing-not-supported",
@@ -129,7 +142,7 @@ fpga_vcu118(
         "exit_failure": DEFAULT_TEST_FAILURE_MSG,
         # Place the firmware in the ROM_EXT stage, because this exec_env
         # doesn't run with a real ROM_EXT.
-        "assemble": "{firmware}@{rom_ext_ctn}",
+        "assemble": "--size=" + PAYLOAD_SIZE + " {firmware}@{rom_ext_sram_main}",
     },
     rom = "//sw/device/lib/testing/test_rom:test_rom",
     test_cmd = """
@@ -160,7 +173,7 @@ fpga_vcu118(
         "exit_failure": DEFAULT_TEST_FAILURE_MSG,
         # Place the firmware in the ROM_EXT stage, because this exec_env
         # doesn't run with a real ROM_EXT.
-        "assemble": "{firmware}@{rom_ext_ctn}",
+        "assemble": "--size=" + PAYLOAD_SIZE + " {firmware}@{rom_ext_sram_main}",
     },
     rom = "//sw/device/silicon_creator/rom:base_rom",
     second_rom = "//sw/device/silicon_creator/rom:second_rom",
@@ -196,12 +209,13 @@ fpga_vcu118(
     testonly = True,
     base = ":fpga_vcu118_rom_with_base_rom",
     exec_env = "fpga_vcu118_rom_ext",
+    linker_script = "//sw/device/lib/testing/test_framework:ottf_ld_silicon_owner_ram",
     manifest = "//sw/device/silicon_owner:manifest",
     param = {
         "interface": "vcu118",
         "exit_success": DEFAULT_TEST_SUCCESS_MSG,
         "exit_failure": DEFAULT_TEST_FAILURE_MSG,
-        "assemble": "{rom_ext}@{rom_ext_ctn} {firmware}@{owner_ctn}",
+        "assemble": "--size=" + PAYLOAD_SIZE + " {rom_ext}@{rom_ext_ctn} {firmware}@{owner_ctn}",
     },
     rom_ext = "//sw/device/silicon_creator/rom_ext:rom_ext_dice_x509",
 )

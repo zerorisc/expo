@@ -7,6 +7,7 @@ load("//rules:cross_platform.bzl", "dual_cc_library", "dual_inputs")
 load("//rules:linker.bzl", "ld_library")
 load("//rules:manifest.bzl", "manifest")
 load("//rules/opentitan:defs.bzl", "OPENTITAN_CPU", "opentitan_binary")
+load("//hw/top:defs.bzl", "opentitan_require_top")
 load(
     "//sw/device/silicon_creator/rom_ext:defs.bzl",
     "ROM_EXT_VARIATIONS",
@@ -107,7 +108,10 @@ cc_test(
 
 ld_library(
     name = "ld_common",
-    includes = ["rom_ext_common.ld"],
+    includes = select({
+        "//hw/top:earlgrey": ["rom_ext_common.ld"],
+        "//hw/top:darjeeling": ["rom_ext_ram_common.ld"],
+    }),
     deps = [
         "//sw/device:info_sections",
         "//sw/device/silicon_creator/lib/base:static_critical_sections",
@@ -115,9 +119,11 @@ ld_library(
     ],
 )
 
+# Earlgrey linker scripts
 ld_library(
     name = "ld_slot_a",
     script = "rom_ext_slot_a.ld",
+    target_compatible_with = opentitan_require_top("earlgrey"),
     deps = [
         ":ld_common",
         "//hw/top_earlgrey/sw/autogen:top_earlgrey_memory",
@@ -127,6 +133,7 @@ ld_library(
 ld_library(
     name = "ld_slot_b",
     script = "rom_ext_slot_b.ld",
+    target_compatible_with = opentitan_require_top("earlgrey"),
     deps = [
         ":ld_common",
         "//hw/top_earlgrey/sw/autogen:top_earlgrey_memory",
@@ -136,9 +143,31 @@ ld_library(
 ld_library(
     name = "ld_slot_virtual",
     script = "rom_ext_slot_virtual.ld",
+    target_compatible_with = opentitan_require_top("earlgrey"),
     deps = [
         ":ld_common",
         "//hw/top_earlgrey/sw/autogen:top_earlgrey_memory",
+    ],
+)
+
+# Darjeeling linker scripts
+ld_library(
+    name = "ld_ram_main",
+    script = "rom_ext_ram_main.ld",
+    target_compatible_with = opentitan_require_top("darjeeling"),
+    deps = [
+        ":ld_common",
+        "//hw/top_darjeeling/sw/autogen:top_darjeeling_memory",
+    ],
+)
+
+ld_library(
+    name = "ld_ram_ctn",
+    script = "rom_ext_ram_ctn.ld",
+    target_compatible_with = opentitan_require_top("darjeeling"),
+    deps = [
+        ":ld_common",
+        "//hw/top_darjeeling/sw/autogen:top_darjeeling_memory",
     ],
 )
 

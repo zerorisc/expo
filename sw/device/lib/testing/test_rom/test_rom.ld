@@ -44,8 +44,12 @@ _manifest_address = ORIGIN(ottf_storage);
  */
 _rom_ext_virtual_start_address = ORIGIN(rom_ext_virtual);
 _rom_ext_virtual_size = LENGTH(rom_ext_virtual);
+#ifdef OPENTITAN_IS_EARLGREY
+/* TODO: Check the virtual memory size for Darjeeling once we migrate from main
+ * SRAM to CTN. */
 ASSERT((_rom_ext_virtual_size <= (LENGTH(ottf_storage) / 2)),
   "Error: rom ext flash is bigger than slot.");
+#endif
 
 _rom_digest_size = 32;
 _chip_info_start = ORIGIN(test_rom) + LENGTH(test_rom) - _rom_digest_size - _chip_info_size;

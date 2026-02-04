@@ -7,7 +7,11 @@
 MEMORY {
     /* There is a 1MiB RAM within the CTN at offset 16MiB to hold the
      * firmware under test in DV. */
-    ctn_ram(rwx) : ORIGIN = ORIGIN(ctn) + 0x1000000, LENGTH = 0x100000
+    /* TODO: uncomment this to use the CTN region, not the smaller main SRAM */
+    /* ctn_ram(rwx) : ORIGIN = ORIGIN(ctn) + 0x1000000, LENGTH = 0x100000 */
+
+    /* We temporarily use the main SRAM in place of the CTN. */
+    ctn_ram(rwx): ORIGIN = _bss_end, LENGTH = 0x10000 - (_bss_end - ORIGIN(ram_main))
 }
 REGION_ALIAS("ottf_storage", ctn_ram)
 #else

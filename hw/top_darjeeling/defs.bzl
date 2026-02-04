@@ -25,8 +25,10 @@ DARJEELING = opentitan_top(
 )
 
 DARJEELING_SLOTS = {
-    "ctn_addr": "0x40000000",
-    "rom_ext_ctn": "0x0",
-    "owner_ctn": "0x10000",
-    "rom_ext_size": "0x10000",
+    "sram_main": "0x10000000",
+    "sram_main_size": "0x10000",
+    "rom_ext_sram_main": "0x2020",
+    "sram_ctn": "0x41000000",
+    "rom_ext_sram_ctn": "0x0",
+    "sram_ctn_size": "0x100000",
 }

@@ -138,6 +138,16 @@ ld_library(
 )
 
 ld_library(
+    name = "ottf_ld_silicon_creator_ram",
+    script = "ottf_silicon_creator_ram.ld",
+    deps = [
+        ":ottf_ld_common",
+        ":ottf_ld_top_config",
+        "//hw/top:top_ld",
+    ],
+)
+
+ld_library(
     name = "ottf_ld_silicon_owner_slot_a",
     script = "ottf_silicon_owner_a.ld",
     deps = [
@@ -160,6 +170,16 @@ ld_library(
 ld_library(
     name = "ottf_ld_silicon_owner_slot_virtual",
     script = "ottf_silicon_owner_virtual.ld",
+    deps = [
+        ":ottf_ld_common",
+        ":ottf_ld_top_config",
+        "//hw/top:top_ld",
+    ],
+)
+
+ld_library(
+    name = "ottf_ld_silicon_owner_ram",
+    script = "ottf_silicon_owner_ram.ld",
     deps = [
         ":ottf_ld_common",
         ":ottf_ld_top_config",

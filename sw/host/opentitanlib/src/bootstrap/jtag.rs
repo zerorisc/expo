@@ -55,9 +55,15 @@ impl UpdateProtocol for Jtag {
         let target_addr = container.target_addr.ok_or(anyhow::Error::msg(
             "JTAG bootstrap reuquires `--target_addr` to be set.",
         ))?;
+        let total = payload.len().div_ceil(2048);
         while current < payload.len() {
             let end = current.saturating_add(2048).min(payload.len());
-            log::info!("Writing chunk {} (offset {:x?})", chunk, current,);
+            log::info!(
+                "Writing chunk {} of {} (offset {:x?})",
+                chunk,
+                total,
+                current,
+            );
             let current_u32: u32 = current
                 .try_into()
                 .expect("Payload too large for 32-bit address space.");
