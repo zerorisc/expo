@@ -1450,7 +1450,8 @@ module chip_darjeeling_vcu118 #(
     // with random data via the backdoor loading interface - it
     // can't load "real" SW images yet since that requires
     // additional build infrastructure.
-    .SecRomCtrl1DisableScrambling(1),
+    //.SecRomCtrl1DisableScrambling(1),
+    .RomCtrl1BootRomInitFile(BootRomInitFile),
     .RomCtrl0BootRomInitFile(BootRomInitFile),
     .RvCoreIbexRegFile(ibex_pkg::RegFileFPGA),
     .RvCoreIbexSecureIbex(0),

@@ -1151,7 +1151,8 @@ module chip_${top["name"]}_${target["name"]} #(
     // with random data via the backdoor loading interface - it
     // can't load "real" SW images yet since that requires
     // additional build infrastructure.
-    .SecRomCtrl1DisableScrambling(1),
+    //.SecRomCtrl1DisableScrambling(1),
+    .RomCtrl1BootRomInitFile(BootRomInitFile),
   % endif
     .RomCtrl0BootRomInitFile(BootRomInitFile),
     .RvCoreIbexRegFile(ibex_pkg::RegFileFPGA),
