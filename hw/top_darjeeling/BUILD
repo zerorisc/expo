@@ -108,7 +108,8 @@ PAYLOAD_SIZE = str(int(
     16,
 ))
 
-BOOTSTRAP_COMMAND = '--exec "bootstrap --clear-uart=true --protocol=jtag {openocd} --size=' + PAYLOAD_SIZE + " --target-addr=" + TARGET_ADDR + ' {firmware}"'
+BOOTSTRAP_COMMAND = ""
+#BOOTSTRAP_COMMAND = '--exec "bootstrap --clear-uart=true --protocol=jtag {openocd} --size=' + PAYLOAD_SIZE + " --target-addr=" + TARGET_ADDR + ' {firmware}"'
 
 fpga_vcu118(
     name = "fpga_vcu118",
@@ -125,7 +126,7 @@ fpga_vcu118(
     test_cmd = "testing-not-supported",
 )
 
-# VCU118 with the test ROM spliced, no second ROM; firmware is bootstrapped and
+# VCU118 with the test ROM and second ROM spliced; firmware is bootstrapped and
 # executed in the ROM_EXT stage.
 fpga_vcu118(
     name = "fpga_vcu118_test_rom",
@@ -145,6 +146,7 @@ fpga_vcu118(
         "assemble": "--size=" + PAYLOAD_SIZE + " {firmware}@{rom_ext_sram_main}",
     },
     rom = "//sw/device/lib/testing/test_rom:test_rom",
+    second_rom = "//sw/device/lib/testing/test_second_rom:test_second_rom",
     test_cmd = """
         --exec="transport init"
         --exec="fpga load-bitstream --vivado {vivado} {bitstream}"

@@ -109,7 +109,7 @@ module top_darjeeling #(
   parameter bit SecRomCtrl0DisableScrambling = 1'b0,
   // parameters for rom_ctrl1
   parameter RomCtrl1BootRomInitFile = "",
-  parameter bit SecRomCtrl1DisableScrambling = 1'b0,
+  parameter bit SecRomCtrl1DisableScrambling = 1'b1,
   // parameters for dma
   parameter bit DmaEnableDataIntgGen = 1'b1,
   parameter bit DmaEnableRspDataIntgCheck = 1'b1,

@@ -12,7 +12,10 @@
 module chip_darjeeling_vcu118 #(
   // Path to a VMEM file containing the contents of the boot ROM, which will be
   // baked into the FPGA bitstream.
-  parameter BootRomInitFile = "test_rom_fpga_vcu118.32.vmem",
+  parameter BootRom0InitFile = "test_rom_fpga_vcu118.32.vmem",
+  // Path to a VMEM file containing the contents of the second ROM, which will be
+  // baked into the FPGA bitstream.
+  parameter BootRom1InitFile = "test_second_rom_fpga_vcu118.32.vmem",
   // Path to a VMEM file containing the contents of the emulated OTP, which will be
   // baked into the FPGA bitstream.
   parameter OtpMacroMemInitFile = "otp_img_fpga_vcu118.vmem",
@@ -1450,9 +1453,9 @@ module chip_darjeeling_vcu118 #(
     // with random data via the backdoor loading interface - it
     // can't load "real" SW images yet since that requires
     // additional build infrastructure.
-    //.SecRomCtrl1DisableScrambling(1),
-    .RomCtrl1BootRomInitFile(BootRomInitFile),
-    .RomCtrl0BootRomInitFile(BootRomInitFile),
+    .SecRomCtrl1DisableScrambling(1),
+    .RomCtrl1BootRomInitFile(BootRom1InitFile),
+    .RomCtrl0BootRomInitFile(BootRom0InitFile),
     .RvCoreIbexRegFile(ibex_pkg::RegFileFPGA),
     .RvCoreIbexSecureIbex(0),
     .SramCtrlMainInstrExec(1),

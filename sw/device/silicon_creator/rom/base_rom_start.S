@@ -11,6 +11,7 @@
 #include "hw/top/clkmgr_regs.h"
 #include "hw/top/csrng_regs.h"
 #include "hw/top/edn_regs.h"
+#include "hw/top/entropy_src_regs.h"
 #include "hw/top/gpio_regs.h"
 #include "hw/top/lc_ctrl_regs.h"
 #include "hw/top/otp_ctrl_regs.h"
@@ -199,6 +200,9 @@ LABEL_FOR_TEST(kRomStartWatchdogEnabled)
   li   t0, 0x00000888
   csrc mie, t0
 
+  // Must be called prior to any Main RAM access.
+  call base_rom_epmp_init
+
   // Copy the AST configuration from OTP.
   li   a0, (TOP_DARJEELING_AST_BASE_ADDR)
   li   a1, (TOP_DARJEELING_AST_BASE_ADDR + AST_REGAL_REG_OFFSET + 4)
@@ -215,6 +219,23 @@ LABEL_FOR_TEST(kRomStartWatchdogEnabled)
   sw   t0, CLKMGR_JITTER_ENABLE_REG_OFFSET(a0)
 
 .L_entropy_enable:
+  // The following sequence enables the minimum level of entropy required to
+  // initialize memory scrambling, as well as the entropy distribution network.
+  li a0, TOP_DARJEELING_ENTROPY_SRC_BASE_ADDR
+
+  // Note for BOOT_ROM initialization the FIPS_ENABLE bit is set to kMultiBitBool4False
+  // to prevent the release of FIPS entropy until all the thresholds are set
+  li t0, (MULTIBIT_ASM_BOOL4_FALSE << ENTROPY_SRC_CONF_FIPS_ENABLE_OFFSET) | \
+         (MULTIBIT_ASM_BOOL4_FALSE << ENTROPY_SRC_CONF_ENTROPY_DATA_REG_ENABLE_OFFSET) | \
+         (MULTIBIT_ASM_BOOL4_FALSE << ENTROPY_SRC_CONF_FIPS_FLAG_OFFSET) | \
+         (MULTIBIT_ASM_BOOL4_FALSE << ENTROPY_SRC_CONF_RNG_FIPS_OFFSET) | \
+         (MULTIBIT_ASM_BOOL4_FALSE << ENTROPY_SRC_CONF_THRESHOLD_SCOPE_OFFSET) | \
+         (MULTIBIT_ASM_BOOL4_FALSE << ENTROPY_SRC_CONF_RNG_BIT_ENABLE_OFFSET)
+  sw t0, ENTROPY_SRC_CONF_REG_OFFSET(a0)
+
+  li t0, (MULTIBIT_ASM_BOOL4_TRUE << ENTROPY_SRC_MODULE_ENABLE_MODULE_ENABLE_OFFSET)
+  sw t0, ENTROPY_SRC_MODULE_ENABLE_REG_OFFSET(a0)
+
   // The following sequence enables the minimum level of entropy required to
   // initialize memory scrambling, as well as the entropy distribution network.
   li a0, TOP_DARJEELING_CSRNG_BASE_ADDR
@@ -240,7 +261,8 @@ LABEL_FOR_TEST(kRomStartWatchdogEnabled)
   li   t1, HARDENED_BOOL_FALSE
   beq t0, t1, .L_sram_key_renew_skip
   li a0, TOP_DARJEELING_SRAM_CTRL_MAIN_REGS_BASE_ADDR
-  li a1, (1 << SRAM_CTRL_CTRL_RENEW_SCR_KEY_BIT) | (1 << SRAM_CTRL_CTRL_INIT_BIT)
+  //li a1, (1 << SRAM_CTRL_CTRL_RENEW_SCR_KEY_BIT) | (1 << SRAM_CTRL_CTRL_INIT_BIT)
+  li a1, (1 << SRAM_CTRL_CTRL_INIT_BIT)
   sw a1, SRAM_CTRL_CTRL_REG_OFFSET(a0)
 .L_sram_key_renew_skip:
 
@@ -280,9 +302,6 @@ LABEL_FOR_TEST(kRomStartWatchdogEnabled)
   li x29, 0x0
   li x30, 0x0
   li x31, 0x0
-
-  // Must be called prior to any Main RAM access.
-  call base_rom_epmp_init
 
   /**
    * Setup C Runtime

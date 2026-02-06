@@ -713,6 +713,30 @@ cc_library(
     alwayslink = True,
 )
 
+cc_library(
+    name = "base_rom_epmp",
+    srcs = [
+        "base_rom_epmp.c",
+        "base_rom_epmp_init.S",
+    ],
+    hdrs = ["base_rom_epmp.h"],
+    target_compatible_with = [OPENTITAN_CPU],
+    deps = [
+        "//hw/top_darjeeling/sw/autogen:top_darjeeling",
+        "//sw/device/silicon_creator/lib:epmp_state",
+    ],
+)
+
+ld_library(
+    name = "base_rom_linker_script",
+    script = "base_rom.ld",
+    deps = [
+        "//hw/top_darjeeling/sw/autogen:top_darjeeling_memory",
+        "//sw/device:info_sections",
+        "//sw/device/silicon_creator/lib/base:static_critical_sections",
+    ],
+)
+
 opentitan_binary(
     name = "base_rom",
     exec_env = [
@@ -732,8 +756,29 @@ opentitan_binary(
     ],
 )
 
+# Create the legacy ROM target names so that existing splicing rules can find
+# the rom VMEM files.
+legacy_rom_targets(
+    suffixes = {
+        "fpga_vcu118": ["//hw/top_darjeeling:fpga_vcu118"],
+    },
+    target = "base_rom",
+)
+
+[
+    filegroup(
+        name = "base_rom_{}_hashfile".format(dev),
+        testonly = True,
+        srcs = [":base_rom"],
+        output_group = "{}_hashfile".format(dev),
+    )
+    for dev in [
+        "fpga_vcu118",
+    ]
+]
+
 cc_library(
-    name = "second_rom_lib",
+    name = "second_rom_common",
     srcs = [
         "second_rom.c",
         "second_rom.h",
@@ -778,26 +823,61 @@ cc_library(
     ],
 )
 
-# Create the legacy ROM target names so that existing splicing rules can find
-# the rom VMEM files.
-legacy_rom_targets(
-    suffixes = {
-        "fpga_vcu118": ["//hw/top_darjeeling:fpga_vcu118"],
-    },
-    target = "base_rom",
+cc_library(
+    name = "second_rom_lib",
+    srcs = ["second_rom_start.S"],
+    target_compatible_with = [OPENTITAN_CPU],
+    deps = [
+        ":second_rom_common",
+        ":second_rom_epmp",
+        "//hw/top:aon_timer_c_regs",
+        "//hw/top:ast_c_regs",
+        "//hw/top:clkmgr_c_regs",
+        "//hw/top:csrng_c_regs",
+        "//hw/top:edn_c_regs",
+        "//hw/top:gpio_c_regs",
+        "//hw/top:lc_ctrl_c_regs",
+        "//hw/top:otp_ctrl_c_regs",
+        "//hw/top:pinmux_c_regs",
+        "//hw/top:pwrmgr_c_regs",
+        "//hw/top:rv_core_ibex_c_regs",
+        "//hw/top:sram_ctrl_c_regs",
+        "//hw/top_darjeeling/sw/autogen:top_darjeeling",
+        "//sw/device/lib/base:hardened",
+        "//sw/device/lib/base:multibits",
+        "//sw/device/silicon_creator/lib/base:chip",
+    ],
+    alwayslink = True,
 )
 
-[
-    filegroup(
-        name = "base_rom_{}_hashfile".format(dev),
-        testonly = True,
-        srcs = [":base_rom"],
-        output_group = "{}_hashfile".format(dev),
-    )
-    for dev in [
-        "fpga_vcu118",
-    ]
-]
+cc_library(
+    name = "second_rom_epmp",
+    srcs = [
+        "second_rom_epmp.c",
+        "second_rom_epmp_init.S",
+    ],
+    hdrs = ["second_rom_epmp.h"],
+    target_compatible_with = [OPENTITAN_CPU],
+    deps = [
+        "//hw/top_darjeeling/sw/autogen:top_darjeeling",
+        "//sw/device/lib/base:bitfield",
+        "//sw/device/lib/base:csr",
+        "//sw/device/lib/base:memory",
+        "//sw/device/silicon_creator/lib:dbg_print",
+        "//sw/device/silicon_creator/lib:epmp_state",
+        "//sw/device/silicon_creator/lib/drivers:lifecycle",
+    ],
+)
+
+ld_library(
+    name = "second_rom_linker_script",
+    script = "second_rom.ld",
+    deps = [
+        "//hw/top_darjeeling/sw/autogen:top_darjeeling_memory",
+        "//sw/device:info_sections",
+        "//sw/device/silicon_creator/lib/base:static_critical_sections",
+    ],
+)
 
 opentitan_binary(
     name = "second_rom",
@@ -808,6 +888,7 @@ opentitan_binary(
     ],
     kind = "rom",
     linker_script = ":second_rom_linker_script",
+    rom_scramble_mode = "second-rom",
     transitive_features = [
         "use_lld",
         "lto",
@@ -838,55 +919,3 @@ legacy_rom_targets(
         "fpga_vcu118",
     ]
 ]
-
-cc_library(
-    name = "base_rom_epmp",
-    srcs = [
-        "base_rom_epmp.c",
-        "base_rom_epmp_init.S",
-    ],
-    hdrs = ["base_rom_epmp.h"],
-    target_compatible_with = [OPENTITAN_CPU],
-    deps = [
-        "//hw/top_darjeeling/sw/autogen:top_darjeeling",
-        "//sw/device/silicon_creator/lib:epmp_state",
-    ],
-)
-
-cc_library(
-    name = "second_rom_epmp",
-    srcs = [
-        "second_rom_epmp.c",
-    ],
-    hdrs = ["second_rom_epmp.h"],
-    target_compatible_with = [OPENTITAN_CPU],
-    deps = [
-        "//hw/top_darjeeling/sw/autogen:top_darjeeling",
-        "//sw/device/lib/base:bitfield",
-        "//sw/device/lib/base:csr",
-        "//sw/device/lib/base:memory",
-        "//sw/device/silicon_creator/lib:dbg_print",
-        "//sw/device/silicon_creator/lib:epmp_state",
-        "//sw/device/silicon_creator/lib/drivers:lifecycle",
-    ],
-)
-
-ld_library(
-    name = "base_rom_linker_script",
-    script = "base_rom.ld",
-    deps = [
-        "//hw/top_darjeeling/sw/autogen:top_darjeeling_memory",
-        "//sw/device:info_sections",
-        "//sw/device/silicon_creator/lib/base:static_critical_sections",
-    ],
-)
-
-ld_library(
-    name = "second_rom_linker_script",
-    script = "second_rom.ld",
-    deps = [
-        "//hw/top_darjeeling/sw/autogen:top_darjeeling_memory",
-        "//sw/device:info_sections",
-        "//sw/device/silicon_creator/lib/base:static_critical_sections",
-    ],
-)

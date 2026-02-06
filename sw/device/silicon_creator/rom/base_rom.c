@@ -215,7 +215,7 @@ static rom_error_t second_rom_boot(void) {
   CFI_FUNC_COUNTER_CHECK(rom_counters, kCfiSecondRomPatch, 3);
 
   CFI_FUNC_COUNTER_INCREMENT(rom_counters, kCfiSecondRomBoot, 4);
-  uintptr_t entry_point = ((uintptr_t)_second_rom_boot_address) + 0x80;
+  uintptr_t entry_point = ((uintptr_t)_second_rom_boot_address) + 0x180;
 
   // Configure ePMP for the second stage ROM
   base_rom_epmp_unlock_second_rom_rx();

@@ -35,6 +35,10 @@ _VCU118_TESTROM = "//sw/device/lib/testing/test_rom:test_rom_fpga_vcu118_scr_vme
 
 _VCU118_TESTROM_PATH = "{}/$(location {})".format(_PREFIX, _VCU118_TESTROM)
 
+_VCU118_TEST_SECOND_ROM = "//sw/device/lib/testing/test_second_rom:test_second_rom_fpga_vcu118_scr_vmem"
+
+_VCU118_TEST_SECOND_ROM_PATH = "{}/$(location {})".format(_PREFIX, _VCU118_TEST_SECOND_ROM)
+
 _EARLGREY_OTP_RMA_PATH = "{}/$(location {})".format(_PREFIX, _EARLGREY_OTP_RMA)
 
 _DARJEELING_OTP_RMA_PATH = "{}/$(location {})".format(_PREFIX, _DARJEELING_OTP_RMA)
@@ -265,14 +269,24 @@ fusesoc_build(
     srcs = [
         "//hw:rtl_files",
         _VCU118_TESTROM,
-        _DARJEELING_OTP_RMA,
-    ],
+    ] + select({
+        "//hw/top:earlgrey": [_EARLGREY_OTP_RMA],
+        "//hw/top:darjeeling": [
+            _VCU118_TEST_SECOND_ROM,
+            _DARJEELING_OTP_RMA,
+        ],
+    }),
     cores = ["//hw:cores"],
     data = ["//hw/ip/otbn:rtl_files"],
     flags = [
-        "--BootRomInitFile=" + _VCU118_TESTROM_PATH,
-        "--OtpMacroMemInitFile=" + _DARJEELING_OTP_RMA_PATH,
-    ],
+        "--BootRom0InitFile=" + _VCU118_TESTROM_PATH,
+    ] + select({
+        "//hw/top:earlgrey": ["--OtpMacroMemInitFile=" + _EARLGREY_OTP_RMA_PATH],
+        "//hw/top:darjeeling": [
+            "--OtpMacroMemInitFile=" + _DARJEELING_OTP_RMA_PATH,
+            "--BootRom1InitFile=" + _VCU118_TEST_SECOND_ROM_PATH,
+        ],
+    }),
     output_groups = select({
         "//hw/top:earlgrey": {
             "bitstream": [_FPGA_PATH_TMPL.format("chip_earlgrey_vcu118", "lowrisc_systems_chip_earlgrey_vcu118_0.1.bit")],

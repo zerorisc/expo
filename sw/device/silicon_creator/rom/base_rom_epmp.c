@@ -73,8 +73,9 @@ void base_rom_epmp_state_init(void) {
 void base_rom_epmp_unlock_second_rom_rx(void) {
   const epmp_region_t second_rom_text = {
       .start = (uintptr_t)_second_rom_boot_address,
-      .end =
-          (uintptr_t)_second_rom_boot_address + (uintptr_t)_epmp_reset_rx_size};
+      .end = (uintptr_t)_second_rom_boot_address +
+             TOP_DARJEELING_ROM_CTRL1_ROM_SIZE_BYTES};
+  //(uintptr_t)_second_rom_boot_address + (uintptr_t)_epmp_reset_rx_size};
   const epmp_region_t second_rom = {
       .start = TOP_DARJEELING_ROM_CTRL1_ROM_BASE_ADDR,
       .end = TOP_DARJEELING_ROM_CTRL1_ROM_BASE_ADDR +

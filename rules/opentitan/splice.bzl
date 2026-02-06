@@ -19,11 +19,13 @@ DEFAULTS = struct(
     env = "//hw/bitstream/universal:none",
 )
 
-def gen_vivado_mem_file(ctx, name, src, tool, otp_size, swap_nibbles = True):
+def gen_vivado_mem_file(ctx, name, src, tool, otp_size, swap_nibbles = True, swap_crumbs = False):
     update = ctx.actions.declare_file("{}.update.mem".format(name))
     args = ctx.actions.args()
     if swap_nibbles:
         args.add("--swap-nibbles")
+    if swap_crumbs:
+        args.add("--swap-crumbs")
     args.add("--otp-size={}".format(otp_size))
     args.add_all([src, update])
     ctx.actions.run(
@@ -158,7 +160,7 @@ def _bitstream_splice_impl(ctx):
             second_rom = ctx.attr.second_rom
 
         if second_rom and second_rom.label.name != "none":
-            second_rom = get_one_binary_file(second_rom, field = "rom", providers = [exec_env.provider])
+            second_rom = get_one_binary_file(second_rom, field = "rom32", providers = [exec_env.provider])
             mem = gen_vivado_mem_file(
                 ctx = ctx,
                 name = "{}-second-rom".format(ctx.label.name),
@@ -166,6 +168,7 @@ def _bitstream_splice_impl(ctx):
                 tool = tc.tools.gen_mem_image,
                 otp_size = otp_size,
                 swap_nibbles = ctx.attr.swap_nibbles,
+                swap_crumbs = True,
             )
             src = vivado_updatemem(
                 ctx = ctx,
@@ -177,29 +180,29 @@ def _bitstream_splice_impl(ctx):
                 debug = ctx.attr.debug,
             )
 
-        # Splice in an OTP image if we have one either in attrs or the exec_env.
-        if not ctx.attr.otp or ctx.attr.otp.label.name == "none":
-            otp = exec_env.otp
-        else:
-            otp = ctx.file.otp
-        if otp:
-            mem = gen_vivado_mem_file(
-                ctx = ctx,
-                name = "{}-otp".format(ctx.label.name),
-                src = otp,
-                tool = tc.tools.gen_mem_image,
-                otp_size = otp_size,
-                swap_nibbles = ctx.attr.swap_nibbles,
-            )
-            src = vivado_updatemem(
-                ctx = ctx,
-                name = "{}-otp".format(ctx.label.name),
-                src = src,
-                instance = "otp",
-                mmi = get_fallback(ctx, "file.mmi", exec_env),
-                update = mem,
-                debug = ctx.attr.debug,
-            )
+    #        # Splice in an OTP image if we have one either in attrs or the exec_env.
+    #        if not ctx.attr.otp or ctx.attr.otp.label.name == "none":
+    #            otp = exec_env.otp
+    #        else:
+    #            otp = ctx.file.otp
+    #        if otp:
+    #            mem = gen_vivado_mem_file(
+    #                ctx = ctx,
+    #                name = "{}-otp".format(ctx.label.name),
+    #                src = otp,
+    #                tool = tc.tools.gen_mem_image,
+    #                otp_size = otp_size,
+    #                swap_nibbles = ctx.attr.swap_nibbles,
+    #            )
+    #            src = vivado_updatemem(
+    #                ctx = ctx,
+    #                name = "{}-otp".format(ctx.label.name),
+    #                src = src,
+    #                instance = "otp",
+    #                mmi = get_fallback(ctx, "file.mmi", exec_env),
+    #                update = mem,
+    #                debug = ctx.attr.debug,
+    #            )
     output = update_usr_access(
         ctx = ctx,
         name = ctx.label.name,
