@@ -1154,7 +1154,7 @@ module chip_${top["name"]}_${target["name"]} #(
     // with random data via the backdoor loading interface - it
     // can't load "real" SW images yet since that requires
     // additional build infrastructure.
-    .SecRomCtrl1DisableScrambling(1),
+    //.SecRomCtrl1DisableScrambling(1),
     .RomCtrl1BootRomInitFile(BootRom1InitFile),
   % endif
     .RomCtrl0BootRomInitFile(BootRom0InitFile),

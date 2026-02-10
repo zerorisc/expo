@@ -7233,7 +7233,7 @@
       }
       param_decl:
       {
-        SecDisableScrambling: 1'b1
+        SecDisableScrambling: 1'b0
         FlopToKmac: 1'b1
       }
       clock_connections:
@@ -7275,7 +7275,7 @@
             primitives.
             '''
           type: bit
-          default: 1'b1
+          default: 1'b0
           local: "false"
           expose: "true"
           name_top: SecRomCtrl1DisableScrambling

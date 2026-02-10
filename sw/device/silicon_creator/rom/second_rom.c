@@ -212,7 +212,6 @@ static rom_error_t rom_try_boot(void) {
   CFI_FUNC_COUNTER_INCREMENT(rom_counters, kCfiRomTryBoot, 1);
   CFI_FUNC_COUNTER_PREPCALL(rom_counters, kCfiRomTryBoot, 2,
                             kCfiRomPreBootCheck);
-  dbg_printf("Running pre-boot checks\n");
   rom_pre_boot_check();
   CFI_FUNC_COUNTER_INCREMENT(rom_counters, kCfiRomTryBoot, 4);
   CFI_FUNC_COUNTER_CHECK(rom_counters, kCfiRomPreBootCheck, 8);
@@ -221,7 +220,6 @@ static rom_error_t rom_try_boot(void) {
   const manifest_t *manifest = (const manifest_t *)rom_ext_lma;
   HARDENED_RETURN_IF_ERROR(epmp_state_check());
 
-  dbg_printf("Performing sigverify\n");
   // Load secure boot keys from OTP into RAM.
   HARDENED_RETURN_IF_ERROR(sigverify_otp_keys_init(&sigverify_ctx));
 

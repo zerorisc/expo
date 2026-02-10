@@ -160,7 +160,7 @@ def _bitstream_splice_impl(ctx):
             second_rom = ctx.attr.second_rom
 
         if second_rom and second_rom.label.name != "none":
-            second_rom = get_one_binary_file(second_rom, field = "rom32", providers = [exec_env.provider])
+            second_rom = get_one_binary_file(second_rom, field = "rom", providers = [exec_env.provider])
             mem = gen_vivado_mem_file(
                 ctx = ctx,
                 name = "{}-second-rom".format(ctx.label.name),
