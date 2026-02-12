@@ -703,7 +703,7 @@ _rej_crypto_sign_signature_internal:
         sub  a1, t0, t1
         jal x1, poly_chknorm
 
-        bne a0, zero, _rej_crypto_sign_signature_internal
+        bne a2, x0, _rej_crypto_sign_signature_internal
 
         /* Speculatively pack z[i] into the signature. */
         addi a0, s9, 0
@@ -852,7 +852,7 @@ _rej_crypto_sign_signature_internal:
         jal  x1, poly_chknorm
 
         /* Update the continuation register. */
-        or  s8, s8, a0
+        or  s8, s8, a2
 
         /* Unpack the next polynomial from t0. */
         addi a0, s10, 0
@@ -898,7 +898,7 @@ _rej_crypto_sign_signature_internal:
         jal  x1, poly_chknorm
 
         /* Update the continuation register. */
-        or  s8, s8, a0
+        or  s8, s8, a2
 
         /* h[i] = make_hint(w0[i], w1[i]) */
         addi   a0, s1, 0
