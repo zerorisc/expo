@@ -1,0 +1,589 @@
+# Copyright lowRISC contributors (OpenTitan project).
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright zeroRISC Inc.
+# Confidential information of zeroRISC Inc. All rights reserved.
+
+name: zeroRISC CI
+on:
+  pull_request:
+    branches-ignore:
+      - "backport-*"
+      - "gh-readonly-queue/**"
+    tags:
+      - "*"
+  merge_group:
+    types:
+      - checks_requested
+  workflow_call:
+
+permissions:
+  contents: read
+  # Needed for workload identity federation
+  id-token: write
+  # Needed for reviewdog (verible linter)
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VIVADO_VERSION: "2024.1"
+  # Release tag from https://github.com/lowRISC/lowrisc-toolchains/releases
+  TOOLCHAIN_VERSION: 20220210-1
+
+jobs:
+  quick_lint:
+    name: Lint (quick)
+    runs-on:
+      group: zerorisc-none
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required so we can lint commit messages.
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-env
+      - name: Show environment
+        run: ./ci/scripts/show-env.sh
+      - name: License headers
+        run: ./ci/scripts/check-licence-headers.sh "$GITHUB_BASE_REF"
+        if: ${{ github.event_name == 'pull_request' }}
+      - name: Executable bits
+        run: ./ci/scripts/exec-check.sh
+      - name: Non-ASCII characters
+        run: ./ci/scripts/check-ascii.sh
+      - name: Check Bazel build graph
+        run: ./bazelisk.sh build --nobuild //...
+      - name: Python (flake8)
+        run: ./ci/scripts/python-lint.sh "$GITHUB_BASE_REF"
+        if: ${{ github.event_name == 'pull_request' }}
+      - name: Python (mypy)
+        run: ./ci/scripts/mypy.sh
+      - name: Python (ruff)
+        run: ruff check
+      - name: Validate testplans with schema
+        run: ./ci/scripts/validate_testplans.sh
+      - name: C/C++ formatting
+        run: ./bazelisk.sh test //quality:clang_format_check
+      - name: Rust formatting
+        run: ./bazelisk.sh test //quality:rustfmt_check
+      - name: Shellcheck
+        run: ./bazelisk.sh test //quality:shellcheck_check
+      - name: Header guards
+        run: ./ci/scripts/include-guard.sh "$GITHUB_BASE_REF"
+        if: ${{ github.event_name == 'pull_request' }}
+      - name: Trailing whitespace
+        run: ./ci/scripts/whitespace.sh "$GITHUB_BASE_REF"
+        if: ${{ github.event_name == 'pull_request' }}
+      - name: Broken links
+        run: ./ci/scripts/check-links.sh
+      - name: Generated documentation
+        run: ./ci/scripts/check-cmdgen.sh
+      - name: Lock files
+        run: ./ci/scripts/check-lock-files.sh
+
+  slow_lint:
+    name: Lint (slow)
+    runs-on:
+      group: zerorisc-none
+    needs: quick_lint
+    if: ${{ github.event_name != 'merge_group' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Bitstream cache requires all commits.
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-env
+        with:
+          install-verible: true
+      - name: Countermeasures implemented (earlgrey)
+        run: ./ci/scripts/check-countermeasures.sh earlgrey
+      - name: Countermeasures implemented (englishbreakfast)
+        run: ./ci/scripts/check-countermeasures.sh englishbreakfast
+      - name: Bazel test suite tags
+        run: ./ci/scripts/check_bazel_test_suites.py
+        continue-on-error: true
+      # See #21973: disabled until Verilator tags are fixed.
+      # - name: Check Bazel tags
+      #   run: ./ci/scripts/check-bazel-tags.sh
+      #   continue-on-error: true
+      - name: Banned Bazel rules
+        run: ./ci/scripts/check-bazel-banned-rules.sh
+      - name: Bazel target names
+        run: ./ci/scripts/check_bazel_target_names.py
+      - name: DV software images
+        run: ./ci/scripts/check_dv_sw_images.sh
+        continue-on-error: true
+      # zR: Currently commented out because it expects an upstream status report
+      # to exist for the current (internal) commit.
+      #- name: Build documentation
+      #  run: ./ci/scripts/build-docs.sh
+      - name: Generated files
+        run: ./ci/scripts/check-generated.sh
+        env:
+          OT_DESTRUCTIVE: 1 # Required by the script to clean up.
+      - name: Buildifier
+        run: ./bazelisk.sh test //quality:buildifier_check
+      - name: Vendored files
+        run: ./ci/scripts/check-vendoring.sh
+      - name: Verible RTL
+        run: ./ci/scripts/verible-lint.sh rtl earlgrey
+      - name: Verible DV
+        run: ./ci/scripts/verible-lint.sh dv earlgrey
+      - name: Verible FPV
+        run: ./ci/scripts/verible-lint.sh fpv earlgrey
+      - name: Validate alert classification for Earl Grey
+        run: ./ci/scripts/validate_alert_classification.py hw/top_earlgrey/ip_autogen/alert_handler/data/top_earlgrey_alert_handler.ipconfig.hjson "$(realpath hw/top_earlgrey/data/otp/otp_ctrl_img_owner_sw_cfg.hjson)"
+      - name: Validate alert classification for Darjeeling
+        run: ./ci/scripts/validate_alert_classification.py hw/top_darjeeling/ip_autogen/alert_handler/data/top_darjeeling_alert_handler.ipconfig.hjson "$(realpath hw/top_darjeeling/data/otp/otp_ctrl_img_owner_sw_cfg.hjson)"
+
+  dependency-licenses:
+    name: Check software dependency licenses
+    runs-on:
+      group: zerorisc-none
+    needs: quick_lint
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-env
+      - name: Check Python licenses
+        run: |
+          ALLOWED=(
+            'apache'
+            'Apache 2.0'
+            'Apache-2.0'
+            'Apache Software License'
+            'BSD'
+            'BSD-3-Clause'
+            'BSD License'
+            '3-Clause BSD License'
+            'Freeware'
+            'GNU Lesser General Public License v2 or later (LGPLv2+)'
+            'GNU Lesser General Public License v3 (LGPLv3)'
+            'GNU Library or Lesser General Public License (LGPL)'
+            'MIT'
+            'MIT License'
+            'Mozilla Public License 2.0 (MPL 2.0)'
+            'Public Domain'
+            'Python Software Foundation License'
+            'UNKNOWN'
+            '3-Clause BSD License'
+          )
+          ALLOWED_SEMI=${ALLOWED[0]}
+          for lic in "${ALLOWED[@]}"; do
+              ALLOWED_SEMI="$ALLOWED_SEMI;$lic"
+          done;
+          pip-licenses --allow-only "$ALLOWED_SEMI"
+      - name: Install cargo
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "~/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Check Rust licenses
+        run: |
+          cargo install cargo-deny --version 0.18.4
+          cargo deny --all-features --manifest-path third_party/rust/Cargo.toml check licenses
+          cargo deny --all-features --manifest-path third_party/tock/Cargo.toml check licenses
+
+  build_docs:
+    name: Build documentation
+    runs-on:
+      group: zerorisc-none
+    needs: quick_lint
+    if: ${{ github.event_name != 'merge_group' }}
+    env:
+      BUCKET: gold-hybrid-255313-prod
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Bitstream cache requires all commits.
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-env
+      - name: Build documentation
+        run: util/site/build-docs.sh build
+      - name: Upload files as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs
+          path: build-site/
+          overwrite: true
+
+  verible_lint:
+    name: Verible lint
+    runs-on:
+      group: zerorisc-none
+    needs: quick_lint
+    if: ${{ github.event_name == 'pull_request' }}
+    env:
+      verible_config: hw/lint/tools/veriblelint/lowrisc-styleguide.rules.verible_lint
+      verible_version: v0.0-3430-g060bde0f
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Verible config
+        run: |
+          echo "Concatenating Verible waivers"
+          find . -type f -name '*.vbl' -exec cat {} \; >> verible_waiver
+
+          echo "::group::Verible config"
+          cat "$verible_config"
+          echo "::endgroup::"
+
+          echo "::group::Verible waiver"
+          cat "verible_waiver"
+          echo "::endgroup::"
+      - name: Install Verible
+        uses: ./.github/actions/third_party/verible
+        with:
+          verible_version: ${{ env.verible_version }}
+      - name: Run Verible linter with reviewdog
+        shell: bash
+        env:
+          INPUT_CONFIG_FILE: ${{ env.verible_config }}
+          INPUT_EXTRA_ARGS: '--waiver_files=verible_waiver'
+          INPUT_EXTENSIONS: ''
+          INPUT_FAIL_ON_ERROR: 'false'
+          INPUT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_LOG_FILE: 'verible-verilog-lint.log'
+          INPUT_PATHS: '.'
+          INPUT_REVIEWDOG_REPORTER: 'github-pr-check'
+          INPUT_SUGGEST_FIXES: 'false'
+        run: ./.github/actions/third_party/verible/entrypoint.sh
+      - name: Upload Verible linter log
+        uses: actions/upload-artifact@v4
+        with:
+          name: verible-linter
+          path: 'verible-verilog-lint.log'
+
+  acc_standalone_tests:
+    name: Run ACC smoke Test
+    needs: quick_lint
+    runs-on:
+      group: zerorisc-none
+    if: ${{ github.event_name != 'merge_group' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Bitstream cache requires all commits.
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-env
+      - name: Install toolchain
+        run: |
+          TOOLCHAIN_PATH=/tools/riscv
+          sudo util/get-toolchain.py \
+            --install-dir="$TOOLCHAIN_PATH" \
+            --release-version="$TOOLCHAIN_VERSION" \
+            --update
+          echo "$TOOLCHAIN_PATH/bin" >> $GITHUB_PATH
+      - name: Display environment
+        run: |
+          python3 --version
+          fusesoc --version
+          verilator --version
+      - name: ACC ISS test
+        run: make -C hw/ip/acc/dv/accsim test
+      - name: OBTN smoke test
+        run: ./hw/ip/acc/dv/smoke/run_smoke.sh
+      - name: Assemble & link code snippets
+        run: make -C hw/ip/acc/util asm-check
+
+  acc_crypto_tests:
+    name: Run ACC crypto tests
+    needs: quick_lint
+    runs-on:
+      group: zerorisc-none
+    if: ${{ github.event_name != 'merge_group' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Bitstream cache requires all commits.
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-env
+      - name: Execute tests
+        run: ./bazelisk.sh test --test_tag_filters=-nightly //sw/acc/crypto/...
+
+  verilator_earlgrey:
+    name: Verilated Earl Grey
+    runs-on:
+      group: zerorisc-large
+    needs: quick_lint
+    if: ${{ github.event_name != 'merge_group' }}
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-env
+      - name: Run fast Verilator tests
+        run: ./ci/scripts/run-verilator-tests.sh
+      - name: Publish Bazel test results
+        uses: ./.github/actions/publish-bazel-test-results
+        if: ${{ !cancelled() }}
+        with:
+          artifact-name: verilator_earlgrey-test-results
+
+  chip_earlgrey_cw310_hyperdebug:
+    name: Earl Grey for CW310 Hyperdebug
+    needs: quick_lint
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/bitstream.yml
+    secrets: inherit
+    with:
+      top_name: earlgrey
+      design_suffix: cw310_hyperdebug
+      vivado_version: '2024.1'
+
+  chip_earlgrey_cw340:
+    name: Earl Grey for CW340
+    needs: quick_lint
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/bitstream.yml
+    secrets: inherit
+    with:
+      top_name: earlgrey
+      design_suffix: cw340
+
+  # Hyper310 FPGA jobs
+  execute_tests_hyper310:
+    name: Hyper310 Tests
+    needs: chip_earlgrey_cw310_hyperdebug
+    uses: ./.github/workflows/hyper310-pr.yml
+    if: ${{ github.event_name != 'merge_group' }}
+    secrets: inherit
+    with:
+      bitstream: chip_earlgrey_cw310_hyperdebug
+
+  # CW340 FPGA jobs
+  execute_tests_cw340:
+    name: CW340 Tests
+    needs: chip_earlgrey_cw340
+    uses: ./.github/workflows/cw340-pr.yml
+    if: ${{ github.event_name != 'merge_group' }}
+    secrets: inherit
+    with:
+      bitstream: chip_earlgrey_cw340
+
+  sw_build_test:
+    name: Build and test software
+    runs-on:
+      group: zerorisc-large
+    timeout-minutes: 120
+    needs: quick_lint
+    if: ${{ github.event_name != 'merge_group' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for bitstream cache to work.
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-env
+      - name: Check Bazel build graph
+        run: |
+          # Test the graph with both an empty and filled bitstream cache.
+          ./ci/scripts/test-empty-bitstream-cache.sh
+          ./bazelisk.sh build --nobuild //...
+      - name: Select software targets
+        run: |
+          target_pattern_file="$(mktemp)"
+          echo "target_pattern_file=${target_pattern_file}" >> "$GITHUB_ENV"
+
+          # Start with building the whole graph.
+          echo '//...' > "$target_pattern_file"
+          # Exclude some targets:
+          #
+          # 1. `//hw/...` is out of scope.
+          # 2. `//quality/...` is tested by the lint jobs.
+          # 3. `//sw/acc/crypto/...` is tested by the ACC job.
+          # 4. `//third_party/...` which is not our code.
+          printf "%s\n"             \
+            "-//hw/..."             \
+            "-//quality/..."        \
+            "-//sw/acc/crypto/..." \
+            "-//third_party/..."    \
+            >> "$target_pattern_file"
+          # Exclude anything that requires a bitstream splice.
+          ./bazelisk.sh cquery                               \
+            --noinclude_aspects                              \
+            --output=starlark                                \
+            --starlark:expr='"-{}".format(target.label)'     \
+            --define DISABLE_VERILATOR_BUILD=true            \
+            -- "rdeps(//..., kind(bitstream_splice, //...))" \
+            >> "$target_pattern_file"
+      - name: Build software targets
+        run: |
+          # Build everything we selected, excluding some tags.
+          ./bazelisk.sh build                                \
+            --build_tests_only=false                         \
+            --define DISABLE_VERILATOR_BUILD=true            \
+            --test_tag_filters=-broken,-cw310,-verilator,-dv \
+            --target_pattern_file="$target_pattern_file"
+      - name: Run software unit tests
+        run: |
+          ./bazelisk.sh test                                          \
+            --build_tests_only=false                                  \
+            --test_output=errors                                      \
+            --define DISABLE_VERILATOR_BUILD=true                     \
+            --test_tag_filters=-broken,-cw310,-verilator,-dv,-silicon \
+            --target_pattern_file="$target_pattern_file"
+      - name: Publish Bazel test results
+        uses: ./.github/actions/publish-bazel-test-results
+        if: ${{ !cancelled() }}
+        with:
+          artifact-name: sw_build_test-test-results
+      - name: Check for unrunnable tests
+        run: ./ci/scripts/check-unrunnable-tests.sh
+        continue-on-error: true
+
+  dj_sw_build_test:
+    name: Build and test Darjeeling software
+    runs-on:
+      group: zerorisc-large
+    timeout-minutes: 120
+    needs: quick_lint
+    if: ${{ github.event_name != 'merge_group' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for bitstream cache to work.
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-env
+      - name: Check Bazel build graph
+        run: |
+          # Test the graph with both an empty and filled bitstream cache.
+          ./ci/scripts/test-empty-bitstream-cache.sh
+          ./bazelisk.sh build --nobuild --//hw/top=darjeeling //...
+      - name: Build software targets
+        run: |
+          # Compile some selected targets
+          ./bazelisk.sh build                                \
+            --build_tests_only=false                         \
+            --//hw/top=darjeeling                            \
+            //sw/device/tests/...
+
+  qemu_smoketest:
+    name: QEMU smoketest
+    runs-on:
+      group: zerorisc-none
+    needs: quick_lint
+    if: ${{ github.event_name != 'merge_group' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-env
+      - name: Execute QEMU smoketest
+        run: |
+          ./bazelisk.sh test //sw/device/tests:rom_exit_immediately_sim_qemu_base
+
+  qemu_local_dev_test:
+    name: Test QEMU local development override
+    runs-on: ubuntu-22.04
+    needs: quick_lint
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: opentitan
+      - name: Prepare environment
+        uses: ./opentitan/.github/actions/prepare-env
+        with:
+          working-directory: opentitan
+      - uses: actions/checkout@v4
+        with:
+          repository: lowRISC/qemu
+          ref: v9.2.0-2025-02-11
+          fetch-depth: 0
+          path: qemu
+      - name: Check that overrides works
+        run: |
+          # The following packages are required to build QEMU.
+          sudo apt-get install -y ninja-build libpixman-1-dev libglib2.0-dev
+          # We need to symlink the BUILD file and create an empty REPO file.
+          ln -s $PWD/opentitan/third_party/qemu/BUILD.qemu_opentitan.bazel qemu/BUILD.bazel
+          touch qemu/REPO.bazel
+          # Just make sure all expected targets are there after building.
+          opentitan/bazelisk.sh build --override_repository="+qemu+qemu_opentitan_src=$PWD/qemu/" //third_party/qemu/...
+      - name: Upload error logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qemu-override-build-logs
+          path: qemu/build/*.log
+
+  # We would like to gate PR on quick lint and merge queue on bitstream caching.
+  # GitHub requires a single job name to be used for branch protection rule, so we use 2 jobs with
+  # conditional names so the non-skipped ones woud be called "Merge blocker".
+  #
+  # TODO: Enable these once `cache_bitstreams` is re-enabled.
+  #
+  #  merge_blocker_pr:
+  #    name: Merge blocker${{ github.event_name != 'pull_request' && ' (skipped)' || '' }}
+  #    runs-on: ubuntu-latest
+  #    needs: quick_lint
+  #    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+  #    steps:
+  #      - name: Complete
+  #        run: ${{ needs.quick_lint.result == 'success' }}
+  #
+  #  merge_blocker_merge:
+  #    name: Merge blocker${{ github.event_name != 'merge_group' && ' (skipped)' || '' }}
+  #    runs-on: ubuntu-latest
+  #    needs: cache_bitstreams
+  #    if: ${{ !cancelled() && github.event_name == 'merge_group' }}
+  #    steps:
+  #      - name: Complete
+  #        run: ${{ needs.cache_bitstreams.result == 'success' }}
+
+# Hardware DV tests
+  dvsim-multitop:
+    name: Multitop quick DVSim tests
+    needs: quick_lint
+    uses: ./.github/workflows/dv-multitop.yml
+    secrets: inherit
+    with:
+      run-type: "quick"
+      item: "smoke"
+      priority: 10
+
+  dvsim-earlgrey:
+    name: Earlgrey quick DVSim tests
+    needs: quick_lint
+    uses: ./.github/workflows/dv-earlgrey.yml
+    secrets: inherit
+    with:
+      run-type: "quick"
+      item: "smoke"
+      priority: 10
+
+  dvsim-earlgrey-report:
+    name: Earlgrey quick DVSim report
+    needs: [dvsim-multitop, dvsim-earlgrey]
+    uses: ./.github/workflows/dv-report.yml
+    secrets: inherit
+    with:
+      run-type: "quick"
+      top-name: "earlgrey"
+      hjson: hw/top_earlgrey/dv/top_earlgrey_sim_cfgs.hjson
+      item: "smoke"
+
+  dvsim-darjeeling:
+    name: Darjeeling quick DVSim tests
+    needs: quick_lint
+    uses: ./.github/workflows/dv-darjeeling.yml
+    secrets: inherit
+    with:
+      run-type: "quick"
+      item: "smoke"
+      priority: 10
+
+  dvsim-darjeeling-report:
+    name: Darjeeling quick DVSim report
+    needs: [dvsim-multitop, dvsim-darjeeling]
+    uses: ./.github/workflows/dv-report.yml
+    secrets: inherit
+    with:
+      run-type: "quick"
+      top-name: "darjeeling"
+      hjson: hw/top_darjeeling/dv/top_darjeeling_sim_cfgs.hjson
+      item: "smoke"
