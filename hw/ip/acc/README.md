@@ -1,22 +1,17 @@
-# OpenTitan Big Number Accelerator (ACC) Technical Specification
+# Asymmetric Cryptographic Coprocessor (ACC) Technical Specification
 
-[`acc`](https://reports.opentitan.org/hw/ip/acc/dv/uvm/latest/report.html):
-![](https://dashboards.lowrisc.org/badges/dv/acc/test.svg)
-![](https://dashboards.lowrisc.org/badges/dv/acc/passing.svg)
-![](https://dashboards.lowrisc.org/badges/dv/acc/functional.svg)
-![](https://dashboards.lowrisc.org/badges/dv/acc/code.svg)
 
 # Overview
 
-This document specifies functionality of the OpenTitan Big Number Accelerator, or ACC.
-ACC is a coprocessor for asymmetric cryptographic operations like RSA or Elliptic Curve Cryptography (ECC).
+This document specifies functionality of the Asymmetric Cryptographic Coprocessor, or ACC.
+ACC is a fork from the OpenTitan Bignum Accelerator (OTBN).
 
-This module conforms to the [Comportable guideline for peripheral functionality](../../../doc/contributing/hw/comportability/README.md).
-See that document for integration overview within the broader top level system.
+ACC follows the [comportability guidelines for peripheral functionality](../../../doc/contributing/hw/comportability/README.md).
+Refer to the guidelines for an integration overview within a broader top level system.
 
 ## Features
 
-* Processor optimized for wide integer arithmetic
+* Processor optimized for wide integer and vector arithmetic
 * 32b wide control path with 32 32b wide registers
 * 256b wide data path with 32 256b wide registers
 * Full control-flow support with conditional branch and unconditional jump instructions, hardware loops, and hardware-managed call/return stacks.
@@ -37,8 +32,9 @@ ACC is designed as a self-contained co-processor with its own instruction and da
 
 ## Compatibility
 
-ACC is not designed to be compatible with other cryptographic accelerators.
-It received some inspiration from assembly code available from the [Chromium EC project](https://chromium.googlesource.com/chromiumos/platform/ec/),
+ACC is not designed to be compatible with other cryptographic accelerators, with the only exception being [KMAC](../kmac/README.md).
+There is a custom interface connection between KMAC and ACC for accelerating hash based post quantum cryptographic algorithms.
+ACC received some inspiration from assembly code available from the [Chromium EC project](https://chromium.googlesource.com/chromiumos/platform/ec/),
 which has been formally verified within the [Fiat Crypto project](http://adam.chlipala.net/papers/FiatCryptoSP19/FiatCryptoSP19.pdf).
 
 # Instruction Set
@@ -48,7 +44,7 @@ The full ISA description can be found in our [ISA manual](./doc/isa.md).
 The instruction set is split into two groups:
 
 * The **base instruction subset** operates on the 32b General Purpose Registers (GPRs).
-  Its instructions are used for the control flow of a ACC application.
+  Its instructions are used for the control flow of an ACC application.
   The base instructions are inspired by RISC-V's RV32I instruction set, but not compatible with it.
 * The **big number instruction subset** operates on 256b Wide Data Registers (WDRs).
   Its instructions are used for data processing.
@@ -88,7 +84,7 @@ For example, good choices for temporary registers are `x6`, `x7`, `x28`, `x29`, 
 
 ### Call Stack
 
-ACC has an in-built call stack which is accessed through the `x1` GPR.
+ACC has a built-in call stack which is accessed through the `x1` GPR.
 This is intended to be used as a return address stack, containing return addresses for the current stack of function calls.
 See the documentation for {{#acc-insn-ref JAL}} and {{#acc-insn-ref JALR}} for a description of how to use it for this purpose.
 
