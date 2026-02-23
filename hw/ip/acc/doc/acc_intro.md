@@ -1,8 +1,8 @@
 # Introduction to ACC
 
-ACC (the **O**pen**T**itan **B**ig **N**umber accelerator) is a specialized coprocessor designed for cryptography.
-It runs as part of OpenTitan in addition to the main processor, Ibex.
-The ACC hardware block could also run as part of a different system and interact with a different main processor, but this page will focus on the OpenTitan context.
+ACC (the **A**symmetric **C**ryptographic **C**oprocessor) is a specialized cryptographic coprocessor designed for the execution of asymmetric algorithms.
+It runs as part of the top-level system in addition to the main processor, Ibex.
+The ACC hardware block could also run as part of a different system and interact with a different main processor, but this page will not cover this style of implementation.
 
 This page is an introduction and overview of ACC.
 For more detailed information, see the [technical specification](../README.md) and the [ISA guide](isa.md).
@@ -185,6 +185,19 @@ bswap32_w23:
   ret
 ```
 
+### Vector operations
+
+To accelerate the lattice-based cryptography ML-KEM and ML-DSA algorithms, ACC has vectorized variants of several bignum instructions.
+Specifically, the following instructions operate on vectors:
+- `bn.addv` : vector add
+- `bn.subv` : vector subtract
+- `bn.shv` : vector shift
+- `bn.trn` : vector transpose
+- `bn.mulv` : vector multiply and accumulate
+- `bn.mulv.l` : vector multiply and accumulate with lane index
+
+For a more detailed overview of the instruction encodings, see the [ISA guide](isa.md).
+
 ## Implementation process
 
 At a high level, the process for developing code on ACC looks something like this:
@@ -266,7 +279,7 @@ Some notes to help explain the code above:
 - The first argument to `loopi` is the number of iterations, and the second is the number of instructions in the loop body
 - `.bss` marks data memory that is not initialized; the program would still work if we used `.data`, but the binary would be bigger because Ibex would store a bunch of placeholder zeroes
 
-To see all current ACC programs from the OpenTitan codebase, see the [sw/acc](https://github.com/lowRISC/opentitan/tree/master/sw/acc) directory.
+To see all current ACC programs from the codebase, see the `sw/acc/` directory.
 The `crypto/` subdirectory contains code we use in production, while the `code-snippets` subdirectory contains small example programs.
 
 ## Performance
@@ -294,12 +307,12 @@ Look below for instructions on how to reproduce these benchmarks.
 
 A few notes:
 - Because some ACC code is still under development, these cycle counts are expected to change a bit as we optimize the code and add hardening countermeasures against fault injection and power/EM side-channel attacks.
-- Some of these benchmarks include significant overhead from these countermeasures (for example, we run the inner loop of P-256 scalar multiplication 320 times instead of 256), but in OpenTitan's threat model the price is worthwhile.
+- Some of these benchmarks include significant overhead from these countermeasures (for example, we run the inner loop of P-256 scalar multiplication 320 times instead of 256), but in the current threat model the price is worthwhile.
 - For non-constant-time code, due to the nature of the ACC benchmarks, it is currently difficult to run multiple tests, so the numbers above reflect only one test each and should be treated as a rough estimate.
 
 ### Benchmark reproduction
 
-To reproduce these benchmarks yourself, checkout the specified commit from OpenTitan, then run the ACC simulator directly on the specified programs.
+To reproduce these benchmarks yourself, checkout the specified commit, then run the ACC simulator directly on the specified programs.
 
 #### Step 1: Build the tests.
 
@@ -333,7 +346,7 @@ For example, during development we were able to fix a bug in our original implem
 
 ## Modeling and formal methods
 
-ACC is well-suited to modeling because of its relatively simple ISA (52 instructions) and predictable timing behavior.
+ACC is well-suited to modeling because of its relatively simple ISA and predictable timing behavior.
 This means we can easily simulate ACC's behavior in software and in formal methods tools.
 
 ### Machine-readable instruction specifications
@@ -344,7 +357,7 @@ The ACC [ISA documentation](isa.md), assembler, simulation tools, and static che
 ### ACC simulator
 
 The ACC simulator is a Python model of ACC that is regularly tested against the exact behavior of the SystemVerilog implementation.
-Both software and hardware engineers on OpenTitan use it for debugging.
+Both software and hardware engineers use it for debugging.
 Detailed information on the ACC simulator can be found [here](developing_acc.md#run-the-python-simulator), but the highlights are:
 - cycle-by-cycle printouts for instructions and updates to registers/flags/memory
 - much faster than simulating ACC in Verilator
@@ -357,12 +370,12 @@ You can see the current ACC simulator tests under [sw/acc/crypto/tests](https://
 
 ### Formal methods
 
-ACC is a large part of the reason OpenTitan has a long history of successful formal-methods collaborations.
+ACC is a large part of the reason for a long history of successful formal-methods collaborations.
 
 For example, the ACC program we use for RSA signature verification in secure boot is [formally verified](https://www.andrew.cmu.edu/user/bparno/papers/galapagos.pdf) in Dafny/Vale.
 The authors of the paper created a system called Galápagos, in which a proven-correct low-level implementation can be instantiated for different architectures, including ACC.
 For RSA, they proved that the low-level implementation was equivalent to modular exponentiation, i.e. that it indeed computed `(sig ^ e) mod n`, where `sig` is the signature and `(n, e)` is the RSA public key.
-We use their ACC code in production silicon.
+Their ACC code is used in production silicon.
 There is no performance hit from the verified code, and since it is burned into hardware ROM it is essential that this code is correct.
 
 We are also pursuing other ongoing collaborations in formal methods, including adding ACC to the Jasmin compiler.
@@ -390,8 +403,6 @@ acc_consttime_test(
 ## Future Ideas
 
 For future versions of ACC, we are considering:
-- ISA extensions and more memory to support lattice-based cryptography
-- A direct interface from ACC to the [KMAC][kmac] hardware block, which would allow ACC to directly run SHA-3 and SHAKE functions
 - More isolation from Ibex, including potentially giving ACC its own ROM so that Ibex doesn't need to load secrets into it
 
 [kmac]:  ../../../../hw/ip/kmac/README.md
