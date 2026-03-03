@@ -1000,7 +1000,7 @@
     - &data-addr A `BAD_DATA_ADDR` error if the computed address is not a valid DMEM address aligned to WLEN bits.
   iflow:
     - to: [wref-grd]
-      from: [dmem]
+      from: [dmem-grs1-32]
     - test:
         - grd_inc == 1
       to: [grd]
@@ -1073,7 +1073,7 @@
     target: [offset, grs1]
     bytes: 32
   iflow:
-    - to: [dmem]
+    - to: [dmem-grs1-32]
       from: [wref-grs2]
     - test:
         - grs1_inc == 1

@@ -289,7 +289,7 @@
     bytes: 4
   iflow:
     - to: [grd]
-      from: [dmem]
+      from: [dmem-grs1-4]
 
 - mnemonic: sw
   rv32i: true
@@ -320,7 +320,7 @@
     target: [offset, grs1]
     bytes: 4
   iflow:
-    - to: [dmem]
+    - to: [dmem-grs1-4]
       from: [grs2]
 
 - mnemonic: beq
