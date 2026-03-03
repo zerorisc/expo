@@ -43,14 +43,14 @@ class InformationFlowNode:
             return None
         return Node(self)
 
-    def subtract(self, other: 'InformationFlowNode') -> Optional['InformationFlowNode']:
+    def subtract(self, other: 'InformationFlowNode') -> List['InformationFlowNode']:
         '''Returns a new node with the intersection of self and other removed.
 
         Returns self if self and other do not overlap and None if they are equal.
         '''
         if not self.overlaps(other):
-            return self
-        return None
+            return [self]
+        return []
 
     def __hash__(self):
         return hash(self.name)
@@ -78,14 +78,19 @@ class DmemInformationFlowNode(InformationFlowNode):
         end = min(self.end, other.end)
         return DmemInformationFlowNode(start, end)
 
-    def subtract(self, other: InformationFlowNode) -> Optional[InformationFlowNode]:
+    def subtract(self, other: InformationFlowNode) -> List[InformationFlowNode]:
         if not self.overlaps(other):
             return self
-        start = max(self.start, other.start)
-        end = min(self.end, other.end)
-        if end <= start:
-            return None
-        return DmemInformationFlowNode(start, end)
+        # Possible orderings:
+        # - self.start, other.start, self.end, other.end -> self.start, other.start
+        # - self.start, other.start, other.end, self.end -> (self.start, other.start), (other.end, self.end)
+        # - other.start, self.start, other.end, self.end -> other.end, self.end
+        out = []
+        if self.start < other.start:
+            out.append(DmemInformationFlowNode(self.start, other.start))
+        if other.end < self.end:
+            out.append(DmemInformationFlowNode(other.end, self.end))
+        return out
 
 
 class InformationFlowGraph:
@@ -253,10 +258,10 @@ class InformationFlowGraph:
                 rem1 = sink1.subtract(sink2)
                 rem2 = sink2.subtract(sink1)
                 inter = sink1.intersection(sink2)
-                if rem1 is not None:
-                    self.flow[rem1] = deepcopy(sources1)
-                if rem2 is not None:
-                    self.flow[rem2] = deepcopy(sources2)
+                for node in rem1:
+                    self.flow[node] = deepcopy(sources1)
+                for node in rem2:
+                    self.flow[node] = deepcopy(sources2)
                 if inter is not None:
                     self.flow[inter] = sources1 | sources2
 
@@ -303,7 +308,16 @@ class InformationFlowGraph:
             flow[sink] = new_sources
 
         for sink, sources in self.flow.items():
-            if sink not in flow:
+            overlapping = [s for s in flow if s.overlaps(sink)]
+            if overlapping:
+                # if one of our original sinks partly overlaps with a new sink
+                # (partial overwrite), we should propagate only the
+                # non-overlapping part.
+                for node in overlapping:
+                    rem = sink.subtract(node)
+                    for n in rem:
+                        flow[n] = sources.copy()
+            else:
                 # sink is not updated in other's flow
                 flow[sink] = sources.copy()
 
