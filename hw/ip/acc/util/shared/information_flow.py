@@ -59,7 +59,7 @@ class InformationFlowNode:
 class DmemInformationFlowNode(InformationFlowNode):
     '''Represents a memory range.'''
     def __init__(self, start: int, end: int):
-        super().__init__("dmem:{start:#06x}-{end:#06x}")
+        super().__init__(f'dmem:{start:#06x}-{end:#06x}')
         assert start < end
         self.start = start
         self.end = end
@@ -433,17 +433,17 @@ class InformationFlowGraph:
 
         prefix = ' ' * indent
         flow_strings = {
-            sink: ','.join(sorted(sources))
+            sink: ','.join(sorted([s.name for s in sources]))
             for sink, sources in self.flow.items()
         }
         max_source_chars = max([len(s) for s in flow_strings.values()],
                                default=0)
         lines = []
-        for sink in sorted(self.flow.keys()):
+        for sink in sorted(self.flow.keys(), key=lambda s:str(s)):
             sources_str = flow_strings[sink]
             padding = ' ' * (max_source_chars - len(sources_str))
             lines.append('{}{}{} -> {}'.format(prefix, sources_str, padding,
-                                               sink))
+                                               sink.name))
         return '\n'.join(lines)
 
     def __eq__(self, other: object) -> bool:

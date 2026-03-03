@@ -12,7 +12,7 @@ from .constants import ConstantContext, get_op_val_str
 from .control_flow import (ControlLoc, ControlGraph, Cycle, Ecall, ImemEnd,
                            LoopStart, Ret)
 from .decode import ACCProgram
-from .information_flow import InformationFlowGraph
+from .information_flow import InformationFlowGraph, DmemInformationFlowNode
 from .insn_yaml import Insn
 
 # Calls to _get_iflow return results in the form of a tuple with entries:
@@ -166,7 +166,8 @@ def _build_iflow_straightline(
 
         used_constants, insn_iflow = _build_iflow_insn(insn, op_vals, pc,
                                                        constants)
-        constant_deps.update(iflow.sources_for_any(used_constants))
+        constant_dep_nodes = iflow.sources_for_any(used_constants)
+        constant_deps.update([n.name for n in constant_dep_nodes])
 
         # Compose iflow with the information flow from this instruction
         iflow = iflow.seq(insn_iflow)
@@ -259,7 +260,8 @@ def _get_iflow_update_state(
     rec_loop_iters = rec_result[6]
 
     # Update the used constants and control-flow dependencies
-    used_constants.update(iflow.sources_for_any(rec_used_constants))
+    used_constant_nodes = iflow.sources_for_any(rec_used_constants)
+    used_constants.update([n.name for n in used_constant_nodes])
     _update_control_deps(control_deps, iflow, rec_control_deps)
 
     # Update the cycles
@@ -359,8 +361,10 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
         last_insn, last_op_vals, section.end, constants)
 
     # Update used constants to include last instruction
+    used_constant_nodes = last_insn_iflow.sources_for_any(last_insn_used_constants)
     used_constants.update(
-        last_insn_iflow.sources_for_any(last_insn_used_constants))
+        [n.name for n in used_constant_nodes
+        if not isinstance(n, DmemInformationFlowNode)])
 
     # Update control_deps to include last instruction
     last_insn_control_deps = {
@@ -488,8 +492,8 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
         # If there is no return branch, we would expect common_consts to be
         # None.
         assert return_iflow.exists
-        used_constants.update(
-            return_iflow.sources_for_any(common_consts.values.keys()))
+        used_constant_nodes = return_iflow.sources_for_any(common_consts.values.keys())
+        used_constants.update([n.name for n in used_constant_nodes])
 
     # If this PC is the start of one of the cycles we're currently processing,
     # see if it can be finalized.
