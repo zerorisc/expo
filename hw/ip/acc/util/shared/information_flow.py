@@ -293,9 +293,9 @@ class InformationFlowGraph:
             for source in sources:
                 overlapping = [s for s in self.flow if s.overlaps(source)]
                 if overlapping:
-                    for sink in overlapping:
+                    for node in overlapping:
                         # connect sink and source even for partial overlap
-                        new_sources.update(self.flow[sink])
+                        new_sources.update(self.flow[node])
                 else:
                     # source is not a sink in self's flow; assume it stays
                     # constant
