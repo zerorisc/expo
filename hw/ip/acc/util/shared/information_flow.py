@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from copy import deepcopy
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Any, cast, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from serialize.parse_helpers import check_keys, check_list, check_str
 
@@ -27,7 +27,9 @@ class InformationFlowNode:
     def __init__(self, name: str):
         self.name = name
 
-    def __eq__(self, other: 'InformationFlowNode') -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, InformationFlowNode):
+            return False
         return self.name == other.name
 
     def overlaps(self, other: 'InformationFlowNode') -> bool:
@@ -41,7 +43,7 @@ class InformationFlowNode:
         '''
         if not self.overlaps(other):
             return None
-        return Node(self)
+        return InformationFlowNode(self.name)
 
     def subtract(self, other: 'InformationFlowNode') -> List['InformationFlowNode']:
         '''Returns a new node with the intersection of self and other removed.
@@ -52,7 +54,7 @@ class InformationFlowNode:
             return [self]
         return []
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.name)
 
 
@@ -72,20 +74,20 @@ class DmemInformationFlowNode(InformationFlowNode):
         return other.start <= self.start and other.end > self.start
 
     def intersection(self, other: InformationFlowNode) -> Optional[InformationFlowNode]:
-        if not self.overlaps(other):
+        if not isinstance(other, DmemInformationFlowNode) or not self.overlaps(other):
             return None
         start = max(self.start, other.start)
         end = min(self.end, other.end)
         return DmemInformationFlowNode(start, end)
 
     def subtract(self, other: InformationFlowNode) -> List[InformationFlowNode]:
-        if not self.overlaps(other):
-            return self
+        if not isinstance(other, DmemInformationFlowNode) or not self.overlaps(other):
+            return [self]
         # Possible orderings:
         # - self.start, other.start, self.end, other.end -> self.start, other.start
         # - self.start, other.start, other.end, self.end -> (self.start, other.start), (other.end, self.end)
         # - other.start, self.start, other.end, self.end -> other.end, self.end
-        out = []
+        out: List[InformationFlowNode] = []
         if self.start < other.start:
             out.append(DmemInformationFlowNode(self.start, other.start))
         if other.end < self.end:
@@ -147,19 +149,26 @@ class InformationFlowGraph:
 
     def sources(self, sink: InformationFlowNode) -> Set[InformationFlowNode]:
         '''Returns all sources for the given sink.'''
-        # if the sink does not appear, it is unmodified, meaning its only
-        # source is itself
-        return self.flow.get(sink, {sink})
+        overlapping = [s for s in self.flow if s.overlaps(sink)]
+        if len(overlapping) == 0:
+            # if the sink does not appear, it is unmodified, meaning its only
+            # source is itself
+            return {sink}
+        elif len(overlapping) == 1:
+            return self.flow[overlapping[0]]
+        else:
+            raise RuntimeError('Multiple overlapping sinks: {}!'
+                .format([s.name for s in overlapping]))
 
-    def sinks(self, source: InformationFlowNode) -> Set[InformationFlowNode]:
+    def sinks(self, source: str) -> Set[InformationFlowNode]:
         '''Returns all sinks for the given source.'''
         out = set()
         for sink in self.flow:
-            if source in self.flow[sink]:
+            if [s for s in self.flow[sink] if s.name == source]:
                 out.add(sink)
-        if source not in self.flow:
+        if [s for s in self.flow if s.name == source]:
             # Implicitly, the source is unmodified and depends on itself
-            out.add(source)
+            out.add(InformationFlowNode(source))
         return out
 
     def all_sources(self) -> Set[InformationFlowNode]:
@@ -177,14 +186,8 @@ class InformationFlowGraph:
         Important: this does not handle partial overlap of e.g. DMEM ranges! It
         only returns sources for the sinks exactly.
         '''
-        sink_nodes = [n for n in self.flow if n.name in sinks]
         out: Set[InformationFlowNode] = set()
-        return out.union(*(self.sources(s) for s in sink_nodes))
-
-    def sinks_for_any(self, sinks: Iterable[InformationFlowNode]) -> Set[InformationFlowNode]:
-        '''Returns all nodes that are a sink for any of the given sources.'''
-        out: Set[InformationFlowNode] = set()
-        return out.union(*(self.sinks(s) for s in sinks))
+        return out.union(*(self.sources(InformationFlowNode(s)) for s in sinks))
 
     def remove_source(self, node: str) -> None:
         '''Removes the node from the graph anywhere it appears as a source.
@@ -192,7 +195,10 @@ class InformationFlowGraph:
         If the node is not a source in the graph, does nothing.
         '''
         for sources in self.flow.values():
-            sources.discard(node)
+            for src in sources:
+                if src.name == node:
+                    sources.discard(src)
+                    break
 
     def remove_sink(self, node: str) -> None:
         '''Removes the node from the graph anywhere it appears as a sink.
@@ -412,20 +418,20 @@ class InformationFlowGraph:
         flag_groups = set()
         wregs = []
         xregs = []
-        for sink in sorted(self.flow.keys()):
-            if sink == 'dmem' or sink == 'x1':
+        for sink in self.flow:
+            if sink.name == 'x1':
                 # Not real registers or flags, ignore
                 continue
-            elif sink.startswith('w') and sink[1:].isdigit():
-                wregs.append(int(sink[1:]))
-            elif sink.startswith('x') and sink[1:].isdigit():
-                xregs.append(int(sink[1:]))
-            elif sink.startswith('fg0'):
+            elif sink.name.startswith('w') and sink.name[1:].isdigit():
+                wregs.append(int(sink.name[1:]))
+            elif sink.name.startswith('x') and sink.name[1:].isdigit():
+                xregs.append(int(sink.name[1:]))
+            elif sink.name.startswith('fg0'):
                 flag_groups.add('FG0')
-            elif sink.startswith('fg1'):
+            elif sink.name.startswith('fg1'):
                 flag_groups.add('FG1')
             else:
-                special.append(sink)
+                special.append(sink.name)
 
         # Combine the ranges.
         w_ranges = _combine_ranges(sorted(wregs))
@@ -557,7 +563,7 @@ class InsnDmemOperandNode(InsnInformationFlowNode):
             raise RuntimeError(
                 'Cannot analyze information flow; cannot determine which '
                 'DMEM region is referenced by non-constant GPR {} (constant '
-                'regs are: {})'.format(gpr, constant_regs.keys()))
+                'regs are: {})'.format(addr_reg_name, constant_regs.keys()))
         addr = constant_regs[addr_reg_name]
         offset = op_vals[self.offset_op.name]
         return DmemInformationFlowNode(addr+offset, addr+offset+self.width)
@@ -628,13 +634,13 @@ class InsnGroupFlagNode(InsnInformationFlowNode):
 
 class InsnConstantNode(InsnInformationFlowNode):
     '''Represents instruction node whose value does not depend on operands.'''
-    def __init__(self, node: InformationFlowNode):
-        self.node = node
+    def __init__(self, name: str):
+        self.name = name
         self.constant_dependent = False
 
     def evaluate(self, op_vals: Dict[str, int],
                  constant_regs: Dict[str, int]) -> InformationFlowNode:
-        return self.node
+        return InformationFlowNode(self.name)
 
 
 def _parse_iflow_nodes(
@@ -699,7 +705,7 @@ def _parse_iflow_nodes(
             raise RuntimeError(
                 'Invalid dmem write width {} in information-flow reference: {}'
                 .format(width, node))
-        width = int(width)
+        width = int(width) # type: ignore
         offset = None
         for op in operands:
             if op.name == 'offset' and isinstance(op.op_type, ImmOperandType):
@@ -716,7 +722,7 @@ def _parse_iflow_nodes(
                         'Operand {} in memory reference {} is not a GPR '
                         '(type {}). Only GPRs can be memory references.'.
                         format(gpr, node, type(op.op_type)))
-                return [InsnDmemOperandNode(op, offset, width)]
+                return [InsnDmemOperandNode(op, offset, width)] # type: ignore
 
     # Check if node is a special string
     if node in SPECIAL_REG_NAMES:

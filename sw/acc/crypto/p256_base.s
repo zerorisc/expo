@@ -55,26 +55,13 @@
  */
 trigger_fault_if_fg0_z:
   /* Read the FG0.Z flag (position 3).
-       x2 <= FG0.Z */
+       x2 <= FG0.Z << 3 */
   csrrw     x2, FG0, x0
   andi      x2, x2, 8
-  srli      x2, x2, 3
 
-  /* Subtract FG0.Z from 0.
-       x2 <= 0 - x2 = FG0.Z ? 2^32 - 1 : 0 */
-  sub       x2, x0, x2
-
-  /* The `bn.lid` instruction causes an `BAD_DATA_ADDR` error if the
-     memory address is out of bounds. Therefore, if FG0.Z is 1, this
-     instruction causes an error, but if FG0.Z is 0 it simply loads the word at
-     address 0 into w31. */
-  li         x3, 31
-  bn.lid     x3, 0(x2)
-
-  /* If we get here, the flag must have been 0. Restore w31 to zero and return.
-       w31 <= 0 */
-  bn.xor     w31, w31, w31
-
+  /* Cause an error if x2 is nonzero, meaning FG0.Z=1. */
+  beq       x2, x0, .+4
+  unimp
   ret
 
 /**
@@ -99,23 +86,10 @@ trigger_fault_if_fg0_not_z:
        x2 <= FG0.Z */
   csrrw     x2, FG0, x0
   andi      x2, x2, 8
-  srli      x2, x2, 3
 
-  /* Subtract 1 from FG0.Z.
-       x2 <= x2 - 1 = FG0.Z ? 0 : 2^32 - 1 */
-  addi      x2, x2, -1
-
-  /* The `bn.lid` instruction causes an `BAD_DATA_ADDR` error if the
-     memory address is out of bounds. Therefore, if FG0.Z is 0, this
-     instruction causes an error, but if FG0.Z is 1 it simply loads the word at
-     address 0 into w31. */
-  li         x3, 31
-  bn.lid     x3, 0(x2)
-
-  /* If we get here, the flag must have been 1. Restore w31 to zero and return.
-       w31 <= 0 */
-  bn.xor     w31, w31, w31
-
+  /* Cause an error if x2 is nonzero, meaning FG0.Z=0. */
+  bne       x2, x0, .+4
+  unimp
   ret
 
 /**
