@@ -766,7 +766,7 @@ module kmac_app
       SelApp: begin
         // app_id is valid at this time
         kmac_valid_o = app_i[app_id].valid;
-        kmac_data_o  = app_i[app_id].data;
+        kmac_data_o  = app_i[app_id].data_share0;
         // Expand strb to bits. prim_packer inside MSG_FIFO accepts the bit masks
         for (int i = 0 ; i < $bits(app_i[app_id].strb) ; i++) begin
           kmac_mask_o[8*i+:8] = {8{app_i[app_id].strb[i]}};
