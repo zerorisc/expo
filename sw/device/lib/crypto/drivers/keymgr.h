@@ -107,7 +107,7 @@ status_t keymgr_generate_key_acc(
  * @return OK or error.
  */
 OT_WARN_UNUSED_RESULT
-status_t keymgr_generate_attestation_key_otbn(void);
+status_t keymgr_generate_attestation_key_acc(void);
 
 /**
  * Clear the sideloaded AES key.

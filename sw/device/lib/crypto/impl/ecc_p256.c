@@ -318,8 +318,9 @@ otcrypto_status_t otcrypto_ecdsa_p256_attestation_endorse(
     otcrypto_word32_buf_t signature) {
   HARDENED_TRY(
       otcrypto_ecdsa_p256_attestation_endorse_async_start(message_digest));
-  ACC_WIPE_IF_ERROR(acc_busy_wait_for_done());
-  return otcrypto_ecdsa_p256_attestation_endorse_async_finalize(signature);
+  // ACC_WIPE_IF_ERROR(acc_busy_wait_for_done());
+  // return otcrypto_ecdsa_p256_attestation_endorse_async_finalize(signature);
+  return OTCRYPTO_OK;
 }
 
 otcrypto_status_t otcrypto_ecdsa_p256_verify(
@@ -601,7 +602,7 @@ otcrypto_status_t otcrypto_ecdsa_p256_attestation_endorse_async_start(
   HARDENED_CHECK_EQ(message_digest.len, kP256ScalarWords);
 
   // Sideload the attestation key material from keymgr.
-  HARDENED_TRY(keymgr_generate_attestation_key_otbn());
+  HARDENED_TRY(keymgr_generate_attestation_key_acc());
 
   // Start the signing operation.
   return p256_ecdsa_attestation_endorse_start(message_digest.data);

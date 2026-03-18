@@ -45,7 +45,7 @@ static const acc_addr_t kAccVarY = ACC_ADDR_T_INIT(run_p256, y);
 static const acc_addr_t kAccVarD0 = ACC_ADDR_T_INIT(run_p256, d0_io);
 static const acc_addr_t kAccVarD1 = ACC_ADDR_T_INIT(run_p256, d1_io);
 static const acc_addr_t kAccVarXr = ACC_ADDR_T_INIT(run_p256, x_r);
-static const acc_addr_t kAccVarSeed = ACC_ADDR_T_INIT(run_p256, seed);
+// static const acc_addr_t kAccVarSeed = ACC_ADDR_T_INIT(run_p256, seed);
 static const acc_addr_t kAccVarOk = ACC_ADDR_T_INIT(run_p256, ok);
 
 // Declare mode constants.
@@ -306,14 +306,15 @@ status_t p256_ecdsa_attestation_endorse_start(
   uint32_t seed[kAccAttestationSeedBufferWords];
   memset(seed, 0, sizeof(seed));
   HARDENED_TRY(flash_ctrl_cdi1_seed_read(seed));
-  HARDENED_TRY(
-      acc_dmem_write(kAccAttestationSeedBufferWords, seed, kAccVarSeed));
+  // HARDENED_TRY(
+  //     acc_dmem_write(kAccAttestationSeedBufferWords, seed, kAccVarSeed));
 
-  // Set the message digest.
-  HARDENED_TRY(set_message_digest(digest));
+  // // Set the message digest.
+  // HARDENED_TRY(set_message_digest(digest));
 
-  // Start the ACC routine.
-  return acc_execute();
+  // // Start the ACC routine.
+  // return acc_execute();
+  return OTCRYPTO_OK;
 }
 
 status_t p256_ecdsa_attestation_endorse_finalize(

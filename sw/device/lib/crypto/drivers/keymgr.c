@@ -270,21 +270,21 @@ status_t keymgr_generate_key_acc(keymgr_diversification_t diversification) {
   return OTCRYPTO_OK;
 }
 
-status_t keymgr_generate_attestation_key_otbn(void) {
+status_t keymgr_generate_attestation_key_acc(void) {
   // Ensure that the entropy complex has been initialized and keymgr is idle.
   HARDENED_TRY(entropy_complex_check());
   HARDENED_TRY(keymgr_is_idle());
 
   // Set the control register to generate *attestation* CDI key material for
-  // OTBN.
+  // ACC.
   uint32_t ctrl =
       bitfield_field32_write(0, KEYMGR_CONTROL_SHADOWED_DEST_SEL_FIELD,
-                             KEYMGR_CONTROL_SHADOWED_DEST_SEL_VALUE_OTBN);
+                             KEYMGR_CONTROL_SHADOWED_DEST_SEL_VALUE_ACC);
   ctrl = bitfield_bit32_write(ctrl, KEYMGR_CONTROL_SHADOWED_CDI_SEL_BIT, true);
   ctrl = bitfield_field32_write(
       ctrl, KEYMGR_CONTROL_SHADOWED_OPERATION_FIELD,
       KEYMGR_CONTROL_SHADOWED_OPERATION_VALUE_GENERATE_HW_OUTPUT);
-  abs_mmio_write32_shadowed(kBaseAddr + KEYMGR_CONTROL_SHADOWED_REG_OFFSET,
+  abs_mmio_write32_shadowed(keymgr_base() + KEYMGR_CONTROL_SHADOWED_REG_OFFSET,
                             ctrl);
 
   // Start the operation and wait for it to complete.
