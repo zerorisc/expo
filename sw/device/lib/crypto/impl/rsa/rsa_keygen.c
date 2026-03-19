@@ -32,6 +32,7 @@ ACC_DECLARE_SYMBOL_ADDR(run_rsa_keygen,
 ACC_DECLARE_SYMBOL_ADDR(run_rsa_keygen, rsa_i_q);       // CRT coefficient i_p.
 ACC_DECLARE_SYMBOL_ADDR(run_rsa_keygen, rsa_cofactor);  // Cofactor p or q.
 ACC_DECLARE_SYMBOL_ADDR(run_rsa_keygen, rsa_e);         // Public exponent e.
+ACC_DECLARE_SYMBOL_ADDR(run_rsa_keygen, rsa_check_mask);  // Check mask.
 
 static const acc_addr_t kAccVarRsaMode = ACC_ADDR_T_INIT(run_rsa_keygen, mode);
 static const acc_addr_t kAccVarRsaSessionToken =
@@ -45,6 +46,8 @@ static const acc_addr_t kAccVarRsaIq = ACC_ADDR_T_INIT(run_rsa_keygen, rsa_i_q);
 static const acc_addr_t kAccVarRsaCofactor =
     ACC_ADDR_T_INIT(run_rsa_keygen, rsa_cofactor);
 static const acc_addr_t kAccVarRsaE = ACC_ADDR_T_INIT(run_rsa_keygen, rsa_e);
+static const acc_addr_t kAccVarRsaCheckMask =
+    ACC_ADDR_T_INIT(run_rsa_keygen, rsa_check_mask);
 
 // Declare mode constants.
 ACC_DECLARE_SYMBOL_ADDR(run_rsa_keygen, MODE_GEN_RSA_2048);
@@ -442,10 +445,11 @@ status_t rsa_key_check_2048_finalize(const rsa_2048_public_key_t *public_key,
   }
   HARDENED_CHECK_EQ(act_mode, exp_mode);
 
-  // Prepare a multi-limb constant of 1 for comparing to in validity checks.
-  uint32_t one[kRsa2048NumWords / 2];
-  memset(&one, 0, sizeof(one));
-  one[0] = 1;
+  // Read the 256-bit random mask used to harden d_p, d_q, and i_q checks.
+  // Zero-extend to full width for comparison.
+  uint32_t mask[kRsa2048NumWords / 2];
+  memset(&mask, 0, sizeof(mask));
+  ACC_WIPE_IF_ERROR(acc_dmem_read(8, kAccVarRsaCheckMask, mask));
 
   // Read the value of the first CRT component (d_p) validity check value
   // from ACC dmem.
@@ -453,9 +457,9 @@ status_t rsa_key_check_2048_finalize(const rsa_2048_public_key_t *public_key,
   ACC_WIPE_IF_ERROR(
       acc_dmem_read(kRsa2048NumWords / 2, kAccVarRsaDp, dp_check));
 
-  // Check that this matches the expected value of 1, and update the
-  // validity.
-  hardened_bool_t dp_valid = hardened_memeq(one, dp_check, ARRAYSIZE(dp_check));
+  // Check that this matches the mask (valid if r * e * d_p == r mod (p-1)).
+  hardened_bool_t dp_valid =
+      hardened_memeq(mask, dp_check, ARRAYSIZE(dp_check));
 
   // Read the value of the second CRT component (d_q) validity check value
   // from ACC dmem.
@@ -463,9 +467,9 @@ status_t rsa_key_check_2048_finalize(const rsa_2048_public_key_t *public_key,
   ACC_WIPE_IF_ERROR(
       acc_dmem_read(kRsa2048NumWords / 2, kAccVarRsaDq, dq_check));
 
-  // Check that this matches the expected value of 1, and update the
-  // validity.
-  hardened_bool_t dq_valid = hardened_memeq(one, dq_check, ARRAYSIZE(dq_check));
+  // Check that this matches the mask (valid if r * e * d_q == r mod (q-1)).
+  hardened_bool_t dq_valid =
+      hardened_memeq(mask, dq_check, ARRAYSIZE(dq_check));
 
   // Read the value of the CRT coefficient (i_q) validity check value
   // from ACC dmem.
@@ -473,9 +477,9 @@ status_t rsa_key_check_2048_finalize(const rsa_2048_public_key_t *public_key,
   ACC_WIPE_IF_ERROR(
       acc_dmem_read(kRsa2048NumWords / 2, kAccVarRsaIq, iq_check));
 
-  // Check that this matches the expected value of 1, and update the
-  // validity.
-  hardened_bool_t iq_valid = hardened_memeq(one, iq_check, ARRAYSIZE(iq_check));
+  // Check that this matches the mask (valid if r * q * i_q == r mod p).
+  hardened_bool_t iq_valid =
+      hardened_memeq(mask, iq_check, ARRAYSIZE(iq_check));
 
   // Read the recovered public modulus (n) from ACC dmem.
   uint32_t recovered_n[kRsa2048NumWords];
@@ -587,10 +591,11 @@ status_t rsa_key_check_3072_finalize(const rsa_3072_public_key_t *public_key,
   }
   HARDENED_CHECK_EQ(act_mode, exp_mode);
 
-  // Prepare a multi-limb constant of 1 for comparing to in validity checks.
-  uint32_t one[kRsa3072NumWords / 2];
-  memset(&one, 0, sizeof(one));
-  one[0] = 1;
+  // Read the 256-bit random mask used to harden d_p, d_q, and i_q checks.
+  // Zero-extend to full width for comparison.
+  uint32_t mask[kRsa3072NumWords / 2];
+  memset(&mask, 0, sizeof(mask));
+  ACC_WIPE_IF_ERROR(acc_dmem_read(8, kAccVarRsaCheckMask, mask));
 
   // Read the value of the first CRT component (d_p) validity check value
   // from ACC dmem.
@@ -598,9 +603,9 @@ status_t rsa_key_check_3072_finalize(const rsa_3072_public_key_t *public_key,
   ACC_WIPE_IF_ERROR(
       acc_dmem_read(kRsa3072NumWords / 2, kAccVarRsaDp, dp_check));
 
-  // Check that this matches the expected value of 1, and update the
-  // validity.
-  hardened_bool_t dp_valid = hardened_memeq(one, dp_check, ARRAYSIZE(dp_check));
+  // Check that this matches the mask (valid if r * e * d_p == r mod (p-1)).
+  hardened_bool_t dp_valid =
+      hardened_memeq(mask, dp_check, ARRAYSIZE(dp_check));
 
   // Read the value of the second CRT component (d_q) validity check value
   // from ACC dmem.
@@ -608,9 +613,9 @@ status_t rsa_key_check_3072_finalize(const rsa_3072_public_key_t *public_key,
   ACC_WIPE_IF_ERROR(
       acc_dmem_read(kRsa3072NumWords / 2, kAccVarRsaDq, dq_check));
 
-  // Check that this matches the expected value of 1, and update the
-  // validity.
-  hardened_bool_t dq_valid = hardened_memeq(one, dq_check, ARRAYSIZE(dq_check));
+  // Check that this matches the mask (valid if r * e * d_q == r mod (q-1)).
+  hardened_bool_t dq_valid =
+      hardened_memeq(mask, dq_check, ARRAYSIZE(dq_check));
 
   // Read the value of the CRT coefficient (i_q) validity check value
   // from ACC dmem.
@@ -618,9 +623,9 @@ status_t rsa_key_check_3072_finalize(const rsa_3072_public_key_t *public_key,
   ACC_WIPE_IF_ERROR(
       acc_dmem_read(kRsa3072NumWords / 2, kAccVarRsaIq, iq_check));
 
-  // Check that this matches the expected value of 1, and update the
-  // validity.
-  hardened_bool_t iq_valid = hardened_memeq(one, iq_check, ARRAYSIZE(iq_check));
+  // Check that this matches the mask (valid if r * q * i_q == r mod p).
+  hardened_bool_t iq_valid =
+      hardened_memeq(mask, iq_check, ARRAYSIZE(iq_check));
 
   // Read the recovered public modulus (n) from ACC dmem.
   uint32_t recovered_n[kRsa3072NumWords];
@@ -732,10 +737,11 @@ status_t rsa_key_check_4096_finalize(const rsa_4096_public_key_t *public_key,
   }
   HARDENED_CHECK_EQ(act_mode, exp_mode);
 
-  // Prepare a multi-limb constant of 1 for comparing to in validity checks.
-  uint32_t one[kRsa4096NumWords / 2];
-  memset(&one, 0, sizeof(one));
-  one[0] = 1;
+  // Read the 256-bit random mask used to harden d_p, d_q, and i_q checks.
+  // Zero-extend to full width for comparison.
+  uint32_t mask[kRsa4096NumWords / 2];
+  memset(&mask, 0, sizeof(mask));
+  ACC_WIPE_IF_ERROR(acc_dmem_read(8, kAccVarRsaCheckMask, mask));
 
   // Read the value of the first CRT component (d_p) validity check value
   // from ACC dmem.
@@ -743,9 +749,9 @@ status_t rsa_key_check_4096_finalize(const rsa_4096_public_key_t *public_key,
   ACC_WIPE_IF_ERROR(
       acc_dmem_read(kRsa4096NumWords / 2, kAccVarRsaDp, dp_check));
 
-  // Check that this matches the expected value of 1, and update the
-  // validity.
-  hardened_bool_t dp_valid = hardened_memeq(one, dp_check, ARRAYSIZE(dp_check));
+  // Check that this matches the mask (valid if r * e * d_p == r mod (p-1)).
+  hardened_bool_t dp_valid =
+      hardened_memeq(mask, dp_check, ARRAYSIZE(dp_check));
 
   // Read the value of the second CRT component (d_q) validity check value
   // from ACC dmem.
@@ -753,9 +759,9 @@ status_t rsa_key_check_4096_finalize(const rsa_4096_public_key_t *public_key,
   ACC_WIPE_IF_ERROR(
       acc_dmem_read(kRsa4096NumWords / 2, kAccVarRsaDq, dq_check));
 
-  // Check that this matches the expected value of 1, and update the
-  // validity.
-  hardened_bool_t dq_valid = hardened_memeq(one, dq_check, ARRAYSIZE(dq_check));
+  // Check that this matches the mask (valid if r * e * d_q == r mod (q-1)).
+  hardened_bool_t dq_valid =
+      hardened_memeq(mask, dq_check, ARRAYSIZE(dq_check));
 
   // Read the value of the CRT coefficient (i_q) validity check value
   // from ACC dmem.
@@ -763,9 +769,9 @@ status_t rsa_key_check_4096_finalize(const rsa_4096_public_key_t *public_key,
   ACC_WIPE_IF_ERROR(
       acc_dmem_read(kRsa4096NumWords / 2, kAccVarRsaIq, iq_check));
 
-  // Check that this matches the expected value of 1, and update the
-  // validity.
-  hardened_bool_t iq_valid = hardened_memeq(one, iq_check, ARRAYSIZE(iq_check));
+  // Check that this matches the mask (valid if r * q * i_q == r mod p).
+  hardened_bool_t iq_valid =
+      hardened_memeq(mask, iq_check, ARRAYSIZE(iq_check));
 
   // Read the recovered public modulus (n) from ACC dmem.
   uint32_t recovered_n[kRsa4096NumWords];
