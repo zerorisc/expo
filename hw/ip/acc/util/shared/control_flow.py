@@ -175,12 +175,15 @@ class ControlGraph:
         '''
         return self.get_entry(pc)[1]
 
-    def get_cycle_starts(self) -> Set[int]:
+    def get_cycle_starts(self, skip_loops=False) -> Set[int]:
         '''Returns start PCs of all marked cycles in the graph.'''
         out = set()
         for pc, entry in self.graph.items():
             for edge in entry[1]:
                 if isinstance(edge, Cycle):
+                    if skip_loops and isinstance(edge, LoopEnd):
+                        continue
+                    print('CYCLECYCLE', hex(edge.pc), edge)
                     out.add(edge.pc)
         return out
 
@@ -438,6 +441,7 @@ def _label_cycles(program: ACCProgram, graph: ControlGraph, start_pc: int,
 
     for i in range(len(explore_edges)):
         edge = explore_edges[i]
+        print(isinstance(edge, LoopEnd), edge)
         if isinstance(edge, Ret) or isinstance(edge, ImemEnd) or isinstance(
                 edge, Ecall):
             # Cannot possibly loop back

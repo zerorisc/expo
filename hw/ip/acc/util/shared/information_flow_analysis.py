@@ -329,16 +329,18 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     # Possible loop iteration counts for loops accessible from this PC.
     loop_iters: Dict[int, Set[int]] = {}
 
-    # If this PC is the start of a cycle, then initialize the information flow
-    # for the cycle with an empty graph (since doing nothing is a valid
-    # traversal of the cycle).
-    if start_pc in graph.get_cycle_starts():
-        cycles[start_pc] = InformationFlowGraph.empty()
-
     section = graph.get_section(start_pc)
     edges = graph.get_edges(start_pc)
     print(hex(start_pc), constants.values)
     print([i.mnemonic for i in section.get_insn_sequence(program)])
+    print(edges)
+
+    # If this PC is the start of a cycle, then initialize the information flow
+    # for the cycle with an empty graph (since doing nothing is a valid
+    # traversal of the cycle). Ensure we do not do this for loops.
+    if start_pc in graph.get_cycle_starts(skip_loops=True):
+        print('CYCLE', hex(start_pc))
+        cycles[start_pc] = InformationFlowGraph.empty()
 
     # If we're crossing the loop end PC, we must do so at the end of the
     # section. In this case, we do not pass the end of the loop; we treat the
@@ -466,7 +468,6 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
                               InformationFlowGraph.nonexistent()).update(iflow)
         elif isinstance(loc, LoopStart) or not loc.is_special():
             # Just a normal PC; recurse
-            print('post-update', constants.values)
             result = _get_iflow(program, graph, loc.pc, constants, loop_end_pc,
                                 cache)
 
@@ -505,6 +506,8 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     # see if it can be finalized.
     if start_pc in cycles:
         cycle_iflow = cycles[start_pc]
+        print(cycle_iflow.pretty())
+        print(cycle_iflow.all_sinks())
 
         # Find which constants are "stable" (unmodified throughout all paths in
         # the cycle)
