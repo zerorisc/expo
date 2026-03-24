@@ -12,6 +12,7 @@ set -e
     --test_timeout=2400,2400,4000,-1 \
     --local_test_jobs=8 \
     --local_resources=cpu=8 \
+    --local_resources=memmory=8192 \
     --test_tag_filters=verilator,-broken \
     --test_output=errors \
     --//hw:verilator_options=--threads,1 \
