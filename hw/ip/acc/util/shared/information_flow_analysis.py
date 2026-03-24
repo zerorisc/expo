@@ -288,6 +288,29 @@ def _get_iflow_update_state(
     return iflow.seq(rec_return_iflow)
 
 
+def simplify_control_deps(control_deps: Dict[InformationFlowNode, Set[int]]) -> None:
+    '''Combine adjacent control-flow dependencies.'''
+    keys = list(control_deps.keys())
+    i = 0
+    while i < len(keys):
+        node1 = keys[i]
+        j = i + 1
+        while j < len(keys):
+            node2 = keys[j]
+            if control_deps[node1] == control_deps[node2]:
+                node12 = node1.union(node2)
+                if node12 is not None:
+                    control_deps[node12] = control_deps[node1]
+                    del keys[j]
+                    del control_deps[node1]
+                    del control_deps[node2]
+                    node1 = node12
+                    j -= 1
+            j += 1
+        i += 1
+    return
+
+
 def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
                start_constants: ConstantContext, loop_end_pc: Optional[int],
                cache: IFlowCache) -> IFlowResult:
@@ -331,9 +354,6 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
 
     section = graph.get_section(start_pc)
     edges = graph.get_edges(start_pc)
-    print(hex(start_pc), constants.values)
-    print([i.mnemonic for i in section.get_insn_sequence(program)])
-    print(edges)
 
     # If this PC is the start of a cycle, then initialize the information flow
     # for the cycle with an empty graph (since doing nothing is a valid
@@ -355,8 +375,6 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
                                                       section.end - 4,
                                                       constants)
 
-    assert(all([x in constants for x in used_constants]))
-
     # Get the instruction/operands at the very end of the block (i.e. the
     # control-flow instruction) for special handling
     last_insn = program.get_insn(section.end)
@@ -370,6 +388,8 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     used_constants.update(
         [n.name for n in used_constant_nodes
         if not isinstance(n, DmemInformationFlowNode)])
+
+    assert(all([x in constants for x in used_constants]))
 
     # Update control_deps to include last instruction
     last_insn_control_deps = {
@@ -429,17 +449,12 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
         jump_loc = edges[0]
         jump_result = _get_iflow(program, graph, jump_loc.pc, constants, None,
                                  cache)
-        print('JUMP BEGIN', hex(start_pc))
-        print(constants.values)
         iflow = _get_iflow_update_state(jump_result, iflow, program_end_iflow,
                                         used_constants, constants, cycles,
                                         control_deps, loop_iters)
 
         # Get information flow for return paths
         _, jump_return_iflow, _, _, _, _, _ = jump_result
-        print(jump_result[0])
-        print(constants.values)
-        print('JUMP DONE', hex(start_pc))
 
         # Compose current iflow with the flow for the jump's return paths
         iflow = iflow.seq(jump_return_iflow)
@@ -480,8 +495,9 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
 
             # Defensively copy constants so they don't cross between branches
             local_constants = deepcopy(constants)
+            local_used_constants = deepcopy(used_constants)
             rec_return_iflow = _get_iflow_update_state(
-                result, iflow, program_end_iflow, used_constants,
+                result, iflow, program_end_iflow, local_used_constants,
                 local_constants, cycles, control_deps, loop_iters)
 
             # If there were any return paths, take values on which existing and
@@ -559,15 +575,16 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     program_end_iflow.remove_sink('x0')
     control_deps.pop(InformationFlowNode('x0'), None)
 
+    # Unify adjacent nodes in control dependencies.
+    simplify_control_deps(control_deps)
+
+    print(hex(start_pc), [i.mnemonic for i in section.get_insn_sequence(program)])
+    print([n.name for n in return_iflow.all_sources()])
+    print([n.name for n in program_end_iflow.all_sources()])
+
     # Update the cache and return
     out = (used_constants, return_iflow, program_end_iflow, common_consts,
            cycles, control_deps, loop_iters)
-
-    print(hex(start_pc))
-    print([i.mnemonic for i in section.get_insn_sequence(program)])
-    print(edges)
-    print("start", start_constants.values)
-    print("used", used_constants)
 
     _get_iflow_cache_update(start_pc, start_constants, out, cache)
     return out
@@ -604,6 +621,8 @@ def get_subroutine_iflow(program: ACCProgram, graph: ControlGraph,
     if not (ret_iflow.exists or end_iflow.exists):
         raise ValueError('Could not find any complete control-flow paths when '
                          'analyzing subroutine.')
+    if not ret_iflow.exists:
+        print('WARNING: no paths in this subroutine appear to return to the caller.')
     return ret_iflow, end_iflow, control_deps
 
 

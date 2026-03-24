@@ -54,6 +54,12 @@ class InformationFlowNode:
             return [self]
         return []
 
+    def union(self, other: 'InformationFlowNode') -> Optional['InformationFlowNode']:
+        '''Try to merge self and other.'''
+        if self.overlaps(other):
+            return self
+        return None
+
     def __hash__(self) -> int:
         return hash(self.name)
 
@@ -94,6 +100,16 @@ class DmemInformationFlowNode(InformationFlowNode):
             out.append(DmemInformationFlowNode(other.end, self.end))
         return out
 
+    def union(self, other: 'InformationFlowNode') -> Optional['InformationFlowNode']:
+        '''Try to merge self and other.'''
+        if not isinstance(other, DmemInformationFlowNode):
+            return None
+        if self.start == other.end:
+            return DmemInformationFlowNode(other.start, self.end) 
+        elif other.start == self.end:
+            return DmemInformationFlowNode(self.start, other.end) 
+        return None
+
 
 class InformationFlowGraph:
     '''Represents an information flow graph.
@@ -114,6 +130,8 @@ class InformationFlowGraph:
         # Should not be modified directly. See the nonexistent() method
         # documentation for details of what this flag means.
         self.exists = exists
+
+        self.simplify()
 
     @staticmethod
     def empty() -> 'InformationFlowGraph':
@@ -210,6 +228,26 @@ class InformationFlowGraph:
         if sink_nodes:
             self.flow.pop(sink_nodes[0], None)
 
+    def simplify(self) -> None:
+        '''Merge adjacent nodes in the graph (e.g. DMEM ranges).'''
+        for sink in self.flow.keys():
+            sources = list(self.flow[sink])
+            i = 0
+            while i < len(sources):
+                node1 = sources[i]
+                j = i + 1
+                while j < len(sources):
+                    node2 = sources[j]
+                    node12 = node1.union(node2) 
+                    if node12 is not None:
+                        node1 = node12
+                        del sources[j]
+                    else:
+                        j += 1
+                sources[i] = node1
+                i += 1
+            self.flow[sink] = set(sources)
+
     def update(self, other: 'InformationFlowGraph') -> None:
         '''Updates self to include the information flow from other.
 
@@ -270,6 +308,8 @@ class InformationFlowGraph:
                     self.flow[node] = deepcopy(sources2)
                 if inter is not None:
                     self.flow[inter] = sources1 | sources2
+
+        self.simplify()
 
         return
 

@@ -132,7 +132,7 @@ class ConstantContext:
         elif insn.mnemonic == 'lui':
             grd_name = get_op_val_str(insn, op_vals, 'grd')
             new_values[grd_name] = op_vals['imm'] << 12
-        else:
+        elif insn.mnemonic in ['bn.lid', 'bn.sid', 'bn.movr']:
             # If the instruction has any op_vals ending in _inc,
             # assume we're incrementing the corresponding register
             for op in insn.operands:
@@ -140,9 +140,12 @@ class ConstantContext:
                     # If reg to be incremented is a constant, increment it
                     inc_op = op.name[:-(len('_inc'))]
                     inc_name = get_op_val_str(insn, op_vals, inc_op)
+                    inc_amount = 1
+                    if insn.mnemonic in ['bn.lid', 'bn.sid'] and op.name == 'grs1_inc':
+                        inc_amount = 32
                     if inc_name in self.values:
                         new_values[inc_name] = (self.values[inc_name] +
-                                                1) % (1 << 32)
+                                                inc_amount) % (1 << 32)
 
         # If the instruction's information-flow graph indicates that we updated
         # any constant register other than the ones handled above, the value of

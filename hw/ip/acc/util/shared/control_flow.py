@@ -205,7 +205,6 @@ class ControlGraph:
                 if isinstance(edge, Cycle):
                     if skip_loops and isinstance(edge, LoopEnd):
                         continue
-                    print('CYCLECYCLE', hex(edge.pc), edge)
                     out.add(edge.pc)
         return out
 
@@ -463,7 +462,6 @@ def _label_cycles(program: ACCProgram, graph: ControlGraph, start_pc: int,
 
     for i in range(len(explore_edges)):
         edge = explore_edges[i]
-        print(isinstance(edge, LoopEnd), edge)
         if isinstance(edge, Ret) or isinstance(edge, ImemEnd) or isinstance(
                 edge, Ecall):
             # Cannot possibly loop back
