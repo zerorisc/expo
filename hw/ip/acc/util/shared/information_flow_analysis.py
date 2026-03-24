@@ -337,8 +337,6 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
 
     section = graph.get_section(start_pc)
     edges = graph.get_edges(start_pc)
-    print(hex(start_pc), constants.values)
-    print([i.mnemonic for i in section.get_insn_sequence(program)])
 
     # If we're crossing the loop end PC, we must do so at the end of the
     # section. In this case, we do not pass the end of the loop; we treat the
@@ -428,7 +426,6 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
 
         # Get information flow for return paths
         _, jump_return_iflow, _, _, _, _, _ = jump_result
-        jump_return_iflow.pretty()
 
         # Compose current iflow with the flow for the jump's return paths
         iflow = iflow.seq(jump_return_iflow)
@@ -442,8 +439,6 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     # We're only returning constants that are the same in all RET branches
     common_consts = None
 
-    print('last_insn', last_insn.mnemonic, last_op_vals)
-    print('edges', edges)
     for loc in edges:
         if isinstance(loc, Ecall) or isinstance(loc, ImemEnd):
             # Ecall or ImemEnd nodes are expected to be the only edge
@@ -466,7 +461,6 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
                               InformationFlowGraph.nonexistent()).update(iflow)
         elif isinstance(loc, LoopStart) or not loc.is_special():
             # Just a normal PC; recurse
-            print('post-update', constants.values)
             result = _get_iflow(program, graph, loc.pc, constants, loop_end_pc,
                                 cache)
 
