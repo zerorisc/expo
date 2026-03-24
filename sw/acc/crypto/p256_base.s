@@ -60,7 +60,7 @@ trigger_fault_if_fg0_z:
   andi      x2, x2, 8
 
   /* Cause an error if x2 is nonzero, meaning FG0.Z=1. */
-  beq       x2, x0, .+4
+  beq       x2, x0, .+8
   unimp
   ret
 
@@ -88,7 +88,7 @@ trigger_fault_if_fg0_not_z:
   andi      x2, x2, 8
 
   /* Cause an error if x2 is nonzero, meaning FG0.Z=0. */
-  bne       x2, x0, .+4
+  bne       x2, x0, .+8
   unimp
   ret
 

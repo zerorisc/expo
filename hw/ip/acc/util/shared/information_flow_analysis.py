@@ -579,6 +579,7 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     simplify_control_deps(control_deps)
 
     print(hex(start_pc), [i.mnemonic for i in section.get_insn_sequence(program)])
+    print(edges)
     print([n.name for n in return_iflow.all_sources()])
     print([n.name for n in program_end_iflow.all_sources()])
 
