@@ -427,13 +427,17 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
         jump_loc = edges[0]
         jump_result = _get_iflow(program, graph, jump_loc.pc, constants, None,
                                  cache)
+        print('JUMP BEGIN', hex(start_pc))
+        print(constants.values)
         iflow = _get_iflow_update_state(jump_result, iflow, program_end_iflow,
                                         used_constants, constants, cycles,
                                         control_deps, loop_iters)
 
         # Get information flow for return paths
         _, jump_return_iflow, _, _, _, _, _ = jump_result
-        jump_return_iflow.pretty()
+        print(jump_result[0])
+        print(constants.values)
+        print('JUMP DONE', hex(start_pc))
 
         # Compose current iflow with the flow for the jump's return paths
         iflow = iflow.seq(jump_return_iflow)
@@ -447,8 +451,6 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     # We're only returning constants that are the same in all RET branches
     common_consts = None
 
-    print('last_insn', last_insn.mnemonic, last_op_vals)
-    print('edges', edges)
     for loc in edges:
         if isinstance(loc, Ecall) or isinstance(loc, ImemEnd):
             # Ecall or ImemEnd nodes are expected to be the only edge
@@ -509,8 +511,6 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     # see if it can be finalized.
     if start_pc in cycles:
         cycle_iflow = cycles[start_pc]
-        print(cycle_iflow.pretty())
-        print(cycle_iflow.all_sinks())
 
         # Find which constants are "stable" (unmodified throughout all paths in
         # the cycle)
@@ -560,6 +560,12 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     # Update the cache and return
     out = (used_constants, return_iflow, program_end_iflow, common_consts,
            cycles, control_deps, loop_iters)
+
+    print(hex(start_pc))
+    print([i.mnemonic for i in section.get_insn_sequence(program)])
+    print(edges)
+    print("start", start_constants.values)
+    print("used", used_constants)
 
     _get_iflow_cache_update(start_pc, start_constants, out, cache)
     return out
