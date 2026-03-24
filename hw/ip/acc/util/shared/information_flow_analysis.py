@@ -355,6 +355,8 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
                                                       section.end - 4,
                                                       constants)
 
+    assert(all([x in constants for x in used_constants]))
+
     # Get the instruction/operands at the very end of the block (i.e. the
     # control-flow instruction) for special handling
     last_insn = program.get_insn(section.end)
