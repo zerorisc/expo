@@ -339,7 +339,6 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     # for the cycle with an empty graph (since doing nothing is a valid
     # traversal of the cycle). Ensure we do not do this for loops.
     if start_pc in graph.get_cycle_starts(skip_loops=True):
-        print('CYCLE', hex(start_pc))
         cycles[start_pc] = InformationFlowGraph.empty()
 
     # If we're crossing the loop end PC, we must do so at the end of the
@@ -412,6 +411,10 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
 
             # Set the next edges to the instruction after the loop ends
             edges = [ControlLoc(body_loc.loop_end_pc + 4)]
+        else:
+            # If the number of loop iterations is not constant, fall back to
+            # treating this as a cycle.
+            cycles[start_pc] = InformationFlowGraph.empty()
 
     elif last_insn.mnemonic == 'jal' and last_op_vals['grd'] == 1:
         # Special handling for jumps; recursive call for jump destination, then
