@@ -105,6 +105,28 @@ static uint32_t kTestInvalidPrivateExponentComponentP[kRsa3072NumWords / 2] = {
     0x454af9,   0xcff6d9cd, 0xac279129, 0x351b6fb4, 0x85357c74, 0x866381de,
 };
 
+static uint32_t kTestInvalidPrivateExponentComponentQ[kRsa3072NumWords / 2] = {
+    0x4f94d00b, 0xcaacdde0, 0x81aa7fd7, 0xc265ae41, 0x326c9940, 0x8b427abf,
+    0x3a8f513a, 0x35580c14, 0xebfa05c1, 0x52b27b33, 0x7619c80c, 0xa5e076dc,
+    0xdef8c89c, 0xd42498c4, 0x753d842c, 0x44858361, 0x7e0b2e5f, 0x9da6b987,
+    0x9868b4ce, 0xb7ecb1ac, 0x381254c5, 0xa273df4f, 0x29aa3f66, 0xe8fd5603,
+    0xd6fe3210, 0x24041fe2, 0xf4c60024, 0x42cb4edf, 0x94713c64, 0xd3f5212c,
+    0x10f126,   0xad37458f, 0x820f1d42, 0x5a0b1136, 0xe000246d, 0x77fdaca4,
+    0xf244711b, 0xdceeefad, 0xc968d70a, 0xb73ee87d, 0xc0e913b3, 0x70629c,
+    0xdbf9ea12, 0xeeb64955, 0x3d24759f, 0x2ec3bd38, 0xd0def2f7, 0x8d57af0b,
+};
+
+static uint32_t kTestInvalidCrtCoefficient[kRsa3072NumWords / 2] = {
+    0x95932eaa, 0x59702111, 0x2ac49f32, 0x294792d7, 0x8ad3e891, 0x5b5a0c15,
+    0x2b6e7c2d, 0x56e13332, 0xe2a6188e, 0x4062dc8d, 0xdaa62268, 0xf28f7c86,
+    0x959632bd, 0xb85a7f81, 0xa5885ac,  0x44a95688, 0x871011f5, 0xd5fae09d,
+    0xd18a788a, 0x17dc874f, 0x1c9367f2, 0x94ba8be9, 0xdcd7ea3c, 0xd872e83e,
+    0x58690c6c, 0xf7f17944, 0x5b7a09ef, 0x2c9440e6, 0x98a67461, 0xc0ffe122,
+    0x17a3638,  0x733a43ea, 0x78476d0d, 0xaf954cab, 0x687da12f, 0x7480080e,
+    0xd573ce7c, 0xdc8e3c64, 0xa740368d, 0x17af4d83, 0xc45af0e2, 0xdd51be35,
+    0xfe85d4f0, 0xa0871757, 0xda54186d, 0x9b3ed119, 0xfe9b64d6, 0x66f89262,
+};
+
 static uint32_t kTestPublicExponent = 65537;
 
 // Key mode for testing.
@@ -343,7 +365,9 @@ status_t private_key_check_valid_roundtrip_test(void) {
   return OK_STATUS();
 }
 
-status_t private_key_check_invalid(void) {
+status_t private_key_check_invalid_inner(const uint32_t *d_p_data,
+                                         const uint32_t *d_q_data,
+                                         const uint32_t *i_q_data) {
   // Construct the public key.
   otcrypto_const_word32_buf_t modulus = {
       .data = kTestModulus,
@@ -359,8 +383,6 @@ status_t private_key_check_invalid(void) {
   TRY(otcrypto_rsa_public_key_construct(kOtcryptoRsaSize3072, modulus,
                                         kTestPublicExponent, &public_key));
 
-  // Attempt to construct the private key, providing an invalid value for d_p
-  // with a single bit changed.
   otcrypto_const_word32_buf_t p = {
       .data = kTestCofactorP,
       .len = ARRAYSIZE(kTestCofactorP),
@@ -370,15 +392,15 @@ status_t private_key_check_invalid(void) {
       .len = ARRAYSIZE(kTestCofactorQ),
   };
   otcrypto_const_word32_buf_t d_p = {
-      .data = kTestInvalidPrivateExponentComponentP,
+      .data = d_p_data,
       .len = ARRAYSIZE(kTestPrivateExponentComponentP),
   };
   otcrypto_const_word32_buf_t d_q = {
-      .data = kTestPrivateExponentComponentQ,
+      .data = d_q_data,
       .len = ARRAYSIZE(kTestPrivateExponentComponentQ),
   };
   otcrypto_const_word32_buf_t i_q = {
-      .data = kTestCrtCoefficient,
+      .data = i_q_data,
       .len = ARRAYSIZE(kTestCrtCoefficient),
   };
   otcrypto_key_config_t private_key_config = {
@@ -405,6 +427,24 @@ status_t private_key_check_invalid(void) {
   return OK_STATUS();
 }
 
+status_t private_key_check_invalid_dp(void) {
+  return private_key_check_invalid_inner(kTestInvalidPrivateExponentComponentP,
+                                         kTestPrivateExponentComponentQ,
+                                         kTestCrtCoefficient);
+}
+
+status_t private_key_check_invalid_dq(void) {
+  return private_key_check_invalid_inner(kTestPrivateExponentComponentP,
+                                         kTestInvalidPrivateExponentComponentQ,
+                                         kTestCrtCoefficient);
+}
+
+status_t private_key_check_invalid_iq(void) {
+  return private_key_check_invalid_inner(kTestPrivateExponentComponentP,
+                                         kTestPrivateExponentComponentQ,
+                                         kTestInvalidCrtCoefficient);
+}
+
 OTTF_DEFINE_TEST_CONFIG();
 
 bool test_main(void) {
@@ -413,6 +453,8 @@ bool test_main(void) {
   EXECUTE_TEST(test_result, public_key_roundtrip_test);
   EXECUTE_TEST(test_result, private_key_roundtrip_test);
   EXECUTE_TEST(test_result, private_key_check_valid_roundtrip_test);
-  EXECUTE_TEST(test_result, private_key_check_invalid);
+  EXECUTE_TEST(test_result, private_key_check_invalid_dp);
+  EXECUTE_TEST(test_result, private_key_check_invalid_dq);
+  EXECUTE_TEST(test_result, private_key_check_invalid_iq);
   return status_ok(test_result);
 }
