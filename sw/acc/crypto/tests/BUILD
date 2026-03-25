@@ -1533,6 +1533,12 @@ acc_sim_test(
 
 acc_consttime_test(
     name = "sha256_consttime",
+    initial_constants = [
+         # memory offset for message (needs to be set for dmem tracking)
+        "x10:32",
+         # number of message chunks (needs to be constant for dmem tracking)
+        "x30:2",
+    ],
     # All secrets are stored in DMEM; timing is permitted to depend on the
     # number of message chunks.
     secrets = ["dmem"],

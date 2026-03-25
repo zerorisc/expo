@@ -288,7 +288,8 @@ def _get_iflow_update_state(
     return iflow.seq(rec_return_iflow)
 
 
-def simplify_control_deps(control_deps: Dict[InformationFlowNode,Set[int]]) -> Dict[InformationFlowNode,Set[int]]:
+def simplify_control_deps(
+        control_deps: Dict[InformationFlowNode,Set[int]]) -> Dict[InformationFlowNode,Set[int]]:
     '''Combine adjacent control-flow dependencies.'''
     new_control_deps = {}
     keys = list(control_deps.keys())
@@ -350,6 +351,11 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     section = graph.get_section(start_pc)
     edges = graph.get_edges(start_pc)
 
+    print(hex(start_pc), [i.mnemonic for i in section.get_insn_sequence(program)])
+    print(edges)
+    print(start_constants.values)
+    print('---')
+
     # If this PC is the start of a cycle, then initialize the information flow
     # for the cycle with an empty graph (since doing nothing is a valid
     # traversal of the cycle). Ensure we do not do this for loops.
@@ -408,6 +414,10 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
 
         # Update the constants to include the loop instruction
         constants.update_insn(last_insn, last_op_vals)
+
+        print('')
+        print('')
+        print(f'LOOP {hex(body_loc.loop_start_pc)} {iterations}')
 
         if iterations is not None:
             # If the number of iterations is constant, perform recursive calls
@@ -523,14 +533,18 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     # If this PC is the start of one of the cycles we're currently processing,
     # see if it can be finalized.
     if start_pc in cycles:
+        print('CYCLE', hex(start_pc))
         cycle_iflow = cycles[start_pc]
+        print(cycle_iflow.pretty())
 
         # Find which constants are "stable" (unmodified throughout all paths in
         # the cycle)
         stable_constants = ConstantContext.empty()
         for k, v in start_constants.values.items():
-            if any([s for s in cycle_iflow.all_sinks() if s.name == k]):
+            if not any([s for s in cycle_iflow.all_sinks() if s.name == k]):
                 stable_constants.set(k, v)
+
+        print(stable_constants.values)
 
         # If any start constants were modified during the cycle; do a recursive
         # call with only the unmodified constants, and return that.
