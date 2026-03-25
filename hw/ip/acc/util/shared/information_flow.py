@@ -539,17 +539,23 @@ class InformationFlowGraph:
 class InsnInformationFlowNode:
     '''Represents an information flow node whose value may depend on operands.
     '''
-    def required_constants(self, op_vals: Dict[str, int]) -> Set[str]:
+    def required_constants(self, op_vals: Dict[str, int],
+                           coarse_dmem: bool) -> Set[str]:
         '''Returns the names of regs that must be constant for `evaluate()`.
 
         For instance, for an indirect reference of a WDR via a GPR, the GPR's
         value must be constant for the node to be evaluated. Subclasses that
         require constants override this method.
+
+        When `coarse_dmem` is true, treat DMEM as a single information-flow
+        node rather than tracking values more precisely; in this case, for
+        example, addresses of DMEM loads would not be required constants.
         '''
         return set()
 
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> InformationFlowNode:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> InformationFlowNode:
         '''Determines information flow graph for the instruction.
 
         Evaluates the information-flow node according to the given operand
@@ -572,7 +578,8 @@ class InsnRegOperandNode(InsnInformationFlowNode):
         self.is_wide = op.op_type.reg_type == 'wdr'
 
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> InformationFlowNode:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> InformationFlowNode:
         if self.op.name not in op_vals:
             raise ValueError(
                 'Operand {} not found in provided operand values: {}'.format(
@@ -601,13 +608,18 @@ class InsnDmemOperandNode(InsnInformationFlowNode):
         self.offset_op = offset_op
         self.width = width
 
-    def required_constants(self, op_vals: Dict[str, int]) -> Set[str]:
+    def required_constants(self, op_vals: Dict[str, int], coarse_dmem: bool) -> Set[str]:
+        if coarse_dmem:
+            return set()
         addr_reg_val = op_vals[self.addr_op.name]
         addr_reg_name = self.addr_op.op_type.op_val_to_str(addr_reg_val, None)
         return set([addr_reg_name])
 
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> InformationFlowNode:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> InformationFlowNode:
+        if coarse_dmem:
+            return InformationFlowNode('dmem')
         if self.addr_op.name not in op_vals:
             raise ValueError(
                 'Operand {} not found in provided operand values: {}'.format(
@@ -661,11 +673,12 @@ class InsnIndirectWDRNode(InsnInformationFlowNode):
                     self.op.name, op_vals.keys()))
         return self.op.op_type.op_val_to_str(op_vals[self.op.name], None)
 
-    def required_constants(self, op_vals: Dict[str, int]) -> Set[str]:
+    def required_constants(self, op_vals: Dict[str, int], coarse_dmem: bool) -> Set[str]:
         return {self._get_gpr_name(op_vals)}
 
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> InformationFlowNode:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> InformationFlowNode:
         gpr = self._get_gpr_name(op_vals)
         return _eval_indirect_wdr(gpr, constant_regs)
 
@@ -682,7 +695,8 @@ class InsnGroupFlagNode(InsnInformationFlowNode):
         self.constant_dependent = False
 
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> InformationFlowNode:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> InformationFlowNode:
         if 'flag_group' not in op_vals:
             raise ValueError(
                 'Operand flag_group not found in provided operand values: {}'.
@@ -698,7 +712,8 @@ class InsnConstantNode(InsnInformationFlowNode):
         self.constant_dependent = False
 
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> InformationFlowNode:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> InformationFlowNode:
         return InformationFlowNode(self.name)
 
 
@@ -919,26 +934,27 @@ class InsnInformationFlowRule:
         self.flows_from = flows_from
         self.test = test
 
-    def required_constants(self, op_vals: Dict[str, int]) -> Set[str]:
+    def required_constants(self, op_vals: Dict[str, int], coarse_dmem: bool) -> Set[str]:
         '''Returns the names of regs that must be constant for `evaluate()`.'''
         out = set()
         for node in self.flows_to:
-            out.update(node.required_constants(op_vals))
+            out.update(node.required_constants(op_vals, coarse_dmem))
         for node in self.flows_from:
-            out.update(node.required_constants(op_vals))
+            out.update(node.required_constants(op_vals, coarse_dmem))
         return out
 
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> InformationFlowGraph:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> InformationFlowGraph:
         if not self.test.check(op_vals):
             # Rule is not triggered
             return InformationFlowGraph.nonexistent()
         sources = set()
         for node in self.flows_from:
-            sources.add(node.evaluate(op_vals, constant_regs))
+            sources.add(node.evaluate(op_vals, constant_regs, coarse_dmem))
         flow = {}
         for node in self.flows_to:
-            dest = node.evaluate(op_vals, constant_regs)
+            dest = node.evaluate(op_vals, constant_regs, coarse_dmem)
             if dest.name in READONLY:
                 # No information will actually flow to this node, because it is
                 # not writeable; skip.
@@ -984,19 +1000,20 @@ class InsnInformationFlow:
     def __init__(self, rules: List[InsnInformationFlowRule]) -> None:
         self.rules = rules
 
-    def required_constants(self, op_vals: Dict[str, int]) -> Set[str]:
+    def required_constants(self, op_vals: Dict[str, int], coarse_dmem: bool) -> Set[str]:
         '''Returns the names of regs that must be constant for `evaluate()`.'''
         return {
             const
             for rule in self.rules
-            for const in rule.required_constants(op_vals)
+            for const in rule.required_constants(op_vals, coarse_dmem)
         }
 
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> InformationFlowGraph:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem) -> InformationFlowGraph:
         graph = InformationFlowGraph.nonexistent()
         for rule in self.rules:
-            rule_graph = rule.evaluate(op_vals, constant_regs)
+            rule_graph = rule.evaluate(op_vals, constant_regs, coarse_dmem)
             graph.update(rule_graph)
 
         return graph

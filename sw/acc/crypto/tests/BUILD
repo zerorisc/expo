@@ -348,6 +348,7 @@ acc_sim_test(
 acc_consttime_test(
     name = "p256_base_mult_consttime",
     subroutine = "p256_base_mult",
+    secrets = ['dmem'],
     deps = [
         "//sw/acc/crypto:run_p256",
     ],
@@ -404,24 +405,34 @@ acc_consttime_test(
 acc_consttime_test(
     name = "p256_shared_key_consttime",
     subroutine = "p256_shared_key",
+    secrets = ['dmem'],
     deps = [
         "//sw/acc/crypto:run_p256",
     ],
 )
 
-# TODO: Add more fine-grained DMEM tracing to the constant-time checker. This
-# test fails because p256_sign branches based on some non-secret values from
-# DMEM. However, since there are also secret values in DMEM, it's not safe to
-# mark DMEM non-secret, and the constant-time checker doesn't currently have
-# the ability to track different DMEM regions separately.
-#
-# acc_consttime_test(
-#   name = "p256_sign_consttime",
-#   deps = [
-#       "//sw/acc/crypto:run_p256"
-#   ],
-#   subroutine = "p256_sign",
-# )
+acc_consttime_test(
+  name = "p256_sign_consttime",
+  deps = [
+      ":p256_ecdsa_sign_test"
+  ],
+  subroutine = "p256_sign",
+  coarse_dmem = False,
+  secrets = [
+      "dmem:k0[:64]",
+      "dmem:k1[:64]",
+      "dmem:d0[:64]",
+      "dmem:d1[:64]",
+  ],
+  # We ignore control-flow paths in the fault routine because it looks to the
+  # checker like whether we fault would depend on the input, but in reality we
+  # would only fault in the case that something so unlikely happens that we can
+  # assume we are in a glitch attack scenario.
+  ignore = [
+      "trigger_fault_if_fg0_z",
+      "trigger_fault_if_fg0_not_z",
+  ],
+)
 
 acc_sim_test(
     name = "p256_ecdsa_sign_test",
@@ -807,6 +818,7 @@ acc_consttime_test(
     ignore = [
         "trigger_fault_if_fg0_not_z",
     ],
+    secrets = ['dmem'],
     subroutine = "p384_scalar_mult",
     deps = [
         ":p384_scalar_mult_test",
@@ -829,11 +841,10 @@ acc_consttime_test(
     ],
 )
 
-# TODO: Add more fine-grained DMEM tracing to the constant-time checker. This
-# test fails because p384_sign branches based on some non-secret values from
-# DMEM. However, since there are also secret values in DMEM, it's not safe to
-# mark DMEM non-secret, and the constant-time checker doesn't currently have
-# the ability to track different DMEM regions separately.
+# TODO: The constant-time checker currently cannot analyze p384 signing because
+# of a secret-depdendent memory access in the scalarmult loop. The code should
+# be reworked to not have such a memory access, because it might be observable
+# to an attacker.
 #
 # acc_consttime_test(
 #   name = "p384_sign_consttime",
@@ -841,6 +852,21 @@ acc_consttime_test(
 #       ":p384_ecdsa_sign_test"
 #   ],
 #   subroutine = "p384_sign",
+#   coarse_dmem = False,
+#   secrets = [
+#       "dmem:k0[:64]",
+#       "dmem:k1[:64]",
+#       "dmem:d0[:64]",
+#       "dmem:d1[:64]",
+#   ],
+#   # We ignore control-flow paths in the fault routine because it looks to the
+#   # checker like whether we fault would depend on the input, but in reality we
+#   # would only fault in the case that something so unlikely happens that we can
+#   # assume we are in a glitch attack scenario.
+#   ignore = [
+#       "trigger_fault_if_fg0_z",
+#       "trigger_fault_if_fg0_not_z",
+#   ],
 # )
 
 acc_consttime_test(
@@ -1533,12 +1559,6 @@ acc_sim_test(
 
 acc_consttime_test(
     name = "sha256_consttime",
-    initial_constants = [
-         # memory offset for message (needs to be set for dmem tracking)
-        "x10:32",
-         # number of message chunks (needs to be constant for dmem tracking)
-        "x30:2",
-    ],
     # All secrets are stored in DMEM; timing is permitted to depend on the
     # number of message chunks.
     secrets = ["dmem"],

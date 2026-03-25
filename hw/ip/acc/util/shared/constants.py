@@ -151,7 +151,7 @@ class ConstantContext:
         # any constant register other than the ones handled above, the value of
         # that register can no longer be determined; remove it from the
         # constants dictionary.
-        iflow = insn.iflow.evaluate(op_vals, self.values)
+        iflow = insn.iflow.evaluate(op_vals, self.values, True)
         self.removemany([n.name for n in iflow.all_sinks()])
 
         self.values.update(new_values)

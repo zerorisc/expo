@@ -4,12 +4,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import argparse
+import re
 import sys
 
 from shared.check import CheckResult
 from shared.constants import parse_required_constants
 from shared.control_flow import program_control_graph, subroutine_control_graph
 from shared.decode import decode_elf
+from shared.information_flow import DmemInformationFlowNode, InformationFlowNode 
 from shared.information_flow_analysis import (get_program_iflow,
                                               get_subroutine_iflow,
                                               stringify_control_deps)
@@ -50,7 +52,17 @@ def main() -> int:
         help=('Initial secret information-flow nodes. If not provided, '
               'assume everything is secret; check that the subroutine or '
               'program has only one possible control-flow path regardless '
-              'of input.'))
+              'of input. Memory locations can be specified in the form '
+              '"dmem:<label>[:<length>]", for example "dmem:foo[:32]".'))
+    parser.add_argument(
+        '--coarse-dmem',
+        action='store_true',
+        help=('Track DMEM coarsely, treating it as one big information-flow '
+              'node. Generally, this is most useful for programs with dynamic '
+              'memory access patterns (e.g. bignum operations with variable '
+              'limb counts), because then the information-flow analysis will '
+              'will not be able to determine which parts of memory get read '
+              'or written without artificially inserting constants.'))
     args = parser.parse_args()
 
     # Parse initial constants.
@@ -63,25 +75,49 @@ def main() -> int:
                              'subroutine.')
         constants = parse_required_constants(args.constants)
 
-    # Compute control graph and get all nodes that influence control flow.
+    # Load the program.
     program = decode_elf(args.elf)
+
+    # Parse the secrets as information-flow nodes.
+    secret_nodes = set()
+    if args.secrets:
+        for secret in args.secrets:
+            # try to match with the dmem location regex pattern
+            m = re.match(r'dmem:(.*)\[:([0-9]+)\]', secret)
+            if m is None:
+                if secret.startswith('dmem:'):
+                    raise ValueError(f'Malformatted secret memory location: {secret}')
+            else:
+                if args.coarse_dmem:
+                    secret_nodes.add('dmem')
+                    continue
+                label = m.group(1)
+                length = int(m.group(2))
+                start = program.get_pc_at_symbol(label)
+                secret_nodes.add(DmemInformationFlowNode(start, start+length))
+
+    # Compute control graph and get all nodes that influence control flow.
     if args.subroutine is None:
         graph = program_control_graph(program)
         to_analyze = 'entire program'
-        _, control_deps = get_program_iflow(program, graph)
+        _, control_deps = get_program_iflow(program, graph, args.coarse_dmem)
     else:
         graph = subroutine_control_graph(program, args.subroutine)
         to_analyze = 'subroutine {}'.format(args.subroutine)
         _, _, control_deps = get_subroutine_iflow(program, graph,
-                                                  args.subroutine, constants)
+                                                  args.subroutine,
+                                                  constants,
+                                                  args.coarse_dmem)
 
-    control_deps_ignore = {}
+    control_deps_ignore = set()
     if args.ignore is not None:
         for subroutine in args.ignore:
             graph = subroutine_control_graph(program, subroutine)
             _, _, control_deps_ignore_temp = get_subroutine_iflow(program, graph,
-                                                                  subroutine, {})
-            control_deps_ignore.update(control_deps_ignore_temp)
+                                                                  subroutine, {},
+                                                                  args.coarse_dmem)
+            for pcs in control_deps_ignore_temp.values():
+                control_deps_ignore |= pcs
 
     if args.secrets is None:
         if args.verbose:
@@ -97,11 +133,14 @@ def main() -> int:
         # nodes could influence control flow.
         secret_control_deps = {
             node: pcs
-            for node, pcs in control_deps.items() if node in args.secrets
-        }
+            for node, pcs in control_deps.items()
+            if any([node.overlaps(secret) for secret in secret_nodes])}
 
-    secret_control_deps_filt = {k: v for k, v in secret_control_deps.items()
-                                if v not in control_deps_ignore.values()}
+    secret_control_deps_filt = {}
+    for node, pcs in secret_control_deps.items():
+        filtered_pcs = pcs - control_deps_ignore
+        if filtered_pcs:
+            secret_control_deps_filt[node] = filtered_pcs
 
     out = CheckResult()
 
