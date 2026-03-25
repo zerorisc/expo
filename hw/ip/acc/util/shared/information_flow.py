@@ -108,6 +108,10 @@ class DmemInformationFlowNode(InformationFlowNode):
             return DmemInformationFlowNode(other.start, self.end) 
         elif other.start == self.end:
             return DmemInformationFlowNode(self.start, other.end) 
+        elif self.start <= other.start and other.end <= self.end:
+            return self
+        elif other.start <= self.start and self.end <= other.end:
+            return other
         return None
 
 
