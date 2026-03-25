@@ -60,6 +60,10 @@ class InformationFlowNode:
             return self
         return None
 
+    def pretty(self, dmem_symbols: Dict[str,int]) -> List[str]:
+        '''Pretty-print the node. May return multiple names.'''
+        return [self.name]
+
     def __hash__(self) -> int:
         return hash(self.name)
 
@@ -104,15 +108,26 @@ class DmemInformationFlowNode(InformationFlowNode):
         '''Try to merge self and other.'''
         if not isinstance(other, DmemInformationFlowNode):
             return None
-        if self.start == other.end:
-            return DmemInformationFlowNode(other.start, self.end) 
-        elif other.start == self.end:
-            return DmemInformationFlowNode(self.start, other.end) 
-        elif self.start <= other.start and other.end <= self.end:
-            return self
-        elif other.start <= self.start and self.end <= other.end:
-            return other
+        if other.start <= self.start <= other.end:
+            return DmemInformationFlowNode(other.start, max(self.end, other.end)) 
+        elif self.start <= other.start <= self.end:
+            return DmemInformationFlowNode(self.start, max(other.end, self.end)) 
         return None
+
+    def pretty(self, dmem_symbols: Dict[str,int] = {}) -> List[str]:
+        labels = [(k, v) for k, v in dmem_symbols.items() if self.start <= v < self.end]
+        if not labels:
+            return [self.name]
+        labels.sort(key=lambda x:x[1])
+        lengths = []
+        for i in range(len(labels)):
+            _, start = labels[i]
+            end = labels[i+1][1] if i+1 < len(labels) else self.end
+            lengths.append(end - start)
+        result = [f'{labels[i][0]}[:{lengths[i]}]' for i in range(len(labels))]
+        if labels[0][1] != self.start:
+            result.insert(0, DmemInformationFlowNode(self.start, labels[0][1]).name)
+        return result
 
 
 class InformationFlowGraph:
@@ -490,14 +505,14 @@ class InformationFlowGraph:
         flags_line = '* clobbered flag groups: ' + flags_str
         return regs_line + '\n' + flags_line
 
-    def pretty(self, indent: int = 0) -> str:
+    def pretty(self, indent: int = 0, dmem_symbols: Dict[str,int] = {}) -> str:
         '''Return a human-readable representation of the graph.'''
         if not self.exists:
             return 'Nonexistent information-flow graph (no possible paths).'
 
         prefix = ' ' * indent
         flow_strings = {
-            sink: ','.join(sorted([s.name for s in sources]))
+            sink: ','.join(sorted([x for s in sources for x in s.pretty(dmem_symbols)]))
             for sink, sources in self.flow.items()
         }
         max_source_chars = max([len(s) for s in flow_strings.values()],

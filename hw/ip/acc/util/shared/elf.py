@@ -149,10 +149,14 @@ def read_elf(path: str) -> Tuple[bytes,
                                                    imem_desc, dmem_desc)
         symtab = _get_symtab(elf_file)
         symbols = {}
+        symbol_sections = {}
         if symtab is not None:
             for sym in symtab.iter_symbols():
                 assert isinstance(sym['st_value'], int)
                 symbols[sym.name] = sym['st_value']
+                index = sym['st_shndx']
+                if isinstance(index, int):
+                    symbol_sections[sym.name] = elf_file.get_section(index).name
 
     assert len(imem_bytes) <= imem_desc[1]
     if len(imem_bytes) & 3:
@@ -160,4 +164,4 @@ def read_elf(path: str) -> Tuple[bytes,
                            'not a multiple of 4.'
                            .format(path, len(imem_bytes)))
 
-    return (imem_bytes, dmem_bytes, symbols)
+    return (imem_bytes, dmem_bytes, symbols, symbol_sections)

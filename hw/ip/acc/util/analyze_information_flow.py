@@ -10,7 +10,8 @@ from shared.constants import parse_required_constants
 from shared.control_flow import program_control_graph, subroutine_control_graph
 from shared.decode import decode_elf
 from shared.information_flow import InformationFlowGraph
-from shared.information_flow_analysis import (get_program_iflow,
+from shared.information_flow_analysis import (get_dmem_symbols,
+                                              get_program_iflow,
                                               get_subroutine_iflow,
                                               stringify_control_deps)
 
@@ -97,16 +98,17 @@ def main() -> int:
     # If no secrets were given or the --verbose flag is set, then print the
     # full information-flow graphs.
     if (args.verbose or (args.secrets is None and not args.clobbered)):
+        symbols = get_dmem_symbols(program)
         if ret_iflow.exists:
             print(
                 'Information flow for paths ending in a return to the caller:')
-            print(ret_iflow.pretty(indent=2))
+            print(ret_iflow.pretty(indent=2, dmem_symbols=symbols))
             if end_iflow.exists:
                 print('--------')
 
         if end_iflow.exists:
             print('Information flow for paths ending the program:')
-            print(end_iflow.pretty(indent=2))
+            print(end_iflow.pretty(indent=2, dmem_symbols=symbols))
 
     if args.clobbered:
         if ret_iflow.exists:

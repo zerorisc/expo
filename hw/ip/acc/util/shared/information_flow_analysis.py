@@ -288,27 +288,22 @@ def _get_iflow_update_state(
     return iflow.seq(rec_return_iflow)
 
 
-def simplify_control_deps(control_deps: Dict[InformationFlowNode, Set[int]]) -> None:
+def simplify_control_deps(control_deps: Dict[InformationFlowNode,Set[int]]) -> Dict[InformationFlowNode,Set[int]]:
     '''Combine adjacent control-flow dependencies.'''
+    new_control_deps = {}
     keys = list(control_deps.keys())
-    i = 0
-    while i < len(keys):
+    for i in range(len(keys)):
         node1 = keys[i]
-        j = i + 1
-        while j < len(keys):
-            node2 = keys[j]
-            if control_deps[node1] == control_deps[node2]:
-                node12 = node1.union(node2)
-                if node12 is not None:
-                    control_deps[node12] = control_deps[node1]
-                    del keys[j]
-                    del control_deps[node1]
-                    del control_deps[node2]
-                    node1 = node12
-                    j -= 1
-            j += 1
-        i += 1
-    return
+        deps1 = control_deps[node1]
+        for node2 in keys[i+1:]:
+            if deps1 != control_deps[node2] or node1.union(node2) is None:
+                continue
+            node1 = node1.union(node2)
+            if node1 in control_deps:
+                # This happens if the union already existed in the dictionary.
+                deps1 |= control_deps[node1]
+        new_control_deps[node1] = deps1
+    return new_control_deps
 
 
 def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
@@ -576,12 +571,7 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     control_deps.pop(InformationFlowNode('x0'), None)
 
     # Unify adjacent nodes in control dependencies.
-    simplify_control_deps(control_deps)
-
-    print(hex(start_pc), [i.mnemonic for i in section.get_insn_sequence(program)])
-    print(edges)
-    print([n.name for n in return_iflow.all_sources()])
-    print([n.name for n in program_end_iflow.all_sources()])
+    control_deps = simplify_control_deps(control_deps)
 
     # Update the cache and return
     out = (used_constants, return_iflow, program_end_iflow, common_consts,
@@ -589,6 +579,19 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
 
     _get_iflow_cache_update(start_pc, start_constants, out, cache)
     return out
+
+
+def get_dmem_symbols(program: ACCProgram) -> Dict[str,int]:
+    symbols = {}
+    for sym in program.symbols:
+        if sym.startswith('_'):
+            continue
+        if sym not in program.symbol_sections:
+            continue
+        if program.symbol_sections[sym] not in ['.data', '.bss']:
+            continue
+        symbols[sym] = program.symbols[sym]
+    return symbols
 
 
 def get_subroutine_iflow(program: ACCProgram, graph: ControlGraph,
@@ -695,6 +698,8 @@ def stringify_control_deps(program: ACCProgram,
       input: {'x2' : {0x44, 0x55}, 'x3': {0x44}}
       output: ['x2 (via beq at 0x44, bne at 0x55)', 'x3 (via beq at 0x44)']
     '''
+    control_deps = simplify_control_deps(control_deps)
+    symbols = get_dmem_symbols(program)
     out = []
     for node, pcs in control_deps.items():
         pc_strings = []
@@ -703,5 +708,5 @@ def stringify_control_deps(program: ACCProgram,
         for pc in pcs:
             insn = program.get_insn(pc)
             pc_strings.append('{} at PC {:#x}'.format(insn.mnemonic, pc))
-        out.append('{} (via {})'.format(node.name, ', '.join(pc_strings)))
+        out.append('{} (via {})'.format(','.join(node.pretty(symbols)), ', '.join(pc_strings)))
     return out

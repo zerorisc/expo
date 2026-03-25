@@ -92,7 +92,7 @@ def main() -> int:
     if args.testcase and (args.expected_dmem or args.expected_regs):
         parser.error("Cannot specify --testcase together with --expected_dmem or --expected_regs.")
 
-    _, _, symbols = read_elf(args.elf)
+    _, _, symbols, _ = read_elf(args.elf)
 
     # Parse expected values.
     result = CheckResult()
