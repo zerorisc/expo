@@ -351,6 +351,11 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     section = graph.get_section(start_pc)
     edges = graph.get_edges(start_pc)
 
+   # print('---')
+   # print(hex(start_pc), [i.mnemonic for i in section.get_insn_sequence(program)])
+   # print(edges)
+   # print('start', start_constants.values)
+
     # If this PC is the start of a cycle, then initialize the information flow
     # for the cycle with an empty graph (since doing nothing is a valid
     # traversal of the cycle). Ensure we do not do this for loops.
@@ -385,7 +390,9 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
         [n.name for n in used_constant_nodes
         if not isinstance(n, DmemInformationFlowNode)])
 
-    assert(all([x in constants for x in used_constants]))
+    # print('end  ', constants.values)
+    # print('used ', used_constants)
+    assert(all([x in start_constants for x in used_constants]))
 
     # Update control_deps to include last instruction
     last_insn_control_deps = {
@@ -409,6 +416,8 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
 
         # Update the constants to include the loop instruction
         constants.update_insn(last_insn, last_op_vals)
+
+        # print(f'LOOP at {body_loc.loop_start_pc:#x}: {iterations}')
 
         if iterations is not None:
             # If the number of iterations is constant, perform recursive calls

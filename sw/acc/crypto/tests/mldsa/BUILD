@@ -217,3 +217,101 @@ acc_sim_test(
         "//sw/acc/crypto/mldsa:mldsa44_rounding",
     ],
 )
+
+SIGN_CONSTTIME_SUBROUTINES = [
+  "intt",
+  "ntt",
+  "poly_add",
+  "poly_chknorm",
+  "poly_decompose",
+  "poly_nonzero_encode",
+  "poly_reduce32",
+  "poly_sub",
+  "poly_pointwise",
+  "poly_pointwise_acc",
+  "poly_uniform_gamma_1",
+  "polyeta_unpack",
+  "polyt0_unpack",
+  "polyw1_pack",
+  "polyz_pack",
+  # The constant-time checker cannot handle the logic-dependent memory accesses
+  # of encode_h, make_hint, and poly_uniform. Luckily these routines don't
+  # handle secret data anyway.
+]
+
+[
+  acc_consttime_test(
+      name = params + "_" + subroutine + "_consttime",
+      subroutine = subroutine,
+      coarse_dmem = True,
+      deps = [
+          ":" + params + "_sign_test0",
+      ],
+  )
+  for subroutine in SIGN_CONSTTIME_SUBROUTINES
+  for params in MLDSA_PARAMS
+]
+
+# keccak_send_message is special because the length argument affects control
+# flow, so we need to explicitly say the secrets are in dmem
+acc_consttime_test(
+    name = "keccak_send_message_consttime",
+    subroutine = "keccak_send_message",
+    coarse_dmem = True,
+    secrets = ["dmem"],
+    deps = [
+        ":mldsa44_sign_test0",
+    ],
+)
+
+# poly_challenge is special because w31 affects control flow so we need to
+# explicitly say the secrets are in dmem 
+[
+  acc_consttime_test(
+      name = params + "_poly_challenge_consttime",
+      subroutine = "poly_challenge",
+      coarse_dmem = True,
+      secrets = ["dmem"],
+      deps = [
+          ":" + params + "_sign_test0",
+      ],
+  )
+  for params in MLDSA_PARAMS
+]
+
+# This list only contains subroutines that do not overlap with sign.
+KEYPAIR_CONSTTIME_SUBROUTINES = [
+  "poly_power2round",
+  "polyeta_pack",
+  "polyt0_pack",
+  "polyt1_pack",
+]
+
+[
+  acc_consttime_test(
+      name = params + "_" + subroutine + "_consttime",
+      subroutine = subroutine,
+      coarse_dmem = True,
+      deps = [
+          ":" + params + "_keypair_test0",
+      ],
+  )
+  for subroutine in KEYPAIR_CONSTTIME_SUBROUTINES
+  for params in MLDSA_PARAMS
+]
+
+# poly_uniform_eta is special because w31 and an input register affect control
+# flow so we need to explicitly say the secrets are in dmem 
+[
+  acc_consttime_test(
+      name = params + "_poly_uniform_eta_consttime",
+      subroutine = "poly_uniform_eta",
+      coarse_dmem = True,
+      secrets = ["dmem"],
+      deps = [
+          ":" + params + "_keypair_test0",
+      ],
+  )
+  for params in MLDSA_PARAMS
+]
+
