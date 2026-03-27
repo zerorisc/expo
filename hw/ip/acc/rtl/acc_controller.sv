@@ -406,7 +406,8 @@ module acc_controller
                              (insn_dec_shared_i.subset == InsnSubsetBignum) &
                              (insn_dec_bignum_i.rf_a_indirect |
                               insn_dec_bignum_i.rf_b_indirect |
-                              insn_dec_bignum_i.rf_d_indirect);
+                              insn_dec_bignum_i.rf_d_indirect |
+                              insn_dec_shared_i.ld_insn);
 
   // Reads to RND must stall until data is available.
   // Also, writes to the KMAC_MSG register are only
@@ -869,14 +870,15 @@ module acc_controller
         // the request (as the indirect register read to get the store data occurs the following
         // cycle).
         rf_base_rd_en_a_raw = insn_dec_base_i.rf_ren_a &
-          (rf_indirect_stall | (insn_dec_shared_i.subset == InsnSubsetBase));
+          (rf_indirect_stall | (insn_dec_shared_i.subset == InsnSubsetBase) |
+           (insn_dec_shared_i.st_insn & ~insn_dec_bignum_i.rf_b_indirect));
         rf_base_rd_en_b_raw = insn_dec_base_i.rf_ren_b &
           (rf_indirect_stall | (insn_dec_shared_i.subset == InsnSubsetBase));
 
         // Bignum stores can update the base register file where an increment is used.
         rf_base_wr_en_raw   = (insn_dec_shared_i.subset == InsnSubsetBignum) &
                               insn_dec_base_i.rf_we                          &
-                              rf_indirect_stall;
+                              (insn_dec_bignum_i.rf_b_indirect ? rf_indirect_stall : 1'b1);
       end else if (insn_dec_shared_i.ld_insn) begin
         // For loads, both base reads happen in the same cycle as the request. The address is
         // required for the request and the indirect destination register (only used for Bignum
@@ -1209,8 +1211,8 @@ module acc_controller
   prim_onehot_enc #(
     .OneHotWidth(NWdr)
   ) rf_bignum_wr_indirect_onehot_enc (
-    .in_i  (rf_base_rd_data_b_no_intg[4:0]),
-    .en_i  (rf_bignum_wr_indirect_en),
+    .in_i  (insn_dec_bignum_i.rf_d_indirect ? rf_base_rd_data_b_no_intg[4:0] : insn_dec_bignum_i.b),
+    .en_i  (rf_bignum_wr_indirect_en | insn_dec_shared_i.ld_insn),
     .out_o (rf_bignum_wr_indirect_onehot_o)
   );
 
@@ -1234,8 +1236,10 @@ module acc_controller
   // one-hot versions are. The predecoded versions get checked against the signals produced here.
   // Buffer them to ensure they don't get optimised away (with a functionally correct ACC they will
   // always be identical).
-  assign rf_bignum_wr_addr_unbuf = insn_dec_bignum_i.rf_d_indirect ? insn_bignum_wr_addr_q :
-                                                                     insn_dec_bignum_i.d;
+  assign rf_bignum_wr_addr_unbuf = insn_dec_bignum_i.rf_d_indirect ?
+                                      insn_bignum_wr_addr_q :
+                                      (insn_dec_shared_i.ld_insn ?
+                                        insn_dec_bignum_i.b : insn_dec_bignum_i.d);
 
   prim_buf #(
     .Width(WdrAw)
@@ -1633,8 +1637,9 @@ module acc_controller
   // instruction so it only presents the calculated address. The stability property is checked by an
   // assertion.
   assign lsu_addr_saved_sel =
-    insn_valid_i & ((insn_dec_shared_i.subset == InsnSubsetBignum) ||
-                    insn_dec_shared_i.ld_insn                         ? ~stall : 1'b0);
+    insn_valid_i & (((insn_dec_shared_i.subset == InsnSubsetBignum) &
+                      insn_dec_shared_i.st_insn & insn_dec_bignum_i.rf_b_indirect
+                    ) || insn_dec_shared_i.ld_insn ? ~stall : 1'b0);
 
   assign lsu_addr = lsu_addr_saved_sel ? lsu_addr_saved_q                                :
                                          alu_base_operation_result_i[DmemAddrWidth-1:0];
@@ -1698,7 +1703,8 @@ module acc_controller
   // For all other loads and stores the dmem address is available the same cycle as the request.
   assign dmem_addr_err_check =
     (lsu_req_subset_o == InsnSubsetBignum) &
-    insn_dec_shared_i.st_insn               ? rf_indirect_stall :
+    insn_dec_shared_i.st_insn              &
+    insn_dec_bignum_i.rf_b_indirect         ? rf_indirect_stall :
                                               lsu_load_req_raw | lsu_store_req_raw;
 
   assign dmem_addr_err =
