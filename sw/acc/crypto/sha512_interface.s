@@ -25,8 +25,8 @@
  * @param[out] dmem[state..state+256]: Working SHA-512 state.
  * @param[out] dmem[sha512_dptr_state]: state, pointer to working state.
  *
- * clobbered registers: x2, x3, x20, w20
- * clobbered flag groups: FG0
+ * clobbered registers: x2 to x3, x20, w20
+ * clobbered flag groups: none
  */
 sha512_init:
   /* Copy the initial state into the working buffer.
@@ -83,8 +83,7 @@ sha512_init:
  * @param[in,out] dmem[partial]: Current partial message block ((len % 128) bytes).
  * @param[in,out] dmem[state]: Working hash state.
  *
- * clobbered registers: x2, x3, x10 to x22, x28
- *                      w0 to w7, w10, w11, w15 to w29
+ * clobbered registers: x2 to x3, x10 to x22, x28, w0 to w7, w10, w15 to w29, w31
  * clobbered flag groups: FG0
  */
 sha512_update:
@@ -178,8 +177,7 @@ sha512_update:
  * @param[in]  dmem[state]: Working hash state.
  * @param[out] dmem[dptr_result..dptr_result+64]: SHA-512 digest.
  *
- * clobbered registers: x2 to x5, x10 to x12, x14 to x17, x19 to x23, x28
- *                      w0 to w7, w10, w15 to w30
+ * clobbered registers: x2 to x5, x10 to x12, x14 to x17, x19 to x23, x28, w0 to w7, w10, w15 to w31
  * clobbered flag groups: FG0
  */
 sha512_final:
@@ -264,8 +262,8 @@ sha512_final:
  * @param[in,out] x21: dptr_dst, pointer to the destination buffer.
  * @param[out]    dmem[dptr_dst..dptr_dst+src_len]: data, copied value.
  *
- * clobbered registers: x2, x10, x11, x13, x16, x17, x19 to x21, w20, w21
- * clobbered flag groups: FG0
+ * clobbered registers: x2, x10 to x11, x13, x16 to x17, x19 to x21, w20 to w21
+ * clobbered flag groups: none
  */
 copy:
   /* Continue only if the length of new data is nonzero; otherwise return. */
@@ -410,7 +408,7 @@ reverse_bytes:
  * @param[in]     x12: dptr_msg, pointer to the start of the first block.
  * @param[in,out] dmem[dptr_msg..dptr_msg+nblocks*128]: Message (modified in-place).
  *
- * clobbered registers: x2, x3, x12, x28, w20 to w29
+ * clobbered registers: x2 to x3, x12, x28, w20 to w29
  * clobbered flag groups: FG0
  */
 sha512_format_blocks:

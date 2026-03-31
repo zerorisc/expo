@@ -258,7 +258,7 @@ attestation_key_save:
  * @param[out]  w10: Lower 256 bits of first share of secret key (d1)
  * @param[out]  w11: Upper 64 bits of second share of secret key (d1)
  *
- * clobbered registers: x2, x3, x20, w1 to w4, w10, w11, w20 to w29
+ * clobbered registers: x2 to x3, w1 to w4, w10 to w11, w20 to w29, w31
  * clobbered flag groups: FG0
  */
 attestation_secret_key_from_seed:

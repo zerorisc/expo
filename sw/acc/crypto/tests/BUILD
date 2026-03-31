@@ -3,9 +3,140 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
-load("//rules:acc.bzl", "acc_consttime_test", "acc_library", "acc_sim_test", "acc_sim_test_suite")
+load("//rules:acc.bzl", "acc_clobbered_regs_test", "acc_consttime_test", "acc_library", "acc_sim_test", "acc_sim_test_suite")
 
 package(default_visibility = ["//visibility:public"])
+
+# Clobbered-register checks: verify that docstring annotations match
+# the actual registers written (determined by information-flow analysis).
+# N-dependent RSA/bignum helpers, routines taking a WDR index in a GPR,
+# and sha3_shake (no acc_binary) are omitted.
+#
+# TODO: investigate why these take 30s-200s; tagged "manual" until fixed.
+_SLOW_CLOBBERED_REGS_SUBS = [
+    ("run_p384", "p384_base_mult"),
+    ("run_p384", "p384_base_mult_checked"),
+    ("run_p384", "scalar_mult_int_p384"),
+    ("run_p384", "p384_scalar_mult"),
+    ("run_p384", "p384_sign"),
+    ("run_p384", "p384_verify"),
+]
+
+[acc_clobbered_regs_test(
+    name = elf + "_" + sub + "_clobbered",
+    srcs = ["//sw/acc/crypto:" + src],
+    subroutine = sub,
+    tags = ["manual"] if (elf, sub) in _SLOW_CLOBBERED_REGS_SUBS else [],
+    deps = ["//sw/acc/crypto:" + elf],
+) for sub, src, elf in [
+    # Ed25519
+    ("ed25519_verify_var", "ed25519.s", "run_ed25519"),
+    ("ed25519_sign_prehashed", "ed25519.s", "run_ed25519"),
+    ("sc_clamp", "ed25519.s", "run_ed25519"),
+    ("affine_to_ext", "ed25519.s", "run_ed25519"),
+    ("ext_to_affine", "ed25519.s", "run_ed25519"),
+    ("affine_encode", "ed25519.s", "run_ed25519"),
+    ("affine_decode_var", "ed25519.s", "run_ed25519"),
+    ("ext_scmul", "ed25519.s", "run_ed25519"),
+    ("ext_scmul_var", "ed25519.s", "run_ed25519"),
+    ("ext_double", "ed25519.s", "run_ed25519"),
+    ("ext_add", "ed25519.s", "run_ed25519"),
+    ("ext_equal_var", "ed25519.s", "run_ed25519"),
+    ("fe_pow_2252m3", "ed25519.s", "run_ed25519"),
+    ("fe_init", "field25519.s", "run_ed25519"),
+    ("fe_mul", "field25519.s", "run_ed25519"),
+    ("fe_square", "field25519.s", "run_ed25519"),
+    ("fe_inv", "field25519.s", "run_ed25519"),
+    ("sc_init", "ed25519_scalar.s", "run_ed25519"),
+    ("sc_reduce", "ed25519_scalar.s", "run_ed25519"),
+    ("sc_mul", "ed25519_scalar.s", "run_ed25519"),
+    ("sha512_compact", "sha512_compact.s", "run_ed25519"),
+    ("sha512_init", "sha512_interface.s", "run_ed25519"),
+    ("sha512_update", "sha512_interface.s", "run_ed25519"),
+    ("sha512_final", "sha512_interface.s", "run_ed25519"),
+    ("sha512_format_blocks", "sha512_interface.s", "run_ed25519"),
+    ("copy", "sha512_interface.s", "run_ed25519"),
+    ("reverse_bytes", "sha512_interface.s", "run_ed25519"),
+    ("bswap64", "sha512_interface.s", "run_ed25519"),
+    ("sha512_pad_message", "sha512_padding.s", "run_ed25519"),
+    ("bswap32", "sha512_padding.s", "run_ed25519"),
+    # SHA-512 (standalone)
+    ("sha512", "sha512.s", "run_sha512"),
+    # SHA-256
+    ("sha256", "sha256.s", "run_sha256"),
+    # P-256
+    ("setup_modp", "p256_base.s", "run_p256"),
+    ("mul_modp", "p256_base.s", "run_p256"),
+    ("mod_inv", "p256_base.s", "run_p256"),
+    ("proj_add", "p256_base.s", "run_p256"),
+    ("proj_double", "p256_base.s", "run_p256"),
+    ("proj_to_affine", "p256_base.s", "run_p256"),
+    ("mod_mul_256x256", "p256_base.s", "run_p256"),
+    ("mod_mul_320x128", "p256_base.s", "run_p256"),
+    ("p256_reduce", "p256_base.s", "run_p256"),
+    ("scalar_mult_int", "p256_base.s", "run_p256"),
+    ("p256_base_mult", "p256_base.s", "run_p256"),
+    ("p256_random_scalar", "p256_base.s", "run_p256"),
+    ("p256_generate_random_key", "p256_base.s", "run_p256"),
+    ("p256_generate_k", "p256_base.s", "run_p256"),
+    ("boolean_to_arithmetic", "p256_base.s", "run_p256"),
+    ("p256_key_from_seed", "p256_base.s", "run_p256"),
+    ("p256_scalar_remask", "p256_base.s", "run_p256"),
+    ("trigger_fault_if_fg0_not_z", "p256_base.s", "run_p256"),
+    ("trigger_fault_if_fg0_z", "p256_base.s", "run_p256"),
+    ("p256_isoncurve", "p256_isoncurve.s", "run_p256"),
+    ("p256_check_public_key", "p256_isoncurve.s", "run_p256"),
+    ("p256_isoncurve_proj", "p256_isoncurve_proj.s", "run_p256"),
+    ("p256_shared_key", "p256_shared_key.s", "run_p256"),
+    ("arithmetic_to_boolean", "p256_shared_key.s", "run_p256"),
+    ("arithmetic_to_boolean_mod", "p256_shared_key.s", "run_p256"),
+    ("p256_sign", "p256_sign.s", "run_p256"),
+    ("p256_verify", "p256_verify.s", "run_p256"),
+    ("mod_inv_var", "p256_verify.s", "run_p256"),
+    ("copy_share", "run_p256.s", "run_p256"),
+    # P-384
+    ("p384_mulmod_p", "p384_base.s", "run_p384"),
+    ("proj_to_affine_p384", "p384_base.s", "run_p384"),
+    ("p384_scalar_remask", "p384_base.s", "run_p384"),
+    ("p384_base_mult_checked", "p384_base_mult.s", "run_p384"),
+    ("p384_base_mult", "p384_base_mult.s", "run_p384"),
+    ("p384_isoncurve", "p384_isoncurve.s", "run_p384"),
+    ("p384_isoncurve_check", "p384_isoncurve.s", "run_p384"),
+    ("p384_check_public_key", "p384_isoncurve.s", "run_p384"),
+    ("trigger_fault_if_fg0_not_z", "p384_isoncurve.s", "run_p384"),
+    ("trigger_input_error_if_fg0_not_z", "p384_isoncurve.s", "run_p384"),
+    ("p384_isoncurve_proj", "p384_isoncurve_proj.s", "run_p384"),
+    ("p384_isoncurve_proj_check", "p384_isoncurve_proj.s", "run_p384"),
+    ("scalar_mult_int_p384", "p384_internal_mult.s", "run_p384"),
+    ("store_proj_randomize", "p384_internal_mult.s", "run_p384"),
+    ("p384_verify", "p384_verify.s", "run_p384"),
+    ("p384_sign", "p384_sign.s", "run_p384"),
+    ("p384_generate_k", "p384_keygen.s", "run_p384"),
+    ("p384_generate_random_key", "p384_keygen.s", "run_p384"),
+    ("p384_random_scalar", "p384_keygen.s", "run_p384"),
+    ("p384_key_from_seed", "p384_keygen_from_seed.s", "run_p384"),
+    ("p384_scalar_mult", "p384_scalar_mult.s", "run_p384"),
+    ("mod_inv_p384", "p384_modinv.s", "run_p384"),
+    ("p384_arithmetic_to_boolean", "p384_a2b.s", "run_p384"),
+    ("p384_arithmetic_to_boolean_mod", "p384_a2b.s", "run_p384"),
+    ("p384_boolean_to_arithmetic", "p384_b2a.s", "run_p384"),
+    ("copy_share", "run_p384.s", "run_p384"),
+    # X25519
+    ("X25519", "x25519.s", "x25519_sideload"),
+    ("scalar_mult", "x25519.s", "x25519_sideload"),
+    ("ladderstep", "x25519.s", "x25519_sideload"),
+    # RSA
+    ("m0inv", "montmul.s", "rsa"),
+    ("mul256_w30xw25", "montmul.s", "rsa"),
+    ("mul256_w30xw2", "montmul.s", "rsa"),
+    ("mul256_w20xw21", "mul.s", "rsa"),
+    ("zero_work_buf", "rsa.s", "rsa"),
+    ("cp_work_buf", "rsa.s", "rsa"),
+    # RSA keygen
+    ("is_zero_mod_small_prime", "rsa_keygen.s", "run_rsa_keygen"),
+    # Boot
+    ("attestation_secret_key_from_seed", "boot.s", "boot"),
+]]
 
 acc_sim_test(
     name = "ed25519_encode_decode_test",

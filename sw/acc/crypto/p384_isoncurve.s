@@ -31,8 +31,8 @@
  * @param[in]    w31: all-zero
  * @param[in]  FG0.Z: boolean indicating (complement of) fault condition
  *
- * clobbered registers: x2, x3
- * clobbered flag groups: none
+ * clobbered registers: x2 to x3, w31
+ * clobbered flag groups: FG0
  */
  .globl trigger_fault_if_fg0_not_z
 trigger_fault_if_fg0_not_z:
@@ -90,7 +90,7 @@ trigger_fault_if_fg0_not_z:
  * @param[in]  x23:         dptr_lhs, pointer to dmem location where left side
  *                                    result will be stored
  *
- * clobbered registers: x2, x3, w0 to w5, w10 to w17
+ * clobbered registers: x2 to x3, w0 to w5, w10 to w11, w16 to w24, w31, acc
  * clobbered flag groups: FG0
  */
  .globl p384_isoncurve
@@ -192,7 +192,7 @@ p384_isoncurve:
  * @param[in]  x21:         dptr_y, pointer to dmem location containing affine
  *                                  y-coordinate of input point
  *
- * clobbered registers: x2, x3, w0 to w5, w10 to w17
+ * clobbered registers: x2 to x3, x22 to x23, w0 to w7, w10 to w11, w16 to w24, w31, acc
  * clobbered flag groups: FG0
  */
  .globl p384_isoncurve_check
@@ -248,7 +248,7 @@ p384_isoncurve_check:
  *
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
- * clobbered registers: x2, x3, x20 to x23, w0 to w17
+ * clobbered registers: x2 to x3, x20 to x23, w0 to w13, w16 to w24, w31, acc
  * clobbered flag groups: FG0
  */
  .globl p384_check_public_key
@@ -348,7 +348,7 @@ p384_check_public_key:
  * @param[in]  FG0.Z: boolean indicating fault condition
  *
  * clobbered registers: x2
- * clobbered flag groups: none
+ * clobbered flag groups: FG0
  */
 trigger_input_error_if_fg0_not_z:
   /* Fail if FG0.Z is false. */

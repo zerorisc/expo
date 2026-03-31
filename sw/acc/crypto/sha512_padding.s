@@ -38,7 +38,7 @@
  * @param[out] dmem[dptr_pad..dptr_end]: message padding
  *
  * clobbered registers: x2 to x5, x20 to x23, w27
- * clobbered flag groups: FG0
+ * clobbered flag groups: none
  */
 .globl sha512_pad_message
 sha512_pad_message:
@@ -132,8 +132,8 @@ sha512_pad_message:
  * @param[in]  x23: w, input word (w[0] || w[1] || w[2] || w[3])
  * @param[out] x23: result (w[3] || w[2] || w[1] || w[0])
  *
- * clobbered registers: x2, x3, x23
- * clobbered flag groups: FG0
+ * clobbered registers: x2 to x3, x23
+ * clobbered flag groups: none
  */
 bswap32:
   /* x2 <= w[0] << 24 */

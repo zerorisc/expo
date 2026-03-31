@@ -209,8 +209,8 @@ bignum_mul256:
  * @param[in] w21: b, second operand
  * @param[out] [w22, w23]: c, result
  *
- * clobbered registers: w22, w23
- * clobbered flag groups: None
+ * clobbered registers: w22 to w23, acc
+ * clobbered flag groups: FG0
  */
 mul256_w20xw21:
   bn.mulqacc.z          w20.0, w21.0,  0

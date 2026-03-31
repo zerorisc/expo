@@ -22,7 +22,7 @@
  * @param[in]  w9: enc(u), encoded Montgomery u-coordinate (256 bits)
  * @param[out] w22: result, X25519(k, u) as an encoded u-coordinate
  *
- * clobbered registers: w2 to w24
+ * clobbered registers: x2 to x3, w2 to w24, w30 to w31, acc, mod
  * clobbered flag groups: FG0
  */
 .globl X25519
@@ -107,7 +107,7 @@ X25519:
  * @param[in]  MOD: p, modulus = 2^255 - 19
  * @param[out] w22: result, Montgomery u-coordinate of point kA
  *
- * clobbered registers: w2 to w7, w10 to w18, w20 to w24
+ * clobbered registers: x2 to x3, w2 to w7, w10 to w18, w20 to w24, acc
  * clobbered flag groups: FG0
  */
 scalar_mult:
@@ -270,7 +270,7 @@ scalar_mult:
  * @param[in,out] w12:  z_2
  * @param[in,out] w13:  z_3
  *
- * clobbered registers: w2 to w5, w10 to w13, w17, w18, w20 to w23
+ * clobbered registers: w2 to w5, w10 to w13, w17 to w18, w20 to w23, acc
  * clobbered flag groups: FG0
  */
 ladderstep:
