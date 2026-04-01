@@ -185,3 +185,27 @@ py_binary(
     for i in range(NTESTS)
     for params in MODE_FOR_PARAMS
 ]
+
+[
+  acc_consttime_test(
+      name = params + "_keypair_consttime",
+      subroutine = "crypto_kem_keypair",
+      secrets = ["dmem"],
+      deps = [
+          ":" + params + "_keypair_test0",
+      ],
+  )
+  for params in MODE_FOR_PARAMS
+]
+
+[
+  acc_consttime_test(
+      name = params + "_decap_consttime",
+      subroutine = "crypto_kem_dec",
+      secrets = ["dmem"],
+      deps = [
+          ":" + params + "_decap_test0",
+      ],
+  )
+  for params in MODE_FOR_PARAMS
+]
