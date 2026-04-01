@@ -7,6 +7,18 @@ load("//rules:acc.bzl", "acc_consttime_test", "acc_library", "acc_sim_test", "ac
 
 package(default_visibility = ["//visibility:public"])
 
+# For constant-time checks, we ignore control-flow paths in certain fault
+# routines because it looks to the checker like whether we fault would depend
+# on the input, but in reality we would only fault in the case that something
+# so unlikely happens that we can assume we are in a glitch attack scenario
+# (e.g. the computed point being the origin point).
+P256_CONSTTIME_IGNORE_LABELS = [
+    "trigger_fault_if_fg0_z",
+    "trigger_fault_if_fg0_not_z",
+]
+P384_CONSTTIME_IGNORE_LABELS = [
+]
+
 acc_sim_test(
     name = "ed25519_encode_decode_test",
     srcs = [
@@ -352,6 +364,7 @@ acc_consttime_test(
     deps = [
         "//sw/acc/crypto:run_p256",
     ],
+    ignore = P256_CONSTTIME_IGNORE_LABELS,
 )
 
 acc_consttime_test(
@@ -409,6 +422,7 @@ acc_consttime_test(
     deps = [
         "//sw/acc/crypto:run_p256",
     ],
+    ignore = P256_CONSTTIME_IGNORE_LABELS,
 )
 
 acc_consttime_test(
@@ -424,14 +438,7 @@ acc_consttime_test(
       "dmem:d0[:64]",
       "dmem:d1[:64]",
   ],
-  # We ignore control-flow paths in the fault routine because it looks to the
-  # checker like whether we fault would depend on the input, but in reality we
-  # would only fault in the case that something so unlikely happens that we can
-  # assume we are in a glitch attack scenario.
-  ignore = [
-      "trigger_fault_if_fg0_z",
-      "trigger_fault_if_fg0_not_z",
-  ],
+  ignore = P256_CONSTTIME_IGNORE_LABELS,
 )
 
 acc_sim_test(
@@ -811,6 +818,8 @@ acc_consttime_test(
     deps = [
         ":p384_base_mult_test",
     ],
+    secrets = ['dmem'],
+    ignore = P384_CONSTTIME_IGNORE_LABELS,
 )
 
 acc_consttime_test(
@@ -859,14 +868,7 @@ acc_consttime_test(
 #       "dmem:d0[:64]",
 #       "dmem:d1[:64]",
 #   ],
-#   # We ignore control-flow paths in the fault routine because it looks to the
-#   # checker like whether we fault would depend on the input, but in reality we
-#   # would only fault in the case that something so unlikely happens that we can
-#   # assume we are in a glitch attack scenario.
-#   ignore = [
-#       "trigger_fault_if_fg0_z",
-#       "trigger_fault_if_fg0_not_z",
-#   ],
+#   ignore = P384_CONSTTIME_IGNORE_LABELS,
 # )
 
 acc_consttime_test(
