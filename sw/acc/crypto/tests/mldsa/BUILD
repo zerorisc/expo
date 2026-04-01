@@ -276,32 +276,10 @@ acc_consttime_test(
   for params in MLDSA_PARAMS
 ]
 
-# This list only contains subroutines that do not overlap with sign.
-KEYPAIR_CONSTTIME_SUBROUTINES = [
-  "poly_power2round",
-  "polyeta_pack",
-  "polyt0_pack",
-  "polyt1_pack",
-]
-
 [
   acc_consttime_test(
-      name = params + "_" + subroutine + "_consttime",
-      subroutine = subroutine,
-      deps = [
-          ":" + params + "_keypair_test0",
-      ],
-  )
-  for subroutine in KEYPAIR_CONSTTIME_SUBROUTINES
-  for params in MLDSA_PARAMS
-]
-
-# poly_uniform_eta is special because w31 and an input register affect control
-# flow so we need to explicitly say the secrets are in dmem 
-[
-  acc_consttime_test(
-      name = params + "_poly_uniform_eta_consttime",
-      subroutine = "poly_uniform_eta",
+      name = params + "_keypair_consttime",
+      subroutine = "crypto_sign_keypair",
       secrets = ["dmem"],
       deps = [
           ":" + params + "_keypair_test0",
@@ -309,4 +287,3 @@ KEYPAIR_CONSTTIME_SUBROUTINES = [
   )
   for params in MLDSA_PARAMS
 ]
-
