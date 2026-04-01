@@ -854,22 +854,21 @@ acc_consttime_test(
 # of a secret-depdendent memory access in the scalarmult loop. The code should
 # be reworked to not have such a memory access, because it might be observable
 # to an attacker.
-#
-# acc_consttime_test(
-#   name = "p384_sign_consttime",
-#   deps = [
-#       ":p384_ecdsa_sign_test"
-#   ],
-#   subroutine = "p384_sign",
-#   track_dmem = True,
-#   secrets = [
-#       "dmem:k0[:64]",
-#       "dmem:k1[:64]",
-#       "dmem:d0[:64]",
-#       "dmem:d1[:64]",
-#   ],
-#   ignore = P384_CONSTTIME_IGNORE_LABELS,
-# )
+acc_consttime_test(
+  name = "p384_sign_consttime",
+  deps = [
+      ":p384_ecdsa_sign_test"
+  ],
+  subroutine = "p384_sign",
+  track_dmem = True,
+  secrets = [
+      "dmem:k0[:64]",
+      "dmem:k1[:64]",
+      "dmem:d0[:64]",
+      "dmem:d1[:64]",
+  ],
+  ignore = P384_CONSTTIME_IGNORE_LABELS,
+)
 
 acc_consttime_test(
     name = "proj_add_p384_consttime",
