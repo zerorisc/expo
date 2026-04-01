@@ -55,14 +55,12 @@ def main() -> int:
               'of input. Memory locations can be specified in the form '
               '"dmem:<label>[:<length>]", for example "dmem:foo[:32]".'))
     parser.add_argument(
-        '--coarse-dmem',
+        '--track-dmem',
         action='store_true',
-        help=('Track DMEM coarsely, treating it as one big information-flow '
-              'node. Generally, this is most useful for programs with dynamic '
-              'memory access patterns (e.g. bignum operations with variable '
-              'limb counts), because then the information-flow analysis will '
-              'will not be able to determine which parts of memory get read '
-              'or written without artificially inserting constants.'))
+        help=('Track data in a fine-grained way through DMEM, rather than '
+              'treating memory as a single information-flow node. This may '
+              'cause analysis to fail on programs with a dynamic pattern of '
+              'memory accesses.'))
     args = parser.parse_args()
 
     # Parse initial constants.
@@ -78,6 +76,8 @@ def main() -> int:
     # Load the program.
     program = decode_elf(args.elf)
 
+    coarse_dmem = not args.track_dmem
+
     # Parse the secrets as information-flow nodes.
     secret_nodes = set()
     if args.secrets:
@@ -88,7 +88,7 @@ def main() -> int:
                 if secret.startswith('dmem:'):
                     raise ValueError(f'Malformatted secret memory location: {secret}')
             else:
-                if args.coarse_dmem:
+                if coarse_dmem:
                     secret_nodes.add('dmem')
                     continue
                 label = m.group(1)
@@ -100,14 +100,14 @@ def main() -> int:
     if args.subroutine is None:
         graph = program_control_graph(program)
         to_analyze = 'entire program'
-        _, control_deps = get_program_iflow(program, graph, args.coarse_dmem)
+        _, control_deps = get_program_iflow(program, graph, coarse_dmem)
     else:
         graph = subroutine_control_graph(program, args.subroutine)
         to_analyze = 'subroutine {}'.format(args.subroutine)
         _, _, control_deps = get_subroutine_iflow(program, graph,
                                                   args.subroutine,
                                                   constants,
-                                                  args.coarse_dmem)
+                                                  coarse_dmem)
 
     control_deps_ignore = set()
     if args.ignore is not None:
@@ -115,7 +115,7 @@ def main() -> int:
             graph = subroutine_control_graph(program, subroutine)
             _, _, control_deps_ignore_temp = get_subroutine_iflow(program, graph,
                                                                   subroutine, {},
-                                                                  args.coarse_dmem)
+                                                                  coarse_dmem)
             for pcs in control_deps_ignore_temp.values():
                 control_deps_ignore |= pcs
 

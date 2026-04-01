@@ -243,7 +243,6 @@ SIGN_CONSTTIME_SUBROUTINES = [
   acc_consttime_test(
       name = params + "_" + subroutine + "_consttime",
       subroutine = subroutine,
-      coarse_dmem = True,
       deps = [
           ":" + params + "_sign_test0",
       ],
@@ -257,7 +256,6 @@ SIGN_CONSTTIME_SUBROUTINES = [
 acc_consttime_test(
     name = "keccak_send_message_consttime",
     subroutine = "keccak_send_message",
-    coarse_dmem = True,
     secrets = ["dmem"],
     deps = [
         ":mldsa44_sign_test0",
@@ -270,7 +268,6 @@ acc_consttime_test(
   acc_consttime_test(
       name = params + "_poly_challenge_consttime",
       subroutine = "poly_challenge",
-      coarse_dmem = True,
       secrets = ["dmem"],
       deps = [
           ":" + params + "_sign_test0",
@@ -291,7 +288,6 @@ KEYPAIR_CONSTTIME_SUBROUTINES = [
   acc_consttime_test(
       name = params + "_" + subroutine + "_consttime",
       subroutine = subroutine,
-      coarse_dmem = True,
       deps = [
           ":" + params + "_keypair_test0",
       ],
@@ -306,7 +302,6 @@ KEYPAIR_CONSTTIME_SUBROUTINES = [
   acc_consttime_test(
       name = params + "_poly_uniform_eta_consttime",
       subroutine = "poly_uniform_eta",
-      coarse_dmem = True,
       secrets = ["dmem"],
       deps = [
           ":" + params + "_keypair_test0",

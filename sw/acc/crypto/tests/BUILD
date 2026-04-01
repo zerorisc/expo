@@ -417,7 +417,7 @@ acc_consttime_test(
       ":p256_ecdsa_sign_test"
   ],
   subroutine = "p256_sign",
-  coarse_dmem = False,
+  track_dmem = True,
   secrets = [
       "dmem:k0[:64]",
       "dmem:k1[:64]",
@@ -852,7 +852,7 @@ acc_consttime_test(
 #       ":p384_ecdsa_sign_test"
 #   ],
 #   subroutine = "p384_sign",
-#   coarse_dmem = False,
+#   track_dmem = True,
 #   secrets = [
 #       "dmem:k0[:64]",
 #       "dmem:k1[:64]",

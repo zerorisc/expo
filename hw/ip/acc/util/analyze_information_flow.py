@@ -54,14 +54,12 @@ def main() -> int:
             'Initially secret information-flow nodes. If provided, the final '
             'secrets will be printed.'))
     parser.add_argument(
-        '--coarse-dmem',
+        '--track-dmem',
         action='store_true',
-        help=('Track DMEM coarsely, treating it as one big information-flow '
-              'node. Generally, this is most useful for programs with dynamic '
-              'memory access patterns (e.g. bignum operations with variable '
-              'limb counts), because then the information-flow analysis will '
-              'will not be able to determine which parts of memory get read '
-              'or written without artificially inserting constants.'))
+        help=('Track data in a fine-grained way through DMEM, rather than '
+              'treating memory as a single information-flow node. This may '
+              'cause analysis to fail on programs with a dynamic pattern of '
+              'memory accesses.'))
     args = parser.parse_args()
     program = decode_elf(args.elf)
 
@@ -97,12 +95,12 @@ def main() -> int:
     # Compute information-flow graph(s).
     if args.subroutine is None:
         what = 'program'
-        end_iflow, control_deps = get_program_iflow(program, graph, args.coarse_dmem)
+        end_iflow, control_deps = get_program_iflow(program, graph, not args.track_dmem)
         ret_iflow = InformationFlowGraph.nonexistent()
     else:
         what = 'subroutine'
         ret_iflow, end_iflow, control_deps = get_subroutine_iflow(
-            program, graph, args.subroutine, constants, args.coarse_dmem)
+            program, graph, args.subroutine, constants, not args.track_dmem)
 
     # If no secrets were given or the --verbose flag is set, then print the
     # full information-flow graphs.
