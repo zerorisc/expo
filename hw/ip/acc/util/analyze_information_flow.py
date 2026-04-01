@@ -157,18 +157,19 @@ def main() -> int:
             print(node)
 
     # Print final secrets (if initial secrets were provided).
+    symbols = get_dmem_symbols(program)
     if args.secrets is not None:
         if ret_iflow.exists:
             final_secrets = {
-                sink.name
-                for node in args.secrets for sink in ret_iflow.sinks(node)
+                sink.pretty(symbols)
+                for node in secret_nodes for sink in ret_iflow.sinks(node)
             }
             print('Final secrets for paths ending in a return to the caller:',
                   ', '.join(sorted(final_secrets)))
         if end_iflow.exists:
             final_secrets = {
-                sink.name
-                for node in args.secrets for sink in end_iflow.sinks(node)
+                sink.pretty(symbols)
+                for node in secret_nodes for sink in end_iflow.sinks(node)
             }
             print('Final secrets for paths ending the program:',
                   ', '.join(sorted(final_secrets)))

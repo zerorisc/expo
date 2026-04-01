@@ -128,6 +128,10 @@ def main() -> int:
     secret_control_deps_filt = {}
     for node, pcs in secret_control_deps.items():
         filtered_pcs = pcs - control_deps_ignore
+        if filtered_pcs != pcs and args.verbose and any([node.overlaps(secret) for secret in secret_nodes]):
+            ignored_pcs = pcs & control_deps_ignore
+            print('Control-flow dependencies on {} ignored at PCs: {}'
+                .format(node.name, ', '.join([hex(pc) for pc in ignored_pcs])))
         if filtered_pcs:
             secret_control_deps_filt[node] = filtered_pcs
 
