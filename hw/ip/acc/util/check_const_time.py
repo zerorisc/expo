@@ -11,10 +11,11 @@ from shared.check import CheckResult
 from shared.constants import parse_required_constants
 from shared.control_flow import program_control_graph, subroutine_control_graph
 from shared.decode import decode_elf
-from shared.information_flow import DmemInformationFlowNode, InformationFlowNode 
+from shared.information_flow import DmemInformationFlowNode, InformationFlowNode
 from shared.information_flow_analysis import (get_program_iflow,
                                               get_subroutine_iflow,
-                                              stringify_control_deps)
+                                              stringify_control_deps,
+                                              parse_information_flow_node)
 
 
 def main() -> int:
@@ -82,19 +83,7 @@ def main() -> int:
     secret_nodes = set()
     if args.secrets:
         for secret in args.secrets:
-            # try to match with the dmem location regex pattern
-            m = re.match(r'dmem:(.*)\[:([0-9]+)\]', secret)
-            if m is None:
-                if secret.startswith('dmem:'):
-                    raise ValueError(f'Malformatted secret memory location: {secret}')
-            else:
-                if coarse_dmem:
-                    secret_nodes.add('dmem')
-                    continue
-                label = m.group(1)
-                length = int(m.group(2))
-                start = program.get_pc_at_symbol(label)
-                secret_nodes.add(DmemInformationFlowNode(start, start+length))
+            secret_nodes.add(parse_information_flow_node(program, secret, coarse_dmem))
 
     # Compute control graph and get all nodes that influence control flow.
     if args.subroutine is None:

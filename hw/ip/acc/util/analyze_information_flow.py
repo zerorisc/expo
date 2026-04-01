@@ -13,7 +13,8 @@ from shared.information_flow import InformationFlowGraph
 from shared.information_flow_analysis import (get_dmem_symbols,
                                               get_program_iflow,
                                               get_subroutine_iflow,
-                                              stringify_control_deps)
+                                              stringify_control_deps,
+                                              parse_information_flow_node)
 
 
 def main() -> int:
@@ -92,6 +93,12 @@ def main() -> int:
                              'subroutine.')
         constants = parse_required_constants(args.constants)
 
+    # Parse the secrets as information-flow nodes.
+    secret_nodes = set()
+    if args.secrets:
+        for secret in args.secrets:
+            secret_nodes.add(parse_information_flow_node(program, secret, not args.track_dmem))
+
     # Compute information-flow graph(s).
     if args.subroutine is None:
         what = 'program'
@@ -133,8 +140,9 @@ def main() -> int:
         # nodes could influence control flow.
         control_what = 'secrets'
         control_deps = {
-            name: pcs
-            for name, pcs in control_deps.items() if name in args.secrets
+            node: pcs
+            for node, pcs in control_deps.items()
+            if any([s.overlaps(node) for s in secret_nodes])
         }
 
     # Print any (secret) nodes that influence control flow, and the PCs of the

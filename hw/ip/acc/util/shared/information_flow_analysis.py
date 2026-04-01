@@ -12,7 +12,7 @@ from .constants import ConstantContext, get_op_val_str
 from .control_flow import (ControlLoc, ControlGraph, Cycle, Ecall, ImemEnd,
                            LoopStart, Ret)
 from .decode import ACCProgram
-from .information_flow import InformationFlowGraph, InformationFlowNode, DmemInformationFlowNode
+from .information_flow import InformationFlowGraph, InformationFlowNode, DmemInformationFlowNode, SPECIAL_REG_NAMES
 from .insn_yaml import Insn
 
 # Calls to _get_iflow return results in the form of a tuple with entries:
@@ -721,3 +721,38 @@ def stringify_control_deps(program: ACCProgram,
             pc_strings.append('{} at PC {:#x}'.format(insn.mnemonic, pc))
         out.append('{} (via {})'.format(','.join(node.pretty(symbols)), ', '.join(pc_strings)))
     return out
+
+
+def parse_information_flow_node(program: ACCProgram, x: str, coarse_dmem: bool) -> InformationFlowNode:
+    '''Parse a named information-flow node.
+
+    Accepts:
+    - register names e.g. "x20", "w1", "mod"
+    - "dmem" (if coarse_dmem is True)
+    - dmem ranges with labels, e.g. "dmem:sk[32:64]" (if coarse_dmem is False)
+    '''
+    if x == 'dmem':
+        if not coarse_dmem:
+            raise ValueError('{x} is not a valid node with fine-grained dmem tracking')
+        return InformationFlowNode(x)
+    if x in SPECIAL_REG_NAMES:
+        return InformationFlowNode(x)
+    # try to match with the dmem location regex pattern
+    m = re.match(r'dmem:(.*)\[:([0-9]+)\]', x)
+    if m is None:
+        # try to match as a register
+        m = re.match(r'[wx]([0-9]+)', x)
+        if m is None:
+            raise ValueError(f'Malformatted secret: {secret}')
+        idx = int(m.group(1))
+        if not 0 <= idx < 32:
+            raise ValueError(f'Invalid register index: {secret}')
+        return InformationFlowNode(x)
+    else:
+        if coarse_dmem:
+            return InformationFlowNode('dmem')
+        label = m.group(1)
+        length = int(m.group(2))
+        start = program.get_pc_at_symbol(label)
+        return DmemInformationFlowNode(start, start+length)
+

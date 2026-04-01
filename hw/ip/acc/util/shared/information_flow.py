@@ -7,6 +7,7 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+import re
 from copy import deepcopy
 from typing import Any, cast, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
