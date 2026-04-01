@@ -270,7 +270,7 @@ jobs:
         run: |
           # Limit local number of test jobs to 4 to prevent memory contention
           # from timing out tests.
-          ./bazelisk.sh test --test_tag_filters=-nightly \
+          ./bazelisk.sh test --test_output=errors --test_tag_filters=-nightly \
             --local_test_jobs=4 //sw/acc/crypto/...
 
   verilator_earlgrey:
