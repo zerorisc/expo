@@ -139,7 +139,6 @@ store_proj_randomize:
  * @param[in]  x20: dptr_x, pointer to affine x-coordinate in dmem
  * @param[in]  x21: dptr_y, pointer to affine y-coordinate in dmem
  * @param[in]  x28: dptr_b, pointer to domain parameter b of P-384 in dmem
- * @param[in]  x30: dptr_sp, pointer to 704 bytes of scratchpad memory in dmem
  * @param[in]  [w13, w12]: p, modulus of P-384 underlying finite field
  * @param[in]  [w11, w10]: n, domain parameter of P-384 curve
  *                            (order of base point G)
@@ -156,8 +155,8 @@ store_proj_randomize:
  * Flags: When leaving this subroutine, the M, L and Z flags of FG0 depend on
  *        the computed affine y-coordinate.
  *
- * clobbered registers: x2, x10, x11 to x13, x18, x26, x27, w0 to w30
- * clobbered flag groups: FG0
+ * clobbered registers: x2 to x7, x10 to x13, x18, x22 to x27, x30, w0 to w11, w16 to w31, acc
+ * clobbered flag groups: FG0, FG1
  */
  .globl scalar_mult_int_p384
 scalar_mult_int_p384:

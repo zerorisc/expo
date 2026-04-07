@@ -50,29 +50,17 @@ p384_sign:
   /* get dmem pointer of base point y-coordinate */
   la        x21, p384_gy
 
-  /* get dmem pointer of scratchpad */
-  la        x30, scratchpad
-
   /* get dmem pointer of 1st scalar share k0 */
   la        x17, k0
 
   /* get dmem pointer of 1st scalar share k1 */
   la        x19, k1
 
-  /* get dmem pointer of message */
-  la        x6, msg
-
   /* get dmem pointer of r component */
   la        x14, r
 
   /* get dmem pointer of s component */
   la        x15, s
-
-  /* get dmem pointer of 1st private key share d0 */
-  la        x4, d0
-
-  /* get dmem pointer of 1st private key share d0 */
-  la        x5, d1
 
   /* load domain parameter p (modulus)
      [w13, w12] <= p = dmem[dptr_p] */
@@ -187,6 +175,12 @@ p384_sign:
   bn.wsrr   w29, URND
   bn.wsrr   w30, URND
 
+  /* get dmem pointer of 1st private key share d0 */
+  la        x4, d0
+
+  /* get dmem pointer of 1st private key share d0 */
+  la        x5, d1
+
   /* load 1st share d0 from dmem
      [w11,w10] <= d0 = dmem[dptr_d0] */
   bn.mov    w16, w4      /* prepare for next p384_mulmod488x128_n call below */
@@ -257,6 +251,9 @@ p384_sign:
   bn.wsrr   w30, URND
 
   /* Multiplicative masking of message msg */
+
+  /* get dmem pointer of message */
+  la        x6, msg
 
   /* load message from dmem
      [w11, w10] <= msg = dmem[dptr_msg] */
