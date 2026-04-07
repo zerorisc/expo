@@ -305,7 +305,7 @@ module acc_core
 
   logic start_stop_fatal_error;
   logic rf_bignum_predec_error, alu_bignum_predec_error, ispr_predec_error, mac_bignum_predec_error;
-  logic controller_predec_error;
+  logic controller_predec_error, kmac_intf_error;
   logic rd_predec_error, predec_error;
 
   logic req_sec_wipe_urnd_keys_q;
@@ -589,6 +589,7 @@ module acc_core
     .kmac_msg0_pending_write_i(kmac_msg0_pending_write),
     .kmac_msg1_pending_write_i(kmac_msg1_pending_write),
     .kmac_digest_valid_i      (kmac_digest_valid),
+    .kmac_intf_error_i        (1'b0),
 
     // Secure wipe
     .secure_wipe_req_o     (secure_wipe_req),
@@ -635,6 +636,7 @@ module acc_core
 
   // Generate an err_bits output by combining errors from all the blocks in acc_core
   assign err_bits_d = '{
+    kmac_fatal_error:    1'b0,
     fatal_software:      controller_err_bits.fatal_software,
     bad_internal_state:  |{controller_err_bits.bad_internal_state,
                            start_stop_fatal_error,
@@ -647,6 +649,7 @@ module acc_core
                            non_controller_reg_intg_violation},
     dmem_intg_violation: lsu_rdata_err,
     imem_intg_violation: insn_fetch_err,
+    kmac_recov_error:    kmac_intf_error,
     rnd_fips_chk_fail:   rnd_fips_err,
     rnd_rep_chk_fail:    rnd_rep_err,
     key_invalid:         controller_err_bits.key_invalid,
@@ -681,7 +684,7 @@ module acc_core
                                        insn_addr_err}));
 
   assign controller_recov_escalate_en =
-      mubi4_bool_to_mubi(|{rnd_rep_err, rnd_fips_err});
+      mubi4_bool_to_mubi(|{rnd_rep_err, rnd_fips_err, kmac_intf_error});
 
   // Similarly for the start/stop controller
   assign start_stop_escalate_en =
@@ -918,7 +921,8 @@ module acc_core
     .kmac_app_req_o,
 
     .alu_predec_error_o(alu_bignum_predec_error),
-    .ispr_predec_error_o(ispr_predec_error)
+    .ispr_predec_error_o(ispr_predec_error),
+    .kmac_intf_error_o(kmac_intf_error)
   );
 
   acc_mac_bignum #(

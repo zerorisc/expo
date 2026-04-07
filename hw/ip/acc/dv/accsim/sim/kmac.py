@@ -10,9 +10,10 @@
 
 import sys
 from typing import Optional, Union
+from .constants import ErrBits
 from Crypto.Hash import cSHAKE128, cSHAKE256, SHAKE128, SHAKE256, SHA3_224, \
     SHA3_256, SHA3_384, SHA3_512
-DEBUG_KMAC = True
+DEBUG_KMAC = False
 
 
 def kmac_debug_print(text: str) -> None:
@@ -140,6 +141,7 @@ class KmacBlock:
         self._skip_digest_shift_cycle = False
         self._kmac_undersized_err = False
         self._kmac_oversized_err = False
+        self._digest_share1_mode_err = False
 
     def _reset(self) -> None:
         self._status = self._STATUS_IDLE
@@ -197,6 +199,7 @@ class KmacBlock:
         self._digest_request_ctr = 0
         self._skip_digest_shift_cycle = False
         self._kmac_undersized_err = False
+        self._digest_share1_mode_err = False
 
     def set_configuration(self, mode: int, strength: int, msg_len: int, masked_mode: bool) -> None:
         kmac_debug_print(f"\tSetting KMAC config: mode = {mode}, \
@@ -216,7 +219,10 @@ class KmacBlock:
         self.start()
 
     def get_error(self) -> int:
-        return 0
+        if self._digest_share1_mode_err:
+            return ErrBits.KMAC_RECOV_ERROR
+        else:
+            return 0
 
     def get_ready(self) -> int:
         return self._app_intf_ready
@@ -333,6 +339,11 @@ class KmacBlock:
                         read={self._digest1_read} ready={self._digest1_ready} \
                         read_offset={self._read_offset} \
                         leftover={self._leftover_digest_bytes}")
+
+        if not self._masked_mode:
+            self._digest_share1_mode_err = True
+            self._digest1_read = True
+            return True
 
         # This helper function is executed during a digest wsrr insn
         # Check if there is an undersized message at this point

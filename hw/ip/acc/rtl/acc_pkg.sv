@@ -108,6 +108,7 @@ package acc_pkg;
   //
   // Note: These errors are duplicated in other places. If updating them here, update those too.
   typedef struct packed {
+    logic kmac_fatal_error;
     logic fatal_software;
     logic lifecycle_escalation;
     logic illegal_bus_access;
@@ -116,6 +117,7 @@ package acc_pkg;
     logic reg_intg_violation;
     logic dmem_intg_violation;
     logic imem_intg_violation;
+    logic kmac_recov_error;
     logic rnd_fips_chk_fail;
     logic rnd_rep_chk_fail;
     logic key_invalid;
@@ -186,11 +188,13 @@ package acc_pkg;
 
   // All the error signals that can be generated somewhere inside acc_core
   typedef struct packed {
+    logic kmac_fatal_error;
     logic fatal_software;
     logic bad_internal_state;
     logic reg_intg_violation;
     logic dmem_intg_violation;
     logic imem_intg_violation;
+    logic kmac_recov_error;
     logic rnd_fips_chk_fail;
     logic rnd_rep_chk_fail;
     logic key_invalid;

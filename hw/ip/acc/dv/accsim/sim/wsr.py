@@ -15,7 +15,7 @@ from typing import List, Optional, Sequence, Tuple
 from .trace import Trace
 from .ext_regs import ACCExtRegs
 from .kmac import KmacBlock
-DEBUG_KMAC = True
+DEBUG_KMAC = False
 
 
 def kmac_debug_print(text: str) -> None:

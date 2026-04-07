@@ -128,21 +128,21 @@ li x23, 0x001008ea
 csrrw x0, kmac_cfg, x23
 li x23, 0x0000001a
 csrrw x0, kmac_partial_write, x23
-bn.wsrw 0x9, w1 /* MSG */
+bn.wsrw 0x9, w1 /* MSG SHARE0 */
 bn.wsrw 0xa, w2 /* MSG SHARE1 */
 li x23, 0x0000000d
 csrrw x0, kmac_partial_write, x23
-bn.wsrw 0x9, w1 /* MSG */
+bn.wsrw 0x9, w1 /* MSG SHARE0 */
 bn.wsrw 0xa, w2 /* MSG SHARE1 */
-bn.wsrw 0x9, w1 /* MSG */
+bn.wsrw 0x9, w1 /* MSG SHARE0 */
 bn.wsrw 0xa, w2 /* MSG SHARE1 */
 bn.wsrr w2, 0xb /* DIGEST SHARE0 */
 bn.wsrr w3, 0xc /* DIGEST SHARE1 */
 bn.wsrr w2, 0xb /* DIGEST SHARE0 */
 bn.wsrr w3, 0xc /* DIGEST SHARE1 */
-bn.wsrr w2, 0xb /* DIGEST */
-bn.wsrr w2, 0xb /* DIGEST */
-bn.wsrr w3, 0xb /* DIGEST */
+bn.wsrr w2, 0xb /* DIGEST SHARE0 */
+bn.wsrr w2, 0xb /* DIGEST SHARE0 */
+bn.wsrr w3, 0xb /* DIGEST SHARE0 */
 bn.wsrr w3, 0xc /* DIGEST SHARE1 */
 bn.wsrr w3, 0xc /* DIGEST SHARE1 */
 bn.wsrr w3, 0xc /* DIGEST SHARE1 */
@@ -164,15 +164,15 @@ li x23, 0x000008ea
 csrrw x0, kmac_cfg, x23
 li x23, 0x0000001a
 csrrw x0, kmac_partial_write, x23
-bn.wsrw 0x9, w1 /* MSG */
+bn.wsrw 0x9, w1 /* MSG SHARE0 */
 li x23, 0x0000000d
 csrrw x0, kmac_partial_write, x23
-bn.wsrw 0x9, w1 /* MSG */
-bn.wsrw 0x9, w1 /* MSG */
+bn.wsrw 0x9, w1 /* MSG SHARE0 */
+bn.wsrw 0x9, w1 /* MSG SHARE0 */
 bn.wsrr w2, 0xb /* DIGEST SHARE0 */
 bn.wsrr w2, 0xb /* DIGEST SHARE0 */
-bn.wsrr w2, 0xb /* DIGEST */
-bn.wsrr w2, 0xb /* DIGEST */
+bn.wsrr w2, 0xb /* DIGEST SHARE0 */
+bn.wsrr w2, 0xb /* DIGEST SHARE0 */
 csrrs x24, kmac_status, x0
 li x23, 0x800008ea /* STOP CFG 0x8000040a */
 csrrw x0, kmac_cfg, x23
