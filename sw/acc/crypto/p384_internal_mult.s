@@ -249,7 +249,7 @@ scalar_mult_int_p384:
   la        x6, scalarmult_k0
   la        x7, scalarmult_k1
   la        x27, scalarmult_Q
-  loopi     448, 51
+  loopi     448, 67
 
     /* Double point Q.
        Q = ([w30,w29], [w28,w27], [w26, w25]) <= Q + dmem[x27] */
@@ -310,33 +310,41 @@ scalar_mult_int_p384:
     bn.sid    x2++,  0(x7)
     bn.sid    x2++, 32(x7)
 
-    /* Add points Q+P or Q+2P depending on which was selected.
-       Q_a = ([w30,w29], [w28,w27], [w26, w25]) <= {P,2P} + dmem[scalarmult_Q] */
+    /* [w30:w25] <= [w30:w25] + dmem[scalarmult_Q] */
     jal       x1, proj_add_p384
 
-    /* TODO: randomize on load instead of store? */
-    /* Load Q from scratchpad.
-        Q = ([w9,w8], [w7,w6], [w5,w4]) <= dmem[x27] */
-    li        x2, 4
-    bn.lid    x2++, 0(x27)
-    bn.lid    x2++, 32(x27)
-    bn.lid    x2++, 64(x27)
-    bn.lid    x2++, 96(x27)
-    bn.lid    x2++, 128(x27)
-    bn.lid    x2++, 160(x27)
+    /* Get a pseudorandom 384-bit scaling factor and reduce modulo p. */
+    bn.wsrr   w4, urnd
+    bn.wsrr   w5, urnd
+    bn.rshi   w5, w31, w5 >> 128
+    bn.sub    w2, w4, w12
+    bn.subb   w3, w5, w13
+    bn.sel    w10, w4, w2, C
+    bn.sel    w11, w5, w3, C
 
-    /* TODO: fix same-destination for select (randomize Q?) */
-
-    /* Select either Q or Q_a depending on the FG1.L flag.
-       if FG1.L: Q = ([w30,w29], [w28,w27], [w26, w25]) <= Q_a else: Q <= Q */
-    bn.sel    w25, w25, w4, FG1.L
-    bn.sel    w26, w26, w5, FG1.L
-    bn.sel    w27, w27, w6, FG1.L
-    bn.sel    w28, w28, w7, FG1.L
-    bn.sel    w29, w29, w8, FG1.L
-    bn.sel    w30, w30, w9, FG1.L
-
-    /* TODO: re-randomize Q */
+    /* Select either Q or Q_a based on FG1.L, randomizing as we go. */
+    li        x2, 1
+    bn.lid    x0,  0(x27)
+    bn.lid    x2, 32(x27)
+    bn.sel    w16, w25, w0, FG1.L
+    bn.sel    w17, w26, w1, FG1.L
+    jal       x1, p384_mulmod_p
+    bn.mov    w25, w16
+    bn.mov    w26, w17
+    bn.lid    x0, 64(x27)
+    bn.lid    x2, 96(x27)
+    bn.sel    w16, w27, w0, FG1.L
+    bn.sel    w17, w28, w1, FG1.L
+    jal       x1, p384_mulmod_p
+    bn.mov    w27, w16
+    bn.mov    w28, w17
+    bn.lid    x0, 128(x27)
+    bn.lid    x2, 160(x27)
+    bn.sel    w16, w29, w0, FG1.L
+    bn.sel    w17, w30, w1, FG1.L
+    jal       x1, p384_mulmod_p
+    bn.mov    w29, w16
+    bn.mov    w30, w17
 
   ret
 
