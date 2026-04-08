@@ -291,12 +291,20 @@ p384_verify:
      compute the point C = (x1, y1) = u1*G + _2*Q. This can be done in a
      single double-and-add routine by using Shamir's Trick. */
 
+  /* load point G */
+  la       x26, scratchpad
+  li       x2, 25
+  bn.lid   x2++, 192(x26)
+  bn.lid   x2++, 224(x26)
+  bn.lid   x2++, 256(x26)
+  bn.lid   x2++, 288(x26)
+  bn.lid   x2++, 320(x26)
+  bn.lid   x2++, 352(x26)
+
   /* Compute G+Q and store in dmem
      GQ = (x,y,z) = dmem[dptr_sp+576]
         <= sp[dptr_sp+192] (+) dmem[dptr_sp+384] */
-  la        x26, scratchpad
   addi      x27, x26, 384
-  addi      x26, x26, 192
   jal       x1, proj_add_p384
   jal       x1, store_proj
 
@@ -306,7 +314,7 @@ p384_verify:
   addi      x15, x0, 0
 
   /* main loop with decreasing index i (i=383 downto 0) */
-  loopi     384, 35
+  loopi     384, 49
 
     /* probe MSBs of u1 and u2 and u1|u2 to determine which point has to be
        added. */
@@ -352,7 +360,16 @@ p384_verify:
     /* no addition if x5 = u1[i] | u2[i] == 0 */
     beq       x5, x0, ver_end_loop
 
+    /* TODO: use point doubling here */
+    /* TODO: try to move load out of loop */
     /* perform point doubling C <= 2 (*) C */
+    li       x2, 25
+    bn.lid   x2++,   0(x26)
+    bn.lid   x2++,  32(x26)
+    bn.lid   x2++,  64(x26)
+    bn.lid   x2++,  96(x26)
+    bn.lid   x2++, 128(x26)
+    bn.lid   x2++, 160(x26)
     jal       x1, proj_add_p384
     addi      x12, x26, 0
     jal       x1, store_proj
@@ -380,6 +397,13 @@ p384_verify:
     ver_end_loop:
     /* perform addition of selected point here, or point doubling in case
        of no addition */
+    li        x2, 25
+    bn.lid    x2++,   0(x26)
+    bn.lid    x2++,  32(x26)
+    bn.lid    x2++,  64(x26)
+    bn.lid    x2++,  96(x26)
+    bn.lid    x2++, 128(x26)
+    bn.lid    x2++, 160(x26)
     jal       x1, proj_add_p384
     addi      x12, x26, 0
     jal       x1, store_proj
