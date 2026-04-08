@@ -251,7 +251,7 @@ scalar_mult_int_p384:
   la        x7, scalarmult_k1
   la        x27, scalarmult_Q
   la        x30, scalarmult_A
-  loopi     448, 58
+  loopi     448, 51
 
     /* Double point Q.
        Q = ([w30,w29], [w28,w27], [w26, w25]) <= Q + dmem[x27] */
@@ -339,16 +339,6 @@ scalar_mult_int_p384:
     bn.sel    w30, w30, w9, FG1.L
 
     /* TODO: re-randomize Q */
-
-    /* store Q in dmem
-     dmem[x26] = dmem[dptr_sc+512] <= [w30:w25] */
-    li        x2, 25
-    bn.sid    x2++, 0(x27)
-    bn.sid    x2++, 32(x27)
-    bn.sid    x2++, 64(x27)
-    bn.sid    x2++, 96(x27)
-    bn.sid    x2++, 128(x27)
-    bn.sid    x2++, 160(x27)
 
   ret
 
