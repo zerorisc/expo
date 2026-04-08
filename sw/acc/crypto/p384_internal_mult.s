@@ -238,7 +238,6 @@ scalar_mult_int_p384:
 
      Loop invariants (i=448..0):
        x27 = scalarmult_Q (tmp)
-       x30 = scalarmult_A (tmp)
        [w30:w25] = Q = ((k >> i) * P)
        dmem[x4:x4+64] = P
        dmem[x5:x5+64] = 2*P
@@ -250,7 +249,6 @@ scalar_mult_int_p384:
   la        x6, scalarmult_k0
   la        x7, scalarmult_k1
   la        x27, scalarmult_Q
-  la        x30, scalarmult_A
   loopi     448, 51
 
     /* Double point Q.
@@ -362,8 +360,4 @@ scalarmult_2P:
 
 .balign 32
 scalarmult_Q:
-.zero 192
-
-.balign 32
-scalarmult_A:
 .zero 192
