@@ -323,7 +323,7 @@ p384_verify:
   bn.lid   x2++, 160(x26)
 
   /* main loop with decreasing index i (i=383 downto 0) */
-  loopi     384, 42
+  loopi     384, 31
 
     /* probe MSBs of u1 and u2 and u1|u2 to determine which point has to be
        added. */
@@ -366,49 +366,34 @@ p384_verify:
     /* always double, let both input pointers for point addition point to C */
     add       x27, x26, x0
 
+    /* perform point doubling C <= 2 (*) C */
+    jal       x1, proj_double_p384
+
     /* no addition if x5 = u1[i] | u2[i] == 0 */
     beq       x5, x0, ver_end_loop
-
-    /* TODO: use point doubling here */
-    /* perform point doubling C <= 2 (*) C */
-    jal       x1, proj_add_p384
-    addi      x12, x26, 0
-    jal       x1, store_proj
 
     /* check if u1[i] is set */
     bne       x3, x0, u1_set
 
     /* only u2[i] is set: do C <= C + Q */
     addi      x27, x26, 384
-    jal       x0, ver_end_loop
+    jal       x0, ver_do_add
 
     u1_set:
-    /* chek if u2[i] is set as well */
-    bne       x4, x0, both
+    /* check if u2[i] is set as well, if so do C <= C + (G + Q) */
+    addi      x27, x26, 576
+    bne       x4, x0, ver_do_add
 
     /* only u1[i] is set: do C <= C + G */
     add       x27, x26, 192
-    jal       x0, ver_end_loop
+    jal       x0, ver_do_add
 
-    /* both bits at current index (u1[i] and u2[i]) are set:
-       do: C <= C + (G + Q) */
-    both:
-    addi      x27, x26, 576
+    ver_do_add:
+    /* Add selected point.
+         [w30:w25] <= [w30:w25] + dmem[x27] */
+    jal       x1, proj_add_p384
 
     ver_end_loop:
-    /* perform addition of selected point here, or point doubling in case
-       of no addition */
-    li        x2, 25
-    bn.lid    x2++,   0(x26)
-    bn.lid    x2++,  32(x26)
-    bn.lid    x2++,  64(x26)
-    bn.lid    x2++,  96(x26)
-    bn.lid    x2++, 128(x26)
-    bn.lid    x2++, 160(x26)
-    jal       x1, proj_add_p384
-    addi      x12, x26, 0
-    jal       x1, store_proj
-
     /* increment counter */
     addi     x15, x15, 1
 
