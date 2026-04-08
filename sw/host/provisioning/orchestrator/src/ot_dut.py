@@ -59,6 +59,7 @@ class OtDut():
     fpga_dont_clear_bitstream: bool
     enable_alerts: bool
     use_ext_clk: bool
+    usb_serial: str = None
     require_confirmation: bool = True
 
     def _make_log_dir(self) -> None:
@@ -133,6 +134,9 @@ class OtDut():
             device_elf = device_elf.format(base_dir=self._base_dev_dir(),
                                            target="silicon_creator")
         device_elf = resolve_runfile(device_elf)
+
+        if self.usb_serial:
+            host_flags += f" --usb-serial={self.usb_serial}"
 
         # Assemble CP command.
         cp_host_bin = resolve_runfile(_CP_HOST_BIN)
@@ -243,6 +247,9 @@ class OtDut():
             fw_bundle_bin = fw_bundle_bin.format(base_dir=self._base_dev_dir(),
                                                  sku=self.sku_config.name,
                                                  target="silicon_creator")
+
+        if self.usb_serial:
+            host_flags += f" --usb-serial={self.usb_serial}"
 
         individ_elf = resolve_runfile(individ_elf)
         perso_bin = resolve_runfile(perso_bin)

@@ -139,6 +139,13 @@ def main(args_in):
         help=
         "Path to provisioning database. The database will be created if it does not exist.",
     )
+    parser.add_argument(
+        "--usb-serial",
+        required=False,
+        default=None,
+        help=
+        "USB serial number of the debug interface to use, when more than one is connected.",
+    )
     args = parser.parse_args(args_in)
 
     if not args.cp_only and args.db_path is None:
@@ -175,6 +182,7 @@ def main(args_in):
                 fpga_dont_clear_bitstream=args.fpga_dont_clear_bitstream,
                 enable_alerts=args.enable_alerts,
                 use_ext_clk=args.use_ext_clk,
+                usb_serial=args.usb_serial,
                 require_confirmation=not args.non_interactive)
     dut.run_cp()
     if args.cp_only:

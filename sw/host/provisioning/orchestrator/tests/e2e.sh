@@ -31,4 +31,5 @@ $PYTHON ${ORCHESTRATOR_PATH} \
   --enable-alerts \
   --use-ext-clk \
   --non-interactive \
+  --usb-serial=206C36643452 \
   --db-path=$TEST_TMPDIR/registry.sqlite
