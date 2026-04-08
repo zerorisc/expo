@@ -239,26 +239,25 @@ scalar_mult_int_p384:
   bn.sid    x2, 0(x3++)
   bn.sid    x2, 0(x3++)
 
+  /* Load the point Q into registers [w30:w25]. */
+  la        x27, scalarmult_Q
+  li        x2, 25
+  bn.sid    x2++,   0(x27)
+  bn.sid    x2++,  32(x27)
+  bn.sid    x2++,  64(x27)
+  bn.sid    x2++,  96(x27)
+  bn.sid    x2++, 128(x27)
+  bn.sid    x2++, 160(x27)
+
   /* Double-and-add loop with decreasing index. */
   la        x4, scalarmult_P
   la        x5, scalarmult_2P
   la        x6, scalarmult_k0
   la        x7, scalarmult_k1
-  la        x27, scalarmult_Q
   la        x30, scalarmult_A
-  loopi     448, 66
+  loopi     448, 59
 
-    /* TODO: make point-doubling routine w/ regs to save this load */
-    /* load Q */
-    li        x2, 25
-    bn.lid    x2++,   0(x27)
-    bn.lid    x2++,  32(x27)
-    bn.lid    x2++,  64(x27)
-    bn.lid    x2++,  96(x27)
-    bn.lid    x2++, 128(x27)
-    bn.lid    x2++, 160(x27)
-
-    /* double point Q
+    /* Double point Q.
        Q = ([w30,w29], [w28,w27], [w26, w25]) <= Q + dmem[x27] */
     jal       x1, proj_add_p384
 
