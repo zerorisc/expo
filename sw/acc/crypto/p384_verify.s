@@ -313,8 +313,17 @@ p384_verify:
   /* Initialize loop counter to 0. */
   addi      x15, x0, 0
 
+  /* load point C */
+  li       x2, 25
+  bn.lid   x2++,   0(x26)
+  bn.lid   x2++,  32(x26)
+  bn.lid   x2++,  64(x26)
+  bn.lid   x2++,  96(x26)
+  bn.lid   x2++, 128(x26)
+  bn.lid   x2++, 160(x26)
+
   /* main loop with decreasing index i (i=383 downto 0) */
-  loopi     384, 49
+  loopi     384, 42
 
     /* probe MSBs of u1 and u2 and u1|u2 to determine which point has to be
        added. */
@@ -361,15 +370,7 @@ p384_verify:
     beq       x5, x0, ver_end_loop
 
     /* TODO: use point doubling here */
-    /* TODO: try to move load out of loop */
     /* perform point doubling C <= 2 (*) C */
-    li       x2, 25
-    bn.lid   x2++,   0(x26)
-    bn.lid   x2++,  32(x26)
-    bn.lid   x2++,  64(x26)
-    bn.lid   x2++,  96(x26)
-    bn.lid   x2++, 128(x26)
-    bn.lid   x2++, 160(x26)
     jal       x1, proj_add_p384
     addi      x12, x26, 0
     jal       x1, store_proj
