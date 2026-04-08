@@ -18,8 +18,15 @@ p384_proj_add_test:
   /* set dmem pointer to domain parameter b */
   la       x28, p384_b
 
-  /* set dmem pointer to point 1 */
-  la       x26, p1_x
+  /* load point 1 */
+  li x2,   25
+  la x3, p1_x
+  bn.lid   x2++,   0(x3)
+  bn.lid   x2++,  32(x3)
+  bn.lid   x2++,  64(x3)
+  bn.lid   x2++,  96(x3)
+  bn.lid   x2++, 128(x3)
+  bn.lid   x2++, 160(x3)
 
   /* set dmem pointer to point 2 */
   la       x27, p2_x

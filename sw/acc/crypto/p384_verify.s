@@ -397,6 +397,7 @@ p384_verify:
   /* Compute Solinas constant k for modulus p (we know it is only 191 bits, so
      no need to compute the high part):
      w14 <= 2^256 - p[255:0] = (2^384 - p) mod (2^256) = 2^384 - p */
+  /* TODO: w14 possibly unused here? */
   bn.sub    w14, w31, w12
 
   /* compute inverse of z-coordinate: [w17,w16] <= z_c^-1  mod p */
