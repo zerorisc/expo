@@ -279,9 +279,9 @@ class Model:
             "MOD": 0x0,
             "KMAC_CFG": 0x8,
             "KMAC_MSG": 0x9,
-            "KMAC_MSG1": 0xa,
-            "KMAC_DIGEST": 0xb,
-            "KMAC_DIGEST1": 0xc
+            "KMAC_MSG1": 0xc,
+            "KMAC_DIGEST": 0xa,
+            "KMAC_DIGEST1": 0xd
         }
 
         # The current PC (the address of the next instruction that needs

@@ -141,7 +141,6 @@ class KmacBlock:
         self._skip_digest_shift_cycle = False
         self._kmac_undersized_err = False
         self._kmac_oversized_err = False
-        self._digest_share1_mode_err = False
 
     def _reset(self) -> None:
         self._status = self._STATUS_IDLE
@@ -199,7 +198,6 @@ class KmacBlock:
         self._digest_request_ctr = 0
         self._skip_digest_shift_cycle = False
         self._kmac_undersized_err = False
-        self._digest_share1_mode_err = False
 
     def set_configuration(self, mode: int, strength: int, msg_len: int, masked_mode: bool) -> None:
         kmac_debug_print(f"\tSetting KMAC config: mode = {mode}, \
@@ -219,10 +217,7 @@ class KmacBlock:
         self.start()
 
     def get_error(self) -> int:
-        if self._digest_share1_mode_err:
-            return ErrBits.KMAC_RECOV_ERROR
-        else:
-            return 0
+        return 0
 
     def get_ready(self) -> int:
         return self._app_intf_ready
@@ -339,11 +334,6 @@ class KmacBlock:
                         read={self._digest1_read} ready={self._digest1_ready} \
                         read_offset={self._read_offset} \
                         leftover={self._leftover_digest_bytes}")
-
-        if not self._masked_mode:
-            self._digest_share1_mode_err = True
-            self._digest1_read = True
-            return True
 
         # This helper function is executed during a digest wsrr insn
         # Check if there is an undersized message at this point
@@ -723,8 +713,8 @@ class KmacBlock:
                 elif (
                     self._msg_len < self._APP_INTF_BYTES_PER_CYCLE
                     and self._msg_len != 0
-                    and (len(self._app_intf_fifo) >= self._msg_len or
-                        len(self._app_intf_share1_fifo >= self._msg_len))
+                    and (len(self._app_intf_fifo) >= self._msg_len and
+                         len(self._app_intf_share1_fifo) >= self._msg_len)
                 ):
                     if (len(self._app_intf_fifo) < 8):
                         # Flushing the APP FIFO has an extra clock cycle to read

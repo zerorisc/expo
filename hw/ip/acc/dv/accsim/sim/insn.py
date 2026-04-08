@@ -1766,7 +1766,7 @@ class BNWSRR(ACCInsn):
                 # There's a pending EDN request. Stall for a cycle.
                 yield None
 
-        if self.wsr == 0xB:
+        if self.wsr == 0xA:
             # A read from KMAC_DIGEST0. If a digest value is not available, request_value()
             # initiates or continues the request for the next digest word from KMAC and
             # returns false. If a digest value is available, it returns True.
@@ -1774,10 +1774,14 @@ class BNWSRR(ACCInsn):
                 # There's a pending KMAC request. Stall for a cycle.
                 yield None
 
-        if self.wsr == 0xC:
+        if self.wsr == 0xD:
             # A read from KMAC_DIGEST1. If a digest value is not available, request_value()
             # initiates or continues the request for the next digest word from KMAC and
             # returns false. If a digest value is available, it returns True.
+            if not state.kmac._masked_mode:
+                state.stop_at_end_of_cycle(ErrBits.KMAC_RECOV_ERROR)
+                return
+
             while not state.wsrs.KMAC_DIGEST1.request_value_share1():
                 # There's a pending KMAC request. Stall for a cycle.
                 yield None
@@ -1821,9 +1825,12 @@ class BNWSRW(ACCInsn):
                     eprint("\tBNWSRW to KMAC_MSG0 stall")
                 yield None
 
-        if self.wsr == 0xA:
+        if self.wsr == 0xC:
             # A write to KMAC_MSG1 might stall, if the register has not yet pushed
             # all its contents to the FIFO connected to the KMAC app interface.
+            if not state.kmac._masked_mode:
+                state.stop_at_end_of_cycle(ErrBits.KMAC_RECOV_ERROR)
+                return
             while not state.wsrs.KMAC_MSG1.request_write():
                 if DEBUG_KMAC:
                     eprint("\tBNWSRW to KMAC_MSG1 stall")

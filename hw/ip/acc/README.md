@@ -472,14 +472,14 @@ All read-write (RW) WSRs are set to 0 when ACC starts an operation (when 1 is wr
     <tr>
       <td>0x9</td>
       <td>RW</td>
-      <td><a name="kmac-msg0">KMAC_MSG0</a></td>
+      <td><a name="kmac-msg">KMAC_MSG</a></td>
       <td>
         The kmac message data share0 to send over the AppIntf.
         A byte mask is applied to the message from the kmac_partial_write WSR value before being written into the internal MSG FIFO.
       </td>
     </tr>
     <tr>
-      <td>0xA</td>
+      <td>0xC</td>
       <td>RW</td>
       <td><a name="kmac-msg1">KMAC_MSG1</a></td>
       <td>
@@ -488,15 +488,15 @@ All read-write (RW) WSRs are set to 0 when ACC starts an operation (when 1 is wr
       </td>
     </tr>
     <tr>
-      <td>0xB</td>
+      <td>0xA</td>
       <td>RW</td>
-      <td><a name="kmac-digest0">KMAC_DIGEST0</a></td>
+      <td><a name="kmac-digest">KMAC_DIGEST</a></td>
       <td>
         Return digest share 0 from AppIntf.
       </td>
     </tr>
     <tr>
-      <td>0xC</td>
+      <td>0xD</td>
       <td>RW</td>
       <td><a name="kmac-digest1">KMAC_DIGEST1</a></td>
       <td>
@@ -504,7 +504,7 @@ All read-write (RW) WSRs are set to 0 when ACC starts an operation (when 1 is wr
       </td>
     </tr>
     <tr>
-      <td>0xD</td>
+      <td>0xB</td>
       <td>RW</td>
       <td><a name="acch">ACCH</a></td>
       <td>

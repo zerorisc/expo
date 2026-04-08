@@ -468,34 +468,34 @@ class KmacMsgWSR(WSR):
                 self._pending_write_stall_pw = False
             
             # MSG SHARE0 Write
-            elif (
-                not self._kmac._app_intf_last
-                and self._kmac.write_to_app_intf_fifo(value_bytes)
-                and not share
-            ):
-                kmac_debug_print(f"\tKMAC_MSG0 -> APP FIFO0: Writing \
-                                 {len(value_bytes)} bytes to App FIFO")
-                self._pending_write_to_app_intf = False
-                self._kmac._app_intf_writing = True
-                # Reset paritial write value after successful write
-                self._partial_ispr._used_share0 = True
-                if (self._partial_ispr._used_share1 == True) or not self._kmac._masked_mode:
-                    self._partial_ispr._value = 32
+            elif not share:
+                if (
+                    not self._kmac._app_intf_last
+                    and self._kmac.write_to_app_intf_fifo(value_bytes)
+                ):
+                    kmac_debug_print(f"\tKMAC_MSG0 -> APP FIFO0: Writing \
+                                    {len(value_bytes)} bytes to App FIFO")
+                    self._pending_write_to_app_intf = False
+                    self._kmac._app_intf_writing = True
+                    # Reset paritial write value after successful write
+                    self._partial_ispr._used_share0 = True
+                    if (self._partial_ispr._used_share1 == True) or not self._kmac._masked_mode:
+                      self._partial_ispr._value = 32
 
             # MSG SHARE1 Write
-            elif (
-                not self._kmac._app_intf_last
-                and self._kmac.write_to_app_intf_share1_fifo(value_bytes)
-                and share
-            ):
-                kmac_debug_print(f"\tKMAC_MSG1 -> APP FIFO1: Writing \
-                                 {len(value_bytes)} bytes to App FIFO")
-                self._pending_write_to_app_intf = False
-                self._kmac._app_intf_writing = True
-                # Reset paritial write value after successful write
-                self._partial_ispr._used_share1 = True
-                if self._partial_ispr._used_share0 == True:
-                    self._partial_ispr._value = 32
+            elif share:
+                if (
+                    not self._kmac._app_intf_last
+                    and self._kmac.write_to_app_intf_share1_fifo(value_bytes)
+                ):
+                    kmac_debug_print(f"\tKMAC_MSG1 -> APP FIFO1: Writing \
+                                     {len(value_bytes)} bytes to App FIFO")
+                    self._pending_write_to_app_intf = False
+                    self._kmac._app_intf_writing = True
+                    # Reset paritial write value after successful write
+                    self._partial_ispr._used_share1 = True
+                    if self._partial_ispr._used_share0 == True:
+                        self._partial_ispr._value = 32
 
 
     def pending_write_pw(self) -> bool:
@@ -711,10 +711,10 @@ class WSRFile:
             self._by_idx.update({
                 8: self.KMAC_CFG,
                 9: self.KMAC_MSG0,
-                10: self.KMAC_MSG1,
-                11: self.KMAC_DIGEST0,
-                12: self.KMAC_DIGEST1,
-                13: self.ACCH,
+                10: self.KMAC_DIGEST0,
+                11: self.ACCH,
+                12: self.KMAC_MSG1,
+                13: self.KMAC_DIGEST1,
             })
 
     def on_start(self) -> None:

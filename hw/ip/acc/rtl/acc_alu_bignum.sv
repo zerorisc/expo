@@ -1093,7 +1093,7 @@ generate
     end else if (kmac_new_cfg_q) begin
       sha_digest_rsp_cnt <= 2'b0;
     end else if (sha3_pkg::sha3_mode_e'(kmac_cfg_intg_q[1:0]) == sha3_pkg::Sha3) begin
-      if (ispr_predec_bignum_i.ispr_rd_en[IsprKmacDigest0] && kmac_digest_valid_q) begin
+      if (kmac_digest_rd_next) begin
         sha_digest_rsp_cnt <= sha_digest_rsp_cnt + 1'b1;
       end
     end
@@ -1122,9 +1122,12 @@ generate
   logic                           kmac_last_msg_all_bytes_valid;
   logic [kmac_pkg::MsgStrbW-1:0]  kmac_last_msg_strb;
 
-  logic       packer_ctr_last;
-  logic [7:0] packer_rdata_mask;
-  logic [3:0] packer_rdata_mask_cnt;
+  logic       packer0_ctr_last;
+  logic       packer1_ctr_last;
+  logic [7:0] packer0_rdata_mask;
+  logic [7:0] packer1_rdata_mask;
+  logic [3:0] packer0_rdata_mask_cnt;
+  logic [3:0] packer1_rdata_mask_cnt;
 
   logic kmac_app_active;
   logic kmac_app_last;
@@ -1319,13 +1322,18 @@ generate
   // Convert the number of 1's in byte mask to decimal value for comparison
   // with CFG WSR partial word byte field
   always_comb begin
-    packer_rdata_mask_cnt = '0;
+    packer0_rdata_mask_cnt = '0;
+    packer1_rdata_mask_cnt = '0;
     for (int i = 0; i < kmac_pkg::MsgStrbW; i++) begin
       // collapse each 8-bit chunk into one strb bit
-      packer_rdata_mask[i] = |kmac_msg0_fifo_rdata_mask[i*8 +: 8];
+      packer0_rdata_mask[i] = |kmac_msg0_fifo_rdata_mask[i*8 +: 8];
+      packer1_rdata_mask[i] = |kmac_msg1_fifo_rdata_mask[i*8 +: 8];
     end
-    foreach (packer_rdata_mask[i]) begin
-      packer_rdata_mask_cnt += {3'b0, packer_rdata_mask[i]};
+    foreach (packer0_rdata_mask[i]) begin
+      packer0_rdata_mask_cnt += {3'b0, packer0_rdata_mask[i]};
+    end
+    foreach (packer1_rdata_mask[i]) begin
+      packer1_rdata_mask_cnt += {3'b0, packer1_rdata_mask[i]};
     end
   end
 
@@ -1438,7 +1446,8 @@ generate
                                 kmac_msg0_fifo_rvalid;
 
   // Ensure that the read mask is at least the size of the cfg before asserting last
-  assign packer_ctr_last       = (packer_rdata_mask_cnt >= {1'b0, kmac_cfg_msg_len_bytes});
+  assign packer0_ctr_last = (packer0_rdata_mask_cnt >= {1'b0, kmac_cfg_msg_len_bytes});
+  assign packer1_ctr_last = (packer1_rdata_mask_cnt >= {1'b0, kmac_cfg_msg_len_bytes});
 
   // If it is time for the final word and there is a partial word we need to flush it out
   assign kmac_msg_fifo_flush   = (kmac_msg_last && (kmac_cfg_msg_len_bytes != 3'h0) &&
@@ -1476,15 +1485,28 @@ generate
   assign kmac_msg0_pending_write_o = kmac_msg0_valid_q && ~kmac_sent_last;
   assign kmac_msg1_pending_write_o = kmac_msg1_valid_q && ~kmac_sent_last;
 
-  assign kmac_msg_last = (kmac_cfg_msg_len_bytes == 3'h0) ?
-                         (kmac_msg0_ctr >= kmac_cfg_msg_len_words - 1) && kmac_msg0_fifo_rvalid :
-                         ((kmac_msg0_ctr >= kmac_cfg_msg_len_words) && packer_ctr_last);
+  logic msg0_last_words, msg0_last_bytes;
+  logic msg1_last_words, msg1_last_bytes;
+  assign msg0_last_words = (kmac_msg0_ctr >= kmac_cfg_msg_len_words - 1) && kmac_msg0_fifo_rvalid;
+  assign msg0_last_bytes = ((kmac_msg0_ctr >= kmac_cfg_msg_len_words) && packer0_ctr_last);
+  assign msg1_last_words = (kmac_msg1_ctr >= kmac_cfg_msg_len_words - 1) && kmac_msg1_fifo_rvalid;
+  assign msg1_last_bytes = ((kmac_msg1_ctr >= kmac_cfg_msg_len_words) && packer1_ctr_last);
+
+  always_comb begin
+    if (kmac_cfg_msg_len_bytes == 3'h0) begin
+      if (kmac_cfg_mask_mode) kmac_msg_last = msg0_last_words & msg1_last_words;
+      else                    kmac_msg_last = msg0_last_words;
+    end else begin
+      if (kmac_cfg_mask_mode) kmac_msg_last = msg0_last_bytes & msg1_last_bytes;
+      else                    kmac_msg_last = msg0_last_bytes;
+    end
+  end
 
   // Compute the assignment for kmac_app_req_o.hold
   assign kmac_app_active = kmac_cfg_active_q & ~kmac_new_cfg_q & ~kmac_cfg_done;
 
   // Compute the assignment for kmac_app_req_o.last
-  assign kmac_app_last = kmac_inject_last_err | (kmac_msg0_fifo_rvalid & kmac_msg_last);
+  assign kmac_app_last = kmac_inject_last_err | (kmac_msg_fifos_valid & kmac_msg_last);
 
   // When there is an undersized message we artificially inject a last valid to finish the message
   assign kmac_app_req_o.valid = (kmac_write_cfg_to_app || kmac_inject_last_err) ?
@@ -1540,18 +1562,24 @@ generate
   always_comb begin
     kmac_msg0_req_err = 1'b0;
     kmac_msg1_req_err = 1'b0;
-    if (ispr_addr_i == IsprKmacDigest0 && kmac_app_active) begin
-      kmac_msg0_req_err = (!kmac_msg0_pending_write_o && !kmac_msg0_fifo_rvalid &&
-                           !kmac_msg_fifo_flush && !kmac_msg0_fifo_wvalid);
-    end
+    //if (ispr_addr_i == IsprKmacDigest0 && kmac_app_active) begin
+    //  kmac_msg0_req_err = (!kmac_msg0_pending_write_o && !kmac_msg0_fifo_rvalid &&
+    //                       !kmac_msg_fifo_flush && !kmac_msg0_fifo_wvalid);
+    //end
     if (ispr_addr_i == IsprKmacDigest1 && kmac_app_active) begin
       kmac_msg1_req_err = (!kmac_msg1_pending_write_o && !kmac_msg1_fifo_rvalid &&
                            !kmac_msg_fifo_flush && !kmac_msg1_fifo_wvalid);
     end
+    if ((ispr_addr_i == IsprKmacDigest0 | ispr_addr_i == IsprKmacDigest1) && kmac_app_active) begin
+      kmac_msg0_req_err = !(kmac_msg0_pending_write_o | kmac_msg1_pending_write_o) &&
+                          !(kmac_msg_fifos_valid) &&
+                          !kmac_msg_fifo_flush &&
+                          !(kmac_msg0_fifo_wvalid | kmac_msg1_fifo_wvalid);
+    end
   end
 
   // If we have not received a last see if there is an error
-  assign kmac_undersized_req_err = (kmac_msg0_req_err | kmac_msg1_req_err) & ~kmac_pending_last;
+  assign kmac_undersized_req_err = (kmac_msg0_req_err) & ~kmac_pending_last;
 
   // Register the undersized req err to compute a posedge
   always_ff @(posedge clk_i or negedge rst_ni) begin
@@ -1605,9 +1633,9 @@ generate
 
   // The cfg reads 0 when it is a full word which means the mask is 8 so we must skip evaluation
   // at these sizes, otherwise check if mask is greater than the cfg
-  assign not_full_word         = ~(packer_rdata_mask_cnt == 4'h8 & kmac_cfg_msg_len_bytes == 3'h0);
+  assign not_full_word = ~(packer0_rdata_mask_cnt == 4'h8 & kmac_cfg_msg_len_bytes == 3'h0);
   assign packer_oversized_last =
-      not_full_word & (packer_rdata_mask_cnt > {1'b0, kmac_cfg_msg_len_bytes});
+      not_full_word & (packer0_rdata_mask_cnt > {1'b0, kmac_cfg_msg_len_bytes});
 
   assign last_word_oversized    = kmac_msg_last & packer_oversized_last;
   // Read or write to/from FIFO that occurs after last

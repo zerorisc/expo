@@ -376,10 +376,10 @@ package acc_pkg;
     WsrKeyS1H       = 'd7,
     WsrKmacCfg      = 'd8,
     WsrKmacMsg0     = 'd9,
-    WsrKmacMsg1     = 'd10,
-    WsrKmacDigest0  = 'd11,
-    WsrKmacDigest1  = 'd12,
-    WsrAccH         = 'd13
+    WsrKmacDigest0  = 'd10,
+    WsrAccH         = 'd11,
+    WsrKmacMsg1     = 'd12,
+    WsrKmacDigest1  = 'd13
   } wsr_e;
 
   // Internal Special Purpose Registers (ISPRs)
