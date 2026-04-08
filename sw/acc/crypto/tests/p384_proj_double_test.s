@@ -47,59 +47,50 @@ p384_proj_double_test:
 
 .section .data
 
-/* point 1 x-cooridante p1_x */
+.balign 32
 p1_x:
-  .word 0x1a11808b
-  .word 0x02e3d5a9
-  .word 0x440d8db6
-  .word 0x5ef02be3
-  .word 0x2a35de10
-  .word 0xdbdb132e
-  .word 0xf84e7899
-  .word 0x7dff4c2b
-  .word 0x24705317
-  .word 0x30eda4ab
-  .word 0xb44ba799
-  .word 0x3af8f1c5
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
+.word 0x1efb65e9
+.word 0x644eefe4
+.word 0x1b9db1d5
+.word 0xb5dbd0ba
+.word 0x760dc196
+.word 0x15e0be5c
+.word 0x6d678c86
+.word 0x65ca4081
+.word 0xde946124
+.word 0x3c315786
+.word 0xb0a1d256
+.word 0x0c1eea5a
+.zero 8
 
-/* point 2 y-cooridante p1_y */
+.balign 32
 p1_y:
-  .word 0xa9f8b96e
-  .word 0x82f268be
-  .word 0x8e51c662
-  .word 0x92b9c4bb
-  .word 0x757d4493
-  .word 0x26b4d3c6
-  .word 0xf491007e
-  .word 0x92a5c72a
-  .word 0x8d8d8641
-  .word 0x87498a20
-  .word 0x0fe7dbde
-  .word 0x841e4949
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
+.word 0xa23ae435
+.word 0x14ae78e9
+.word 0xa74a3d75
+.word 0x300654dd
+.word 0xeb352d44
+.word 0x7035e43c
+.word 0xe1e8fb14
+.word 0xdd446c11
+.word 0xee0e53b9
+.word 0x69b4d724
+.word 0xa23baf66
+.word 0xdb1cc4d8
+.zero 8
 
-/* point 1 z-cooridante p1_z */
+.balign 32
 p1_z:
-  .word 0x00000001
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
-  .word 0x00000000
+.word 0x9b2f1d4b
+.word 0x9b53163d
+.word 0xa26dbeaa
+.word 0x4e834230
+.word 0x498af72a
+.word 0x5cf57ec1
+.word 0xe4e29dd9
+.word 0xf242436d
+.word 0xb18b0f28
+.word 0x031262c1
+.word 0xee07b92f
+.word 0xe514c262
+.zero 8

@@ -247,7 +247,17 @@ scalar_mult_int_p384:
   bn.xor    w29, w29, w29
   bn.xor    w30, w30, w30
 
-  /* Double-and-add loop with decreasing index. */
+  /* Double-and-add loop with decreasing index.
+
+     Loop invariants (i=448..0):
+       x27 = scalarmult_Q (tmp)
+       x30 = scalarmult_A (tmp)
+       [w30:w25] = Q = ((k >> i) * P)
+       dmem[x4:x4+64] = P
+       dmem[x5:x5+64] = 2*P
+       dmem[x6:x6+64] = (k0 << (i+64)) % 2^512
+       dmem[x7:x7+64] = (k1 << (i+64)) % 2^512
+   */
   la        x4, scalarmult_P
   la        x5, scalarmult_2P
   la        x6, scalarmult_k0
