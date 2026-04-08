@@ -1080,6 +1080,17 @@ proj_double_p384:
   bn.sel    w27, w10, w16, C
   bn.sel    w28, w11, w17, C
 
+  /* The proj_double routine returns (0, 0, 0) when called on the point at
+     infinity (any point where Y is nonzero and both X=0 and Z=0). Detect this
+     case and select a 1 for Y if all coordinates are 0. */
+  bn.addi   w3, w31, 1
+  bn.or     w0, w25, w27
+  bn.or     w0, w0, w29
+  bn.or     w1, w26, w28
+  bn.or     w1, w1, w30
+  bn.or     w0, w0, w1
+  bn.sel    w27, w3, w27, Z
+
   ret
 
 /**
