@@ -909,19 +909,15 @@ proj_add_p384:
  *
  * This routine runs in constant time.
  *
- * @param[in]  x22: set to 10, pointer to in reg for modular multiplication
- * @param[in]  x23: set to 11, pointer to in reg for modular multiplication
- * @param[in]  x24: set to 16, pointer to in/out reg for modular multiplication
- * @param[in]  x25: set to 17, pointer to in/out reg for modular multiplication
  * @param[in]  [w13, w12]: p, modulus of underlying field of P-384
  * @param[in]  w31: all-zero.
- * @param[in,out]  [w26, w25]: x_r, x-coordinate of input point P/result point R
- * @param[in,out]  [w28, w27]: y_r, y-coordinate of input point P/result point R
- * @param[in,out]  [w30, w29]: z_r, z-coordinate of input point P/result point R
+ * @param[in,out]  [w26, w25]: x, x-coordinate of input point P/result point R
+ * @param[in,out]  [w28, w27]: y, y-coordinate of input point P/result point R
+ * @param[in,out]  [w30, w29]: z, z-coordinate of input point P/result point R
  *
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
- * clobbered registers: w0 to w30
+ * clobbered registers: w0 to w11, w16 to w30, acc
  * clobbered flag groups: FG0
  */
 .globl proj_double_p384
