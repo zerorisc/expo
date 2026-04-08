@@ -26,8 +26,6 @@
  *                          x-coordinate of input point
  * @param[in]  x21: dptr_y, pointer to dmem location containing affine
  *                          y-coordinate of input point
- * @param[in]  [w15, w14]: u[383:0] lower 384 bit of Barrett constant u for
- *                                    modulus p
  * @param[in]  [w13, w12]: p, modulus of P-384 underlying finite field
  * @param[in]  w31: all-zero
  * @param[in]  x18: dptr_p_p, pointer to dmem location to store resulting point
@@ -199,15 +197,22 @@ scalar_mult_int_p384:
   bn.sid    x2++,  0(x3)
   bn.sid    x2++, 32(x3)
 
-  /* get randomized projective coodinates of curve point
-     P = (x_p, y_p, z_p) = dmem[scalarmult_P] = (x*z mod p, y*z mod p, z) */
+  /* Convert P to projective coordinates and copy to scratchpad. */
   la        x18, scalarmult_P
   jal       x1, store_proj_randomize
 
+  /* load randomized point P */
+  li        x2, 25
+  bn.lid    x2++,   0(x18)
+  bn.lid    x2++,  32(x18)
+  bn.lid    x2++,  64(x18)
+  bn.lid    x2++,  96(x18)
+  bn.lid    x2++, 128(x18)
+  bn.lid    x2++, 160(x18)
+
   /* double point P
      2P = ([w30,w29], [w28,w27], [w26, w25]) <= 2*P */
-  la        x26, scalarmult_P
-  la        x27, scalarmult_P
+  addi      x27, x18, 0
   jal       x1, proj_add_p384
 
   /* Store point 2P.
@@ -234,28 +239,27 @@ scalar_mult_int_p384:
   bn.sid    x2, 0(x3++)
   bn.sid    x2, 0(x3++)
 
-  /*
-    Double-and-add loop with decreasing index.
-
-    Loop invariants (index i=448..0):
-      x4 = scalarmult_P
-      x5 = scalarmult_2P
-      x26 = scalarmult_Q
-      x30 = scalarmult_A
-      [w0:w1] = (s0 << (i+64)) mod 2^512
-      [w3:w2] = (s1 << (i+64)) mod 2^512
-   */
+  /* Double-and-add loop with decreasing index. */
   la        x4, scalarmult_P
   la        x5, scalarmult_2P
   la        x6, scalarmult_k0
   la        x7, scalarmult_k1
-  la        x26, scalarmult_Q
+  la        x27, scalarmult_Q
   la        x30, scalarmult_A
-  loopi     448, 68
+  loopi     448, 66
+
+    /* TODO: make point-doubling routine w/ regs to save this load */
+    /* load Q */
+    li        x2, 25
+    bn.lid    x2++,   0(x27)
+    bn.lid    x2++,  32(x27)
+    bn.lid    x2++,  64(x27)
+    bn.lid    x2++,  96(x27)
+    bn.lid    x2++, 128(x27)
+    bn.lid    x2++, 160(x27)
 
     /* double point Q
        Q = ([w30,w29], [w28,w27], [w26, w25]) <= Q + dmem[x27] */
-    add       x27, x26, x0
     jal       x1, proj_add_p384
 
     /* Store Q in dmem and load scalar shares, interleaving to avoid
@@ -265,16 +269,16 @@ scalar_mult_int_p384:
          [w3:w2] <= dmem[scalarmult_k1] */
     li        x2, 25
     la        x3, 0
-    bn.sid    x2++,   0(x26)
-    bn.sid    x2++,  32(x26)
+    bn.sid    x2++,   0(x27)
+    bn.sid    x2++,  32(x27)
     bn.lid    x3++,   0(x6)
     bn.lid    x3++,  32(x6)
-    bn.sid    x2++,  64(x26)
-    bn.sid    x2++,  96(x26)
+    bn.sid    x2++,  64(x27)
+    bn.sid    x2++,  96(x27)
     bn.lid    x3++,   0(x7)
     bn.lid    x3++,  32(x7)
-    bn.sid    x2++, 128(x26)
-    bn.sid    x2++, 160(x26)
+    bn.sid    x2++, 128(x27)
+    bn.sid    x2++, 160(x27)
 
     /* Probe the MSB xor and or of the combined scalars. Randomize other bits
        to obfuscate power signals.
@@ -301,16 +305,6 @@ scalar_mult_int_p384:
     addi  x4, x4, -192
     addi  x5, x5, -192
 
-    /* Store the selected addition value in dmem.
-       dmem[scalarmult_A] <= [w30:w25] */
-    li        x2, 25
-    bn.sid    x2++,   0(x30)
-    bn.sid    x2++,  32(x30)
-    bn.sid    x2++,  64(x30)
-    bn.sid    x2++,  96(x30)
-    bn.sid    x2++, 128(x30)
-    bn.sid    x2++, 160(x30)
-
     /* Shift the scalar shares one place and store them. */
     bn.add    w0, w0, w0
     bn.addc   w1, w1, w1
@@ -323,21 +317,20 @@ scalar_mult_int_p384:
     bn.sid    x2++,  0(x7)
     bn.sid    x2++, 32(x7)
 
-    /* Add points Q+P or Q+2P depending on A.
-       Q_a = ([w30,w29], [w28,w27], [w26, w25]) <= Q + dmem[scalarmult_A] */
-    addi      x27, x30, 0
+    /* Add points Q+P or Q+2P depending on which was selected.
+       Q_a = ([w30,w29], [w28,w27], [w26, w25]) <= {P,2P} + dmem[scalarmult_Q] */
     jal       x1, proj_add_p384
 
     /* TODO: randomize on load instead of store? */
     /* Load Q from scratchpad.
-        Q = ([w9,w8], [w7,w6], [w5,w4]) <= dmem[x26] */
+        Q = ([w9,w8], [w7,w6], [w5,w4]) <= dmem[x27] */
     li        x2, 4
-    bn.lid    x2++, 0(x26)
-    bn.lid    x2++, 32(x26)
-    bn.lid    x2++, 64(x26)
-    bn.lid    x2++, 96(x26)
-    bn.lid    x2++, 128(x26)
-    bn.lid    x2++, 160(x26)
+    bn.lid    x2++, 0(x27)
+    bn.lid    x2++, 32(x27)
+    bn.lid    x2++, 64(x27)
+    bn.lid    x2++, 96(x27)
+    bn.lid    x2++, 128(x27)
+    bn.lid    x2++, 160(x27)
 
     /* TODO: fix same-destination for select (randomize Q?) */
 
@@ -355,12 +348,12 @@ scalar_mult_int_p384:
     /* store Q in dmem
      dmem[x26] = dmem[dptr_sc+512] <= [w30:w25] */
     li        x2, 25
-    bn.sid    x2++, 0(x26)
-    bn.sid    x2++, 32(x26)
-    bn.sid    x2++, 64(x26)
-    bn.sid    x2++, 96(x26)
-    bn.sid    x2++, 128(x26)
-    bn.sid    x2++, 160(x26)
+    bn.sid    x2++, 0(x27)
+    bn.sid    x2++, 32(x27)
+    bn.sid    x2++, 64(x27)
+    bn.sid    x2++, 96(x27)
+    bn.sid    x2++, 128(x27)
+    bn.sid    x2++, 160(x27)
 
   ret
 
