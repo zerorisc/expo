@@ -925,6 +925,7 @@ proj_add_p384:
  * clobbered flag groups: FG0
  */
 .globl proj_double_p384
+proj_double_p384:
   /* 1: [w1, w0] = t0 <= X1-Z1 */
   bn.sub    w16, w25, w29
   bn.subb   w17, w26, w30
@@ -934,8 +935,8 @@ proj_add_p384:
   bn.sel    w1, w11, w17, C
 
   /* 2: [w3, w2] = t1 <= X1+Z1 */
-  bn.add    w16, w25, w27
-  bn.addc   w17, w26, w28
+  bn.add    w16, w25, w29
+  bn.addc   w17, w26, w30
   bn.sub    w10, w16, w12
   bn.subb   w11, w17, w13
   bn.sel    w2, w16, w10, C
@@ -947,18 +948,16 @@ proj_add_p384:
   bn.mov    w16, w2
   bn.mov    w17, w3
   jal       x1, p384_mulmod_p
-  bn.mov    w0, w16
-  bn.mov    w1, w17
 
   /* 4: [w1, w0] = w <= 3*t2 */
-  bn.add    w16, w16, w16
-  bn.addc   w17, w17, w17
-  bn.sub    w10, w16, w12
-  bn.subb   w11, w17, w13
-  bn.sel    w2, w16, w10, C
-  bn.sel    w3, w17, w11, C
+  bn.add    w2, w16, w16
+  bn.addc   w3, w17, w17
+  bn.sub    w10, w2, w12
+  bn.subb   w11, w3, w13
+  bn.sel    w2, w2, w10, C
+  bn.sel    w3, w3, w11, C
   bn.add    w2, w2, w16
-  bn.addc   w2, w3, w17
+  bn.addc   w3, w3, w17
   bn.sub    w10, w2, w12
   bn.subb   w11, w3, w13
   bn.sel    w0, w2, w10, C
@@ -1069,7 +1068,7 @@ proj_add_p384:
   bn.mov    w17, w1
   jal       x1, p384_mulmod_p
 
-  /* 19: [w7, w6] = t9 <= 2*RR */ w6-7 free
+  /* 19: [w7, w6] = t9 <= 2*RR */
   bn.add    w2, w6, w6
   bn.addc   w3, w7, w7
   bn.sub    w10, w2, w12
