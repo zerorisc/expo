@@ -598,19 +598,15 @@ proj_add_p384:
   bn.sel    w6, w10, w16, C
   bn.sel    w7, w11, w17, C
 
-  /* 9: [w9, w8] = t4 <= Y1+Z1 = dmem[x26+64]+dmem[x26+128] */
-  bn.lid    x22, 64(x26)
-  bn.lid    x23, 96(x26)
-  bn.lid    x24, 128(x26)
-  bn.lid    x25, 160(x26)
-  bn.add    w16, w10, w16
-  bn.addc   w17, w11, w17
+  /* 9: [w9, w8] = t4 <= Y1+Z1 = [w28, w27]+[w30, w29] */
+  bn.add    w16, w27, w29
+  bn.addc   w17, w28, w30
   bn.sub    w10, w16, w12
   bn.subb   w11, w17, w13
   bn.sel    w8, w16, w10, C
   bn.sel    w9, w17, w11, C
 
-  /* 10: [w26, w25] = X3 <= Y2+Z2 = dmem[x27+64]+dmem[x27+128] */
+  /* 10: [w15, w14] = t5 <= Y2+Z2 = dmem[x27+64]+dmem[x27+128] */
   bn.lid    x22, 64(x27)
   bn.lid    x23, 96(x27)
   bn.lid    x24, 128(x27)
@@ -619,41 +615,37 @@ proj_add_p384:
   bn.addc   w17, w11, w17
   bn.sub    w10, w16, w12
   bn.subb   w11, w17, w13
-  bn.sel    w25, w16, w10, C
-  bn.sel    w26, w17, w11, C
+  bn.sel    w14, w16, w10, C
+  bn.sel    w15, w17, w11, C
 
-  /* 11: [w9, w8] = t4 <= t4*X3 = [w9, w8]*[w26, w25] */
+  /* 11: [w9, w8] = t4 <= t4*t5 = [w9, w8]*[w26, w25] */
   bn.mov    w10, w8
   bn.mov    w11, w9
-  bn.mov    w16, w25
-  bn.mov    w17, w26
+  bn.mov    w16, w14
+  bn.mov    w17, w15
   jal       x1, p384_mulmod_p
   bn.mov    w8, w16
   bn.mov    w9, w17
 
-  /* 12: [w26, w25] = X3 <= t1+t2 = [w3, w2]+[w5, w4] */
+  /* 12: [w15, w14] = t5 <= t1+t2 = [w3, w2]+[w5, w4] */
   bn.add    w16, w2, w4
   bn.addc   w17, w3, w5
   bn.sub    w10, w16, w12
   bn.subb   w11, w17, w13
-  bn.sel    w25, w16, w10, C
-  bn.sel    w26, w17, w11, C
+  bn.sel    w14, w16, w10, C
+  bn.sel    w15, w17, w11, C
 
-  /* 13: [w9, w8] = t4 <= t4-X3 = [w9, w8]-[w26, w25] */
-  bn.sub    w16, w8, w25
-  bn.subb   w17, w9, w26
+  /* 13: [w9, w8] = t4 <= t4-t5 = [w9, w8]-[w26, w25] */
+  bn.sub    w16, w8, w14
+  bn.subb   w17, w9, w15
   bn.add    w10, w16, w12
   bn.addc   w11, w17, w13
   bn.sel    w8, w10, w16, C
   bn.sel    w9, w11, w17, C
 
-  /* 14: [w26, w25] = X3 <= X1+Z1 = dmem[x26+0]+dmem[x26+128] */
-  bn.lid    x22, 0(x26)
-  bn.lid    x23, 32(x26)
-  bn.lid    x24, 128(x26)
-  bn.lid    x25, 160(x26)
-  bn.add    w16, w10, w16
-  bn.addc   w17, w11, w17
+  /* 14: [w26, w25] = X3 <= X1+Z1 = [w26, w25]+[w30, w29] */
+  bn.add    w16, w25, w29
+  bn.addc   w17, w26, w30
   bn.sub    w10, w16, w12
   bn.subb   w11, w17, w13
   bn.sel    w25, w16, w10, C
