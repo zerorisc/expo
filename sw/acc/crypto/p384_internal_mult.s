@@ -267,7 +267,7 @@ scalar_mult_int_p384:
 
     /* Double point Q.
        Q = ([w30,w29], [w28,w27], [w26, w25]) <= Q + dmem[x27] */
-    jal       x1, proj_add_p384
+    jal       x1, proj_double_p384
 
     /* Store Q in dmem and load scalar shares, interleaving to avoid
        consecutive share access.
