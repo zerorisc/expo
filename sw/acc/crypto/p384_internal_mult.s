@@ -226,28 +226,26 @@ scalar_mult_int_p384:
   bn.sid    x2++, 128(x3)
   bn.sid    x2++, 160(x3)
 
+  /* TODO: remove this store once doubling is enabled */
   /* init point Q = (0,1,0) for double-and-add in scratchpad */
   /* dmem[scalarmult_Q] = Q = (0,1,0) */
-  la        x3, scalarmult_Q
+  la        x27, scalarmult_Q
   li        x2, 30
   bn.addi   w30, w31, 1
-  bn.sid    x2++, 64(x3)
-  bn.sid    x2, 0(x3++)
-  bn.sid    x2, 0(x3++)
-  addi      x3, x3, 32
-  bn.sid    x2, 0(x3++)
-  bn.sid    x2, 0(x3++)
-  bn.sid    x2, 0(x3++)
+  bn.sid    x2++, 64(x27)
+  bn.sid    x2, 0(x27)
+  bn.sid    x2, 32(x27)
+  bn.sid    x2, 96(x27)
+  bn.sid    x2, 128(x27)
+  bn.sid    x2, 160(x27)
 
-  /* Load the point Q into registers [w30:w25]. */
-  la        x27, scalarmult_Q
-  li        x2, 25
-  bn.sid    x2++,   0(x27)
-  bn.sid    x2++,  32(x27)
-  bn.sid    x2++,  64(x27)
-  bn.sid    x2++,  96(x27)
-  bn.sid    x2++, 128(x27)
-  bn.sid    x2++, 160(x27)
+  /* Also keep the point Q in registers [w30:w25]. */
+  bn.xor    w25, w25, w25
+  bn.xor    w26, w26, w26
+  bn.addi   w27, w26, 1
+  bn.xor    w28, w28, w28
+  bn.xor    w29, w29, w29
+  bn.xor    w30, w30, w30
 
   /* Double-and-add loop with decreasing index. */
   la        x4, scalarmult_P
@@ -255,7 +253,7 @@ scalar_mult_int_p384:
   la        x6, scalarmult_k0
   la        x7, scalarmult_k1
   la        x30, scalarmult_A
-  loopi     448, 59
+  loopi     448, 58
 
     /* Double point Q.
        Q = ([w30,w29], [w28,w27], [w26, w25]) <= Q + dmem[x27] */
@@ -267,7 +265,7 @@ scalar_mult_int_p384:
          [w1:w0] <= dmem[scalarmult_k0]
          [w3:w2] <= dmem[scalarmult_k1] */
     li        x2, 25
-    la        x3, 0
+    li        x3, 0
     bn.sid    x2++,   0(x27)
     bn.sid    x2++,  32(x27)
     bn.lid    x3++,   0(x6)
