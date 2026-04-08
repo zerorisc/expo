@@ -226,20 +226,7 @@ scalar_mult_int_p384:
   bn.sid    x2++, 128(x3)
   bn.sid    x2++, 160(x3)
 
-  /* TODO: remove this store once doubling is enabled */
-  /* init point Q = (0,1,0) for double-and-add in scratchpad */
-  /* dmem[scalarmult_Q] = Q = (0,1,0) */
-  la        x27, scalarmult_Q
-  li        x2, 30
-  bn.addi   w30, w31, 1
-  bn.sid    x2++, 64(x27)
-  bn.sid    x2, 0(x27)
-  bn.sid    x2, 32(x27)
-  bn.sid    x2, 96(x27)
-  bn.sid    x2, 128(x27)
-  bn.sid    x2, 160(x27)
-
-  /* Also keep the point Q in registers [w30:w25]. */
+  /* Initialize the point Q = (0, 1, 0) in registers [w30:w25]. */
   bn.xor    w25, w25, w25
   bn.xor    w26, w26, w26
   bn.addi   w27, w26, 1
@@ -262,6 +249,7 @@ scalar_mult_int_p384:
   la        x5, scalarmult_2P
   la        x6, scalarmult_k0
   la        x7, scalarmult_k1
+  la        x27, scalarmult_Q
   la        x30, scalarmult_A
   loopi     448, 58
 
