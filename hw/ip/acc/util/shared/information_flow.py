@@ -192,11 +192,10 @@ class InformationFlowGraph:
             # if the sink does not appear, it is unmodified, meaning its only
             # source is itself
             return {sink}
-        elif len(overlapping) == 1:
-            return self.flow[overlapping[0]]
-        else:
-            raise RuntimeError('Multiple overlapping sinks: {}!'
-                .format([s.name for s in overlapping]))
+        out = set()
+        for s in overlapping:
+            out |= self.flow[s]
+        return out
 
     def sinks(self, source: str) -> Set[InformationFlowNode]:
         '''Returns all sinks for the given source.'''

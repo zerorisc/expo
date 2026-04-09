@@ -599,7 +599,7 @@ def get_dmem_symbols(program: ACCProgram) -> Dict[str,int]:
             continue
         if sym not in program.symbol_sections:
             continue
-        if program.symbol_sections[sym] not in ['.data', '.bss']:
+        if program.symbol_sections[sym] not in ['.data', '.bss', '.scratchpad']:
             continue
         symbols[sym] = program.symbols[sym]
     return symbols
@@ -712,8 +712,19 @@ def stringify_control_deps(program: ACCProgram,
     '''
     control_deps = simplify_control_deps(control_deps)
     symbols = get_dmem_symbols(program)
-    out = []
+    # if any overlapping nodes affect control flow at the same PCs, unify them
+    dedup_control_deps = {}
     for node, pcs in control_deps.items():
+        if any([n.overlaps(node) and pcs == dedup_control_deps[n] for n in dedup_control_deps]):
+            # there is already an overlapping node with the same PCs, meaning
+            # we've already processed this node
+            continue
+        for other in control_deps:
+            if pcs == control_deps[other] and node.overlaps(other):
+                node = node.union(other)
+        dedup_control_deps[node] = pcs
+    out = []
+    for node, pcs in dedup_control_deps.items():
         pc_strings = []
         if len(pcs) == 0:
             continue

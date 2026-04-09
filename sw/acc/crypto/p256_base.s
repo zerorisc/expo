@@ -20,8 +20,6 @@
 .globl p256_generate_random_key
 .globl p256_key_from_seed
 .globl p256_scalar_remask
-.globl trigger_fault_if_fg0_z
-.globl trigger_fault_if_fg0_not_z
 .globl mul_modp
 .globl setup_modp
 .globl mod_mul_256x256
@@ -35,62 +33,6 @@
 .globl proj_double
 
 .text
-
-/**
- * Trigger a fault if the FG0.Z flag is 1.
- *
- * If the flag is 1, then this routine will trigger an `ILLEGAL_INSN` error and
- * abort the ACC program. If the flag is 0, the routine will essentially do
- * nothing.
- *
- * NOTE: Be careful when calling this routine that the FG0.Z flag is not
- * sensitive; since aborting the program will be quicker than completing it,
- * the flag's value is likely clearly visible to an attacker through timing.
- *
- * @param[in]    w31: all-zero
- * @param[in]  FG0.Z: boolean indicating fault condition
- *
- * clobbered registers: x2
- * clobbered flag groups: none
- */
-trigger_fault_if_fg0_z:
-  /* Read the FG0.Z flag (position 3).
-       x2 <= FG0.Z << 3 */
-  csrrw     x2, FG0, x0
-  andi      x2, x2, 8
-
-  /* Cause an error if x2 is nonzero, meaning FG0.Z=1. */
-  beq       x2, x0, .+8
-  unimp
-  ret
-
-/**
- * Trigger a fault if the FG0.Z flag is 0.
- *
- * If the flag is 0, then this routine will trigger an `ILLEGAL_INSN` error and
- * abort the ACC program. If the flag is 1, the routine will essentially do
- * nothing.
- *
- * NOTE: Be careful when calling this routine that the FG0.Z flag is not
- * sensitive; since aborting the program will be quicker than completing it,
- * the flag's value is likely clearly visible to an attacker through timing.
- *
- * @param[in]    w31: all-zero
- * @param[in]  FG0.Z: boolean indicating (complement of) fault condition
- *
- * clobbered registers: x2
- * clobbered flag groups: none
- */
-trigger_fault_if_fg0_not_z:
-  /* Read the FG0.Z flag (position 3).
-       x2 <= FG0.Z */
-  csrrw     x2, FG0, x0
-  andi      x2, x2, 8
-
-  /* Cause an error if x2 is nonzero, meaning FG0.Z=0. */
-  bne       x2, x0, .+8
-  unimp
-  ret
 
 /**
  * Reduce a 512-bit value by a 256-bit P-256 modulus (either n or p).
@@ -1576,7 +1518,7 @@ p256_base_mult:
      The check fails if both sides are not equal.
      FG0.Z <= (y^2) mod p == (x^2 + ax + b) mod p */
   bn.cmp   w18, w19
-  jal      x1, trigger_fault_if_fg0_not_z
+  jal      x1, trigger_fault_if_not_fg0_z
 
   ret
 

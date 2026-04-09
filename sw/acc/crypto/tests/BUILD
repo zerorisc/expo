@@ -14,9 +14,11 @@ package(default_visibility = ["//visibility:public"])
 # (e.g. the computed point being the origin point).
 P256_CONSTTIME_IGNORE_LABELS = [
     "trigger_fault_if_fg0_z",
-    "trigger_fault_if_fg0_not_z",
+    "trigger_fault_if_not_fg0_z",
 ]
 P384_CONSTTIME_IGNORE_LABELS = [
+    "trigger_fault_if_fg0_z",
+    "trigger_fault_if_not_fg0_z",
 ]
 
 acc_sim_test(
@@ -342,6 +344,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -354,6 +358,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -392,6 +398,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -404,6 +412,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -451,6 +461,8 @@ acc_sim_test(
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
         "//sw/acc/crypto:p256_sign",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -464,6 +476,8 @@ acc_sim_test(
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
         "//sw/acc/crypto:p256_verify",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -476,6 +490,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -489,6 +505,8 @@ acc_sim_test(
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
         "//sw/acc/crypto:p256_isoncurve_proj",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -501,6 +519,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -513,6 +533,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -525,6 +547,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -539,6 +563,8 @@ acc_sim_test(
         "//sw/acc/crypto:p256_isoncurve",
         "//sw/acc/crypto:p256_isoncurve_proj",
         "//sw/acc/crypto:p256_shared_key",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -553,6 +579,8 @@ acc_sim_test(
         "//sw/acc/crypto:p256_isoncurve",
         "//sw/acc/crypto:p256_isoncurve_proj",
         "//sw/acc/crypto:p256_shared_key",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -567,6 +595,8 @@ acc_sim_test(
         "//sw/acc/crypto:p256_isoncurve",
         "//sw/acc/crypto:p256_isoncurve_proj",
         "//sw/acc/crypto:p256_shared_key",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -605,6 +635,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_base_mult",
         "//sw/acc/crypto:p384_internal_mult",
         "//sw/acc/crypto:p384_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -619,6 +651,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_base_mult",
         "//sw/acc/crypto:p384_internal_mult",
         "//sw/acc/crypto:p384_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -670,6 +704,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_isoncurve",
         "//sw/acc/crypto:p384_isoncurve_proj",
         "//sw/acc/crypto:p384_scalar_mult",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -685,6 +721,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_isoncurve",
         "//sw/acc/crypto:p384_modinv",
         "//sw/acc/crypto:p384_sign",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -699,6 +737,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_isoncurve",
         "//sw/acc/crypto:p384_modinv",
         "//sw/acc/crypto:p384_verify",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -711,6 +751,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p384_base",
         "//sw/acc/crypto:p384_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -724,6 +766,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_base",
         "//sw/acc/crypto:p384_isoncurve",
         "//sw/acc/crypto:p384_isoncurve_proj",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -736,6 +780,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p384_base",
         "//sw/acc/crypto:p384_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -798,6 +844,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_isoncurve",
         "//sw/acc/crypto:p384_isoncurve_proj",
         "//sw/acc/crypto:p384_scalar_mult",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -816,7 +864,7 @@ acc_consttime_test(
     name = "p384_base_mult_consttime",
     subroutine = "p384_base_mult",
     deps = [
-        ":p384_base_mult_test",
+        "//sw/acc/crypto:run_p384"
     ],
     secrets = ['dmem'],
     ignore = P384_CONSTTIME_IGNORE_LABELS,
@@ -824,13 +872,11 @@ acc_consttime_test(
 
 acc_consttime_test(
     name = "p384_scalar_mult_consttime",
-    ignore = [
-        "trigger_fault_if_fg0_not_z",
-    ],
+    ignore = P384_CONSTTIME_IGNORE_LABELS,
     secrets = ['dmem'],
     subroutine = "p384_scalar_mult",
     deps = [
-        ":p384_scalar_mult_test",
+        "//sw/acc/crypto:run_p384"
     ],
 )
 
@@ -838,7 +884,7 @@ acc_consttime_test(
     name = "p384_mulmod_p_consttime",
     subroutine = "p384_mulmod_p",
     deps = [
-        ":p384_ecdsa_sign_test",
+        "//sw/acc/crypto:run_p384"
     ],
 )
 
@@ -846,18 +892,14 @@ acc_consttime_test(
     name = "p384_mulmod_n_consttime",
     subroutine = "p384_mulmod_n",
     deps = [
-        ":p384_ecdsa_sign_test",
+        "//sw/acc/crypto:run_p384"
     ],
 )
 
-# TODO: The constant-time checker currently cannot analyze p384 signing because
-# of a secret-depdendent memory access in the scalarmult loop. The code should
-# be reworked to not have such a memory access, because it might be observable
-# to an attacker.
 acc_consttime_test(
   name = "p384_sign_consttime",
   deps = [
-      ":p384_ecdsa_sign_test"
+      "//sw/acc/crypto:run_p384"
   ],
   subroutine = "p384_sign",
   track_dmem = True,
@@ -871,17 +913,17 @@ acc_consttime_test(
 )
 
 acc_consttime_test(
-    name = "proj_add_p384_consttime",
-    initial_constants = [
-        "x22:10",
-        "x23:11",
-        "x24:16",
-        "x25:17",
-    ],
-    subroutine = "proj_add_p384",
-    deps = [
-        ":p384_ecdsa_sign_test",
-    ],
+  name = "proj_add_p384_consttime",
+  initial_constants = [
+      "x22:10",
+      "x23:11",
+      "x24:16",
+      "x25:17",
+  ],
+  subroutine = "proj_add_p384",
+  deps = [
+      "//sw/acc/crypto:run_p384"
+  ],
 )
 
 acc_library(

@@ -1,0 +1,31 @@
+/* Copyright zeroRISC Inc. */
+/* Licensed under the Apache License, Version 2.0, see LICENSE for details. */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/**
+ * Trigger a fault if the FG0.Z flag is 0.
+ *
+ * If the flag is 0, then this routine will trigger an `ILLEGAL_INSN` error and
+ * abort the ACC program. If the flag is 1, the routine will essentially do
+ * nothing.
+ *
+ * NOTE: Be careful when calling this routine that the FG0.Z flag is not
+ * sensitive; since aborting the program will be quicker than completing it,
+ * the flag's value is likely clearly visible to an attacker through timing.
+ *
+ * @param[in]  FG0.Z: boolean indicating fault condition
+ *
+ * clobbered registers: x2
+ * clobbered flag groups: none
+ */
+.globl trigger_fault_if_not_fg0_z
+trigger_fault_if_not_fg0_z:
+  /* Read the FG0.Z flag (position 3).
+       x2 <= FG0.Z << 3 */
+  csrrw     x2, FG0, x0
+  andi      x2, x2, 8
+
+  /* Cause an error if x2 is zero, meaning FG0.Z=0. */
+  bne       x2, x0, .+8
+  unimp
+  ret
