@@ -130,7 +130,8 @@ module acc_alu_bignum
 
   output logic alu_predec_error_o,
   output logic ispr_predec_error_o,
-  output logic kmac_intf_error_o,
+  output logic kmac_intf_fatal_error_o,
+  output logic kmac_intf_recov_error_o,
 
   output logic kmac_msg0_write_ready_o,
   output logic kmac_msg1_write_ready_o,
@@ -1144,6 +1145,7 @@ generate
   // Oversized and undersized msg handling
   logic kmac_msg0_req_err;
   logic kmac_msg1_req_err;
+  logic kmac_fifo_deadlock;
   logic kmac_pending_last;
   logic kmac_inject_last_err;
   logic kmac_undersized_req_err_q;
@@ -1440,6 +1442,17 @@ generate
     .err_o              (kmac_msg1_ctr_err)
   );
 
+  // Check if we have a FIFO deadlock
+  always_comb begin
+    kmac_fifo_deadlock = 1'b0;
+    if (kmac_msg0_wr_stall & ~kmac_msg1_fifo_rvalid & ~kmac_msg1_valid_q) begin
+      kmac_fifo_deadlock = 1'b1;
+    end
+    if (kmac_msg1_wr_stall & ~kmac_msg0_fifo_rvalid & ~kmac_msg0_valid_q) begin
+      kmac_fifo_deadlock = 1'b1;
+    end
+  end
+
   // All fifos for masked mode are rvalid
   assign kmac_msg_fifos_valid = kmac_cfg_mask_mode ?
                                 kmac_msg0_fifo_rvalid && kmac_msg1_fifo_rvalid :
@@ -1648,8 +1661,10 @@ generate
   assign kmac_oversized_req_err = (rw_after_last | write_during_last)
                                   & ~kmac_undersized_req_err_latch | last_word_oversized;
 
-  assign kmac_intf_error_o = kmac_digest1_illegal_rd | kmac_msg1_illegal_wr |
-                             msg0_consecutive_wr_error | msg1_consecutive_wr_error;
+  assign kmac_intf_fatal_error_o = msg0_consecutive_wr_error | msg1_consecutive_wr_error |
+                                   kmac_app_req_i.error | kmac_undersized_req_err |
+                                   kmac_oversized_req_err | kmac_fifo_deadlock;
+  assign kmac_intf_recov_error_o = kmac_digest1_illegal_rd | kmac_msg1_illegal_wr;
   end
 endgenerate
 

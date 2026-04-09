@@ -158,7 +158,6 @@ module acc_controller
   input  logic kmac_msg0_pending_write_i,
   input  logic kmac_msg1_pending_write_i,
   input  logic kmac_digest_valid_i,
-  input  logic kmac_intf_error_i,
 
   // Secure Wipe
   output logic secure_wipe_req_o,
@@ -639,7 +638,7 @@ module acc_controller
 
   // Instruction is illegal based on the static properties of the instruction bits (illegal encoding
   // or illegal WSR/CSR referenced).
-  assign illegal_insn_static = insn_illegal_i | ispr_err | kmac_intf_error_i;
+  assign illegal_insn_static = insn_illegal_i | ispr_err;
 
   assign fatal_software_err       = software_err & software_errs_fatal_i;
   assign bad_internal_state_err   = |{state_error_d, loop_hw_err, rf_base_call_stack_hw_err_i,
