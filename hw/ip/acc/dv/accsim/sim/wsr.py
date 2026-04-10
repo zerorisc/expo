@@ -15,7 +15,7 @@ from typing import List, Optional, Sequence, Tuple
 from .trace import Trace
 from .ext_regs import ACCExtRegs
 from .kmac import KmacBlock
-DEBUG_KMAC = True
+DEBUG_KMAC = False
 
 
 def kmac_debug_print(text: str) -> None:
@@ -442,9 +442,9 @@ class KmacMsgWSR(WSR):
         self._pending_write_stall_pw = self._pending_write_to_app_intf
 
         if share:
-            self._start_cycle_fifo_ready = self._kmac.app_intf_share1_fifo_ready()
+            self._start_cycle_fifo_ready = self._kmac.app_intf_fifo1_ready()
         else:
-            self._start_cycle_fifo_ready = self._kmac.app_intf_fifo_ready()
+            self._start_cycle_fifo_ready = self._kmac.app_intf_fifo0_ready()
 
         if self._kmac._app_fifo_after_flush:
             self._pending_write_stall_pw = False
@@ -475,7 +475,7 @@ class KmacMsgWSR(WSR):
             elif not share:
                 if (
                     not self._kmac._app_intf_last
-                    and self._kmac.write_to_app_intf_fifo(value_bytes)
+                    and self._kmac.write_to_app_intf_fifo0(value_bytes)
                 ):
                     kmac_debug_print(f"\tKMAC_MSG0 -> APP FIFO0: Writing \
                                     {len(value_bytes)} bytes to App FIFO")
@@ -490,7 +490,7 @@ class KmacMsgWSR(WSR):
             elif share:
                 if (
                     not self._kmac._app_intf_last
-                    and self._kmac.write_to_app_intf_share1_fifo(value_bytes)
+                    and self._kmac.write_to_app_intf_fifo1(value_bytes)
                 ):
                     kmac_debug_print(f"\tKMAC_MSG1 -> APP FIFO1: Writing \
                                      {len(value_bytes)} bytes to App FIFO")
@@ -586,9 +586,7 @@ class KmacStatusWSR(WSR):
         self._next_value: Optional[int] = None
 
     def read_unsigned(self) -> int:
-        value = self._kmac.get_undersized() << 4
-        value += self._kmac.get_oversized() << 3
-        value += self._kmac.get_error() << 2
+        value = self._kmac.get_error() << 2
         value += self._kmac.get_ready() << 1
         value += self._kmac.get_done()
         self._next_value = value

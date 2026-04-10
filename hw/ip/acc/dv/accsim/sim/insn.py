@@ -24,7 +24,7 @@ from .state import ACCState
 DEBUG_MEM = False
 DEBUG_BRANCH = False
 DEBUG_ARITH = False
-DEBUG_KMAC = True
+DEBUG_KMAC = False
 DEBUG_FLOW = False
 
 STACK_BENCH = False
@@ -600,15 +600,15 @@ class CSRRW(ACCInsn):
 
                 # The following conditions cause a deadlock in execution
                 if (state.wsrs.KMAC_MSG1._pending_write_to_app_intf and
-                    not state.kmac.app_intf_share1_fifo_ready() and
-                    state.kmac.app_intf_fifo_ready() and
+                    not state.kmac.app_intf_fifo1_ready() and
+                    state.kmac.app_intf_fifo0_ready() and
                     state.kmac._masked_mode
                 ):
                     state.stop_at_end_of_cycle(ErrBits.KMAC_FATAL_ERROR)
 
                 if (state.wsrs.KMAC_MSG0._pending_write_to_app_intf and
-                    not state.kmac.app_intf_fifo_ready() and
-                    state.kmac.app_intf_share1_fifo_ready() and
+                    not state.kmac.app_intf_fifo0_ready() and
+                    state.kmac.app_intf_fifo1_ready() and
                     state.kmac._masked_mode
                 ):
                     state.stop_at_end_of_cycle(ErrBits.KMAC_FATAL_ERROR)
@@ -1841,7 +1841,7 @@ class BNWSRW(ACCInsn):
                     eprint("\tBNWSRW to KMAC_MSG0 stall")
                 # The following write will cause a deadlock by a full fifo
                 if (not state.wsrs.KMAC_MSG1._pending_write_to_app_intf and
-                    state.kmac.app_intf_share1_fifo_ready() and
+                    state.kmac.app_intf_fifo1_ready() and
                     state.kmac._masked_mode
                 ):
                     state.stop_at_end_of_cycle(ErrBits.KMAC_FATAL_ERROR)
@@ -1859,7 +1859,7 @@ class BNWSRW(ACCInsn):
                     eprint("\tBNWSRW to KMAC_MSG1 stall")
                 # The following write will cause a deadlock by a full fifo
                 if (not state.wsrs.KMAC_MSG0._pending_write_to_app_intf and
-                    state.kmac.app_intf_fifo_ready()
+                    state.kmac.app_intf_fifo0_ready()
                 ):
                     state.stop_at_end_of_cycle(ErrBits.KMAC_FATAL_ERROR)
                     return None
