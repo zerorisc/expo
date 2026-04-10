@@ -1,4 +1,5 @@
 # Copyright lowRISC contributors (OpenTitan project).
+# Copyright zeroRISC Inc.
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
@@ -84,6 +85,7 @@ thiserror = "2"
 tiny-keccak = {version = "2.0.2", features = ["cshake"]}
 tokio = { version = "1", features = ["full"] }
 typetag = "0.2"
+wait-timeout = "0.2.1"
 zerocopy = { version = "0.8", features = ["derive"] }
 zeroize = "1.8.1"
 
