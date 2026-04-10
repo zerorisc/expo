@@ -15,7 +15,7 @@ from typing import List, Optional, Sequence, Tuple
 from .trace import Trace
 from .ext_regs import ACCExtRegs
 from .kmac import KmacBlock
-DEBUG_KMAC = False
+DEBUG_KMAC = True
 
 
 def kmac_debug_print(text: str) -> None:
@@ -422,6 +422,7 @@ class KmacMsgWSR(WSR):
         self._next_value: Optional[int] = None
         self._value: Optional[int] = None
         self._partial_ispr = partial_ispr
+        self._oversized_error = False
 
     def read_unsigned(self) -> int:
         return 0
@@ -457,6 +458,8 @@ class KmacMsgWSR(WSR):
             else:
               kmac_debug_print("\tPending write to App Share0 FIFO")
 
+            kmac_debug_print(f"Latch: {self._kmac._app_intf_last_latch} | Pending Last: {self._kmac._pending_app_intf_last} | Pending: {self.pending_write_pw()} | Flush: {self._kmac._app_intf_fifo_flush}")
+
             if (
                 self._kmac._app_intf_last_latch
                 or (self._kmac._pending_app_intf_last and not self.pending_write_pw())
@@ -464,6 +467,7 @@ class KmacMsgWSR(WSR):
             ):
                 kmac_debug_print("DROPPING WRITE TO FIFO FROM OVERSIZED MSG")
                 self._kmac._kmac_oversized_err = True
+                self._oversized_error = True
                 self._pending_write_to_app_intf = False
                 self._pending_write_stall_pw = False
             

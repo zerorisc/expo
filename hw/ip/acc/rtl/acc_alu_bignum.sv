@@ -1445,11 +1445,21 @@ generate
   // Check if we have a FIFO deadlock
   always_comb begin
     kmac_fifo_deadlock = 1'b0;
-    if (kmac_msg0_wr_stall & ~kmac_msg1_fifo_rvalid & ~kmac_msg1_valid_q) begin
-      kmac_fifo_deadlock = 1'b1;
-    end
-    if (kmac_msg1_wr_stall & ~kmac_msg0_fifo_rvalid & ~kmac_msg0_valid_q) begin
-      kmac_fifo_deadlock = 1'b1;
+    if (kmac_cfg_mask_mode) begin
+      if ((|kmac_msg0_ispr_base_wr & ~kmac_msg0_fifo_wready) & ~kmac_msg1_fifo_rvalid & ~kmac_msg1_valid_q) begin
+        kmac_fifo_deadlock = 1'b1;
+      end
+      if ((|kmac_msg1_ispr_base_wr & ~kmac_msg1_fifo_wready) & ~kmac_msg0_fifo_rvalid & ~kmac_msg0_valid_q) begin
+        kmac_fifo_deadlock = 1'b1;
+      end
+      if ((ispr_addr_i == IsprKmacPartialW) & ispr_base_wr_en_i[0]) begin
+        if (kmac_msg1_valid_q & ~kmac_msg1_fifo_rready & ~kmac_msg0_fifo_rvalid) begin
+          kmac_fifo_deadlock = 1'b1;
+        end
+        if (kmac_msg0_valid_q & ~kmac_msg0_fifo_rready & ~kmac_msg1_fifo_rvalid) begin
+          kmac_fifo_deadlock = 1'b1;
+        end
+      end
     end
   end
 
@@ -1646,9 +1656,18 @@ generate
 
   // The cfg reads 0 when it is a full word which means the mask is 8 so we must skip evaluation
   // at these sizes, otherwise check if mask is greater than the cfg
-  assign not_full_word = ~(packer0_rdata_mask_cnt == 4'h8 & kmac_cfg_msg_len_bytes == 3'h0);
+  always_comb begin
+    not_full_word = 1'b0;
+    if (kmac_cfg_mask_mode) begin
+      not_full_word = ~(packer0_rdata_mask_cnt == 4'h8 & kmac_cfg_msg_len_bytes == 3'h0) &
+                      ~(packer1_rdata_mask_cnt == 4'h8 & kmac_cfg_msg_len_bytes == 3'h0);
+    end else begin
+      not_full_word = ~(packer0_rdata_mask_cnt == 4'h8 & kmac_cfg_msg_len_bytes == 3'h0);
+    end
+  end
   assign packer_oversized_last =
-      not_full_word & (packer0_rdata_mask_cnt > {1'b0, kmac_cfg_msg_len_bytes});
+      not_full_word & ((packer0_rdata_mask_cnt > {1'b0, kmac_cfg_msg_len_bytes}) |
+                       (packer1_rdata_mask_cnt > {1'b0, kmac_cfg_msg_len_bytes});
 
   assign last_word_oversized    = kmac_msg_last & packer_oversized_last;
   // Read or write to/from FIFO that occurs after last
@@ -1661,8 +1680,7 @@ generate
   assign kmac_oversized_req_err = (rw_after_last | write_during_last)
                                   & ~kmac_undersized_req_err_latch | last_word_oversized;
 
-  assign kmac_intf_fatal_error_o = msg0_consecutive_wr_error | msg1_consecutive_wr_error |
-                                   kmac_app_req_i.error | kmac_undersized_req_err |
+  assign kmac_intf_fatal_error_o = kmac_app_rsp_i.error | kmac_undersized_req_err |
                                    kmac_oversized_req_err | kmac_fifo_deadlock;
   assign kmac_intf_recov_error_o = kmac_digest1_illegal_rd | kmac_msg1_illegal_wr;
   end

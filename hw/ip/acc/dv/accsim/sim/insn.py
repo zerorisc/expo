@@ -24,7 +24,7 @@ from .state import ACCState
 DEBUG_MEM = False
 DEBUG_BRANCH = False
 DEBUG_ARITH = False
-DEBUG_KMAC = False
+DEBUG_KMAC = True
 DEBUG_FLOW = False
 
 STACK_BENCH = False
@@ -597,6 +597,22 @@ class CSRRW(ACCInsn):
             ):
                 if DEBUG_KMAC:
                     eprint("\tBNWSRW to KMAC_PW stall")
+
+                # The following conditions cause a deadlock in execution
+                if (state.wsrs.KMAC_MSG1._pending_write_to_app_intf and
+                    not state.kmac.app_intf_share1_fifo_ready() and
+                    state.kmac.app_intf_fifo_ready() and
+                    state.kmac._masked_mode
+                ):
+                    state.stop_at_end_of_cycle(ErrBits.KMAC_FATAL_ERROR)
+
+                if (state.wsrs.KMAC_MSG0._pending_write_to_app_intf and
+                    not state.kmac.app_intf_fifo_ready() and
+                    state.kmac.app_intf_share1_fifo_ready() and
+                    state.kmac._masked_mode
+                ):
+                    state.stop_at_end_of_cycle(ErrBits.KMAC_FATAL_ERROR)
+
                 yield None
 
         # At this point, the CSR is either ready or unneeded. Read it if
@@ -1823,6 +1839,13 @@ class BNWSRW(ACCInsn):
             while not state.wsrs.KMAC_MSG0.request_write():
                 if DEBUG_KMAC:
                     eprint("\tBNWSRW to KMAC_MSG0 stall")
+                # The following write will cause a deadlock by a full fifo
+                if (not state.wsrs.KMAC_MSG1._pending_write_to_app_intf and
+                    state.kmac.app_intf_share1_fifo_ready() and
+                    state.kmac._masked_mode
+                ):
+                    state.stop_at_end_of_cycle(ErrBits.KMAC_FATAL_ERROR)
+                    return None
                 yield None
 
         if self.wsr == 0xC:
@@ -1830,10 +1853,16 @@ class BNWSRW(ACCInsn):
             # all its contents to the FIFO connected to the KMAC app interface.
             if not state.kmac._masked_mode:
                 state.stop_at_end_of_cycle(ErrBits.KMAC_RECOV_ERROR)
-                return
+                return None
             while not state.wsrs.KMAC_MSG1.request_write():
                 if DEBUG_KMAC:
                     eprint("\tBNWSRW to KMAC_MSG1 stall")
+                # The following write will cause a deadlock by a full fifo
+                if (not state.wsrs.KMAC_MSG0._pending_write_to_app_intf and
+                    state.kmac.app_intf_fifo_ready()
+                ):
+                    state.stop_at_end_of_cycle(ErrBits.KMAC_FATAL_ERROR)
+                    return None
                 yield None
 
         val = state.wdrs.get_reg(self.wrs).read_unsigned()
