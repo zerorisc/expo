@@ -62,7 +62,8 @@ interface acc_app_intf (input clk, input rst_n);
   endclocking
 
   // Split kmac_data_req signals
-  assign {req_valid, req_hold, req_next, req_data_share0, req_data_share1, req_strb, req_last} = kmac_data_req;
+  assign {req_valid, req_hold, req_next, req_data_share0, req_data_share1, req_strb, req_last} =
+    kmac_data_req;
 
   // Assemble kmac_data_rsp signals
   assign kmac_data_rsp = {rsp_ready, rsp_done, rsp_digest_share0, rsp_digest_share1, rsp_error};
