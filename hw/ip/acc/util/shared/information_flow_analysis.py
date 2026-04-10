@@ -352,11 +352,6 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     section = graph.get_section(start_pc)
     edges = graph.get_edges(start_pc)
 
-   # print('---')
-   # print(hex(start_pc), [i.mnemonic for i in section.get_insn_sequence(program)])
-   # print(edges)
-   # print('start', start_constants.values)
-
     # If this PC is the start of a cycle, then initialize the information flow
     # for the cycle with an empty graph (since doing nothing is a valid
     # traversal of the cycle). Ensure we do not do this for loops.

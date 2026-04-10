@@ -1207,7 +1207,10 @@
   errs:
     - *bad-wsr
   iflow:
-    - to: []
+    - test:
+        - wsr != 0x0
+        - wsr != 0x3
+      to: []
       from: []
     - test:
         - wsr == 0x0
