@@ -271,14 +271,19 @@ interface acc_trace_if
         assign ispr_read_data[IsprMod][i_word*32+:32] = u_acc_alu_bignum.mod_intg_q[i_word*39+:32];
         assign ispr_write_data[IsprAcc][i_word*32+:32] = u_acc_mac_bignum.acc_intg_d[i_word*39+:32];
         assign ispr_write_data[IsprKmacMsg0][i_word*32+:32] =
-          u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_wr_en[0][i_word] ? u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_intg_d[0][i_word*39+:32] :
-                                                    u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_intg_q[0][i_word*39+:32];
-        assign ispr_read_data[IsprKmacMsg0][i_word*32+:32] = u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_intg_q[0][i_word*39+:32];
+          u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_wr_en[0][i_word] ?
+          u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_intg_d[0][i_word*39+:32] :
+          u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_intg_q[0][i_word*39+:32];
+        assign ispr_read_data[IsprKmacMsg0][i_word*32+:32] =
+          u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_intg_q[0][i_word*39+:32];
         assign ispr_write_data[IsprKmacMsg1][i_word*32+:32] =
-          u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_wr_en[1][i_word] ? u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_intg_d[1][i_word*39+:32] :
-                                                    u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_intg_q[1][i_word*39+:32];
-        assign ispr_read_data[IsprKmacMsg1][i_word*32+:32] = u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_intg_q[1][i_word*39+:32];
-        assign ispr_write_data[IsprAccH][i_word*32+:32] = u_acc_mac_bignum.gen_acch_wr_en.acch_intg_d[i_word*39+:32];
+          u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_wr_en[1][i_word] ?
+          u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_intg_d[1][i_word*39+:32] :
+          u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_intg_q[1][i_word*39+:32];
+        assign ispr_read_data[IsprKmacMsg1][i_word*32+:32] =
+          u_acc_alu_bignum.gen_pqc_wsr.kmac_msg_intg_q[1][i_word*39+:32];
+        assign ispr_write_data[IsprAccH][i_word*32+:32] =
+          u_acc_mac_bignum.gen_acch_wr_en.acch_intg_d[i_word*39+:32];
       end
     end else begin : gen_ispr_data
       for (genvar i_word = 0; i_word < BaseWordsPerWLEN; i_word++) begin : g_mod_and_acc_words

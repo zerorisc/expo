@@ -687,7 +687,8 @@ module acc_core
       mubi4_or_hi(escalate_en_i,
                   mubi4_bool_to_mubi(|{urnd_all_zero, rf_base_intg_err, rf_base_spurious_we_err,
                                        predec_error, lsu_rdata_err, insn_fetch_err,
-                                       controller_fatal_err, insn_addr_err, kmac_intf_fatal_error}));
+                                       controller_fatal_err, insn_addr_err,
+                                       kmac_intf_fatal_error}));
 
   // Signal error if MuBi input signals take on invalid values as this means something bad is
   // happening. The explicit error detection is required as the mubi4_or_hi operations above
