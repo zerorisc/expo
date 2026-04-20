@@ -330,6 +330,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -342,6 +344,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -378,6 +382,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -390,6 +396,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -433,6 +441,8 @@ acc_sim_test(
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
         "//sw/acc/crypto:p256_sign",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -446,6 +456,8 @@ acc_sim_test(
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
         "//sw/acc/crypto:p256_verify",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -458,6 +470,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -471,6 +485,8 @@ acc_sim_test(
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
         "//sw/acc/crypto:p256_isoncurve_proj",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -483,6 +499,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -495,6 +513,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -507,6 +527,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p256_base",
         "//sw/acc/crypto:p256_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -521,6 +543,8 @@ acc_sim_test(
         "//sw/acc/crypto:p256_isoncurve",
         "//sw/acc/crypto:p256_isoncurve_proj",
         "//sw/acc/crypto:p256_shared_key",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -535,6 +559,8 @@ acc_sim_test(
         "//sw/acc/crypto:p256_isoncurve",
         "//sw/acc/crypto:p256_isoncurve_proj",
         "//sw/acc/crypto:p256_shared_key",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -549,6 +575,8 @@ acc_sim_test(
         "//sw/acc/crypto:p256_isoncurve",
         "//sw/acc/crypto:p256_isoncurve_proj",
         "//sw/acc/crypto:p256_shared_key",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -587,6 +615,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_base_mult",
         "//sw/acc/crypto:p384_internal_mult",
         "//sw/acc/crypto:p384_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -601,6 +631,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_base_mult",
         "//sw/acc/crypto:p384_internal_mult",
         "//sw/acc/crypto:p384_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -652,6 +684,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_isoncurve",
         "//sw/acc/crypto:p384_isoncurve_proj",
         "//sw/acc/crypto:p384_scalar_mult",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -667,6 +701,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_isoncurve",
         "//sw/acc/crypto:p384_modinv",
         "//sw/acc/crypto:p384_sign",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -681,6 +717,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_isoncurve",
         "//sw/acc/crypto:p384_modinv",
         "//sw/acc/crypto:p384_verify",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -693,6 +731,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p384_base",
         "//sw/acc/crypto:p384_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -706,6 +746,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_base",
         "//sw/acc/crypto:p384_isoncurve",
         "//sw/acc/crypto:p384_isoncurve_proj",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -718,6 +760,8 @@ acc_sim_test(
     deps = [
         "//sw/acc/crypto:p384_base",
         "//sw/acc/crypto:p384_isoncurve",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -780,6 +824,8 @@ acc_sim_test(
         "//sw/acc/crypto:p384_isoncurve",
         "//sw/acc/crypto:p384_isoncurve_proj",
         "//sw/acc/crypto:p384_scalar_mult",
+        "//sw/acc/crypto:trigger_fault_if_fg0_z",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -804,9 +850,6 @@ acc_consttime_test(
 
 acc_consttime_test(
     name = "p384_scalar_mult_consttime",
-    ignore = [
-        "trigger_fault_if_fg0_not_z",
-    ],
     subroutine = "p384_scalar_mult",
     deps = [
         ":p384_scalar_mult_test",
@@ -983,6 +1026,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1001,6 +1045,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1034,6 +1079,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1063,6 +1109,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1081,6 +1128,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1099,6 +1147,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1117,6 +1166,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1135,6 +1185,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1153,6 +1204,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1171,6 +1223,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1199,6 +1252,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1218,6 +1272,7 @@ acc_sim_test(
         "//sw/acc/crypto:montmul",
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1238,6 +1293,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1259,6 +1315,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1279,6 +1336,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1298,6 +1356,7 @@ acc_sim_test(
         "//sw/acc/crypto:montmul",
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1317,6 +1376,7 @@ acc_sim_test(
         "//sw/acc/crypto:montmul",
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
@@ -1336,6 +1396,7 @@ acc_sim_test(
         "//sw/acc/crypto:mul",
         "//sw/acc/crypto:primality",
         "//sw/acc/crypto:rsa_keygen",
+        "//sw/acc/crypto:trigger_fault_if_not_fg0_z",
     ],
 )
 
