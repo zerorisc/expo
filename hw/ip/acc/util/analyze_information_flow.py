@@ -10,9 +10,11 @@ from shared.constants import parse_required_constants
 from shared.control_flow import program_control_graph, subroutine_control_graph
 from shared.decode import decode_elf
 from shared.information_flow import InformationFlowGraph
-from shared.information_flow_analysis import (get_program_iflow,
+from shared.information_flow_analysis import (get_dmem_symbols,
+                                              get_program_iflow,
                                               get_subroutine_iflow,
-                                              stringify_control_deps)
+                                              stringify_control_deps,
+                                              parse_information_flow_node)
 
 
 def main() -> int:
@@ -52,6 +54,13 @@ def main() -> int:
         help=(
             'Initially secret information-flow nodes. If provided, the final '
             'secrets will be printed.'))
+    parser.add_argument(
+        '--track-dmem',
+        action='store_true',
+        help=('Track data in a fine-grained way through DMEM, rather than '
+              'treating memory as a single information-flow node. This may '
+              'cause analysis to fail on programs with a dynamic pattern of '
+              'memory accesses.'))
     args = parser.parse_args()
     program = decode_elf(args.elf)
 
@@ -74,6 +83,9 @@ def main() -> int:
                     ', '.join(symbols)) if symbols else ''
                 print('{:#x}{}'.format(pc, label_str))
 
+    # Get the DMEM symbols from the program.
+    dmem_symbols = get_dmem_symbols(program)
+
     # Parse initial constants.
     if args.constants is None:
         constants = {}
@@ -82,17 +94,23 @@ def main() -> int:
             raise ValueError('Cannot require initial constants for a whole '
                              'program; use --subroutine to analyze a specific '
                              'subroutine.')
-        constants = parse_required_constants(args.constants)
+        constants = parse_required_constants(args.constants, dmem_symbols)
+
+    # Parse the secrets as information-flow nodes.
+    secret_nodes = set()
+    if args.secrets:
+        for secret in args.secrets:
+            secret_nodes.add(parse_information_flow_node(program, secret, not args.track_dmem))
 
     # Compute information-flow graph(s).
     if args.subroutine is None:
         what = 'program'
-        end_iflow, control_deps = get_program_iflow(program, graph)
+        end_iflow, control_deps = get_program_iflow(program, graph, not args.track_dmem)
         ret_iflow = InformationFlowGraph.nonexistent()
     else:
         what = 'subroutine'
         ret_iflow, end_iflow, control_deps = get_subroutine_iflow(
-            program, graph, args.subroutine, constants)
+            program, graph, args.subroutine, constants, not args.track_dmem)
 
     # If no secrets were given or the --verbose flag is set, then print the
     # full information-flow graphs.
@@ -100,13 +118,13 @@ def main() -> int:
         if ret_iflow.exists:
             print(
                 'Information flow for paths ending in a return to the caller:')
-            print(ret_iflow.pretty(indent=2))
+            print(ret_iflow.pretty(indent=2, dmem_symbols=dmem_symbols))
             if end_iflow.exists:
                 print('--------')
 
         if end_iflow.exists:
             print('Information flow for paths ending the program:')
-            print(end_iflow.pretty(indent=2))
+            print(end_iflow.pretty(indent=2, dmem_symbols=dmem_symbols))
 
     if args.clobbered:
         if ret_iflow.exists:
@@ -124,8 +142,9 @@ def main() -> int:
         # nodes could influence control flow.
         control_what = 'secrets'
         control_deps = {
-            name: pcs
-            for name, pcs in control_deps.items() if name in args.secrets
+            node: pcs
+            for node, pcs in control_deps.items()
+            if any([s.overlaps(node) for s in secret_nodes])
         }
 
     # Print any (secret) nodes that influence control flow, and the PCs of the
@@ -143,15 +162,15 @@ def main() -> int:
     if args.secrets is not None:
         if ret_iflow.exists:
             final_secrets = {
-                sink
-                for node in args.secrets for sink in ret_iflow.sinks(node)
+                sink.pretty(dmem_symbols)
+                for node in secret_nodes for sink in ret_iflow.sinks(node)
             }
             print('Final secrets for paths ending in a return to the caller:',
                   ', '.join(sorted(final_secrets)))
         if end_iflow.exists:
             final_secrets = {
-                sink
-                for node in args.secrets for sink in end_iflow.sinks(node)
+                sink.pretty(dmem_symbols)
+                for node in secret_nodes for sink in end_iflow.sinks(node)
             }
             print('Final secrets for paths ending the program:',
                   ', '.join(sorted(final_secrets)))

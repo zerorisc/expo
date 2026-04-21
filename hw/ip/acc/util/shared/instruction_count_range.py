@@ -199,7 +199,7 @@ def program_insn_count_range(program: ACCProgram,
     if thru_label is not None:
         subroutine_graph = subroutine_control_graph(program, thru_label)
         loop_iters = get_subroutine_loop_iters(program, subroutine_graph, thru_label,
-                                               {})
+                                               {}, coarse_dmem=True)
     else:
         loop_iters = {}
     program_graph = program_control_graph(program)

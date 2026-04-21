@@ -132,7 +132,7 @@ class ConstantContext:
         elif insn.mnemonic == 'lui':
             grd_name = get_op_val_str(insn, op_vals, 'grd')
             new_values[grd_name] = op_vals['imm'] << 12
-        else:
+        elif insn.mnemonic in ['bn.lid', 'bn.sid', 'bn.movr']:
             # If the instruction has any op_vals ending in _inc,
             # assume we're incrementing the corresponding register
             for op in insn.operands:
@@ -140,16 +140,19 @@ class ConstantContext:
                     # If reg to be incremented is a constant, increment it
                     inc_op = op.name[:-(len('_inc'))]
                     inc_name = get_op_val_str(insn, op_vals, inc_op)
+                    inc_amount = 1
+                    if insn.mnemonic in ['bn.lid', 'bn.sid'] and op.name == 'grs1_inc':
+                        inc_amount = 32
                     if inc_name in self.values:
                         new_values[inc_name] = (self.values[inc_name] +
-                                                1) % (1 << 32)
+                                                inc_amount) % (1 << 32)
 
         # If the instruction's information-flow graph indicates that we updated
         # any constant register other than the ones handled above, the value of
         # that register can no longer be determined; remove it from the
         # constants dictionary.
-        iflow = insn.iflow.evaluate(op_vals, self.values)
-        self.removemany(iflow.all_sinks())
+        iflow = insn.iflow.evaluate(op_vals, self.values, True)
+        self.removemany([n.name for n in iflow.all_sinks()])
 
         self.values.update(new_values)
 
@@ -158,7 +161,8 @@ def is_gpr_name(name: str):
     return name in [f'x{i}' for i in range(32)]
 
 
-def parse_required_constants(constants: List[str]) -> Dict[str, int]:
+def parse_required_constants(constants: List[str],
+                             dmem_symbols: Dict[str, int]) -> Dict[str, int]:
     '''Parses required initial constants.
 
     Constants are expected to be provided in the form <reg>:<value>, e.g.
@@ -183,12 +187,14 @@ def parse_required_constants(constants: List[str]) -> Dict[str, int]:
         try:
             if value.startswith('0x'):
                 value = int(value, 16)
+            elif value in dmem_symbols:
+                value = dmem_symbols[value]
             else:
                 value = int(value)
         except ValueError:
             raise ValueError(
                 f'Cannot parse required constant {token}: {value} is not a '
-                'recognized numeric value.')
+                'recognized numeric value or DMEM label.')
         if value < 0 or value > GPR_MAX:
             raise ValueError(
                 f'Cannot parse required constant {token}: {value} is out of '

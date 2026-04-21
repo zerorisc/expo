@@ -297,6 +297,8 @@ def _acc_consttime_test_impl(ctx):
         script_content += " --public {}".format(" ".join(ctx.attr.public))
     if ctx.attr.initial_constants:
         script_content += " --constants {}".format(" ".join(ctx.attr.initial_constants))
+    if ctx.attr.track_dmem:
+        script_content += " --track-dmem"
     ctx.actions.write(
         output = ctx.outputs.executable,
         content = script_content,
@@ -576,6 +578,7 @@ acc_consttime_test = rule(
         "secret": attr.string_list(),
         "public": attr.string_list(),
         "initial_constants": attr.string_list(),
+        "track_dmem": attr.bool(default = False),
         "_checker": attr.label(
             default = "//hw/ip/acc/util:check_const_time",
             executable = True,

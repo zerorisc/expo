@@ -78,7 +78,7 @@ def load_elf(sim: ACCSim, path: str, dump_rtl_sim: bool = False) -> Optional[int
     Returns the expected end address, if set, otherwise None.
 
     '''
-    (imem_bytes, dmem_bytes, symbols) = read_elf(path)
+    (imem_bytes, dmem_bytes, symbols, _) = read_elf(path)
 
     # Collect imem bytes into 32-bit words and set the validity bit for each
     assert len(imem_bytes) & 3 == 0

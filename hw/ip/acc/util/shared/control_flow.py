@@ -197,12 +197,14 @@ class ControlGraph:
         '''
         return self.get_entry(pc)[1]
 
-    def get_cycle_starts(self) -> Set[int]:
+    def get_cycle_starts(self, skip_loops=False) -> Set[int]:
         '''Returns start PCs of all marked cycles in the graph.'''
         out = set()
         for pc, entry in self.graph.items():
             for edge in entry[1]:
                 if isinstance(edge, Cycle):
+                    if skip_loops and isinstance(edge, LoopEnd):
+                        continue
                     out.add(edge.pc)
         return out
 
