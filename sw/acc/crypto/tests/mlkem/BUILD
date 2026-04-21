@@ -185,3 +185,93 @@ py_binary(
     for i in range(NTESTS)
     for params in MODE_FOR_PARAMS
 ]
+
+ENCAP_CONSTTIME_SUBROUTINES = [
+    "basemul",
+    "basemul_acc",
+    "intt",
+    "ntt",
+    "pack_ciphertext",
+    "poly_add",
+    "poly_frommsg",
+    "poly_gen_matrix_init",
+    "poly_getnoise_eta_init",
+    "poly_getnoise_eta_1",
+    "poly_getnoise_eta_2",
+    "unpack_pk",
+
+    # The constant-time checker cannot handle the logic-dependent memory accesses
+    # of the following routines -- even though the logic does not depend on
+    # secret data, the information flow through DMEM cannot be constructed
+    # without knowing where the loads and stores are going.
+    #
+    # TODO: adding a capability to the information-flow analysis backend that can
+    # store the possible *range* of a GPR in a certain control-flow path, so that
+    # memory loads/stores can be conservatively mapped to the the whole range,
+    # would likely solve this.
+
+    # "poly_gen_matrix",
+]
+
+# keccak_send_message is special because the length argument affects control
+# flow, so we need to explicitly say the secrets are in dmem
+acc_consttime_test(
+    name = "keccak_send_message_consttime",
+    secret = ["dmem"],
+    subroutine = "keccak_send_message",
+    deps = [
+        ":mlkem512_encap_test0",
+    ],
+)
+
+[
+    acc_consttime_test(
+        name = params + "_" + subroutine + "_consttime",
+        subroutine = subroutine,
+        deps = [
+            ":" + params + "_encap_test0",
+        ],
+    )
+    for subroutine in ENCAP_CONSTTIME_SUBROUTINES
+    for params in MODE_FOR_PARAMS
+]
+
+# Includes only subroutines not shared with encap.
+DECAP_CONSTTIME_SUBROUTINES = [
+    "indcpa_dec",
+    "poly_sub",
+    "poly_tomsg",
+    "unpack_ciphertext",
+    "unpack_sk",
+]
+
+[
+    acc_consttime_test(
+        name = params + "_" + subroutine + "_consttime",
+        subroutine = subroutine,
+        deps = [
+            ":" + params + "_decap_test0",
+        ],
+    )
+    for subroutine in DECAP_CONSTTIME_SUBROUTINES
+    for params in MODE_FOR_PARAMS
+]
+
+# Includes only subroutines not shared with encap or decap.
+KEYPAIR_CONSTTIME_SUBROUTINES = [
+    "pack_sk",
+    "pack_pk",
+    "poly_tomont",
+]
+
+[
+    acc_consttime_test(
+        name = params + "_" + subroutine + "_consttime",
+        subroutine = subroutine,
+        deps = [
+            ":" + params + "_keypair_test0",
+        ],
+    )
+    for subroutine in KEYPAIR_CONSTTIME_SUBROUTINES
+    for params in MODE_FOR_PARAMS
+]

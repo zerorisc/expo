@@ -217,3 +217,75 @@ acc_sim_test(
         "//sw/acc/crypto/mldsa:mldsa44_rounding",
     ],
 )
+
+SIGN_CONSTTIME_SUBROUTINES = [
+    "intt",
+    "ntt",
+    "poly_add",
+    "poly_chknorm",
+    "poly_decompose",
+    "poly_nonzero_encode",
+    "poly_reduce32",
+    "poly_sub",
+    "poly_pointwise",
+    "poly_pointwise_acc",
+    "poly_uniform_gamma_1",
+    "polyeta_unpack",
+    "polyt0_unpack",
+    "polyw1_pack",
+    "polyz_pack",
+    # The constant-time checker cannot handle the logic-dependent memory accesses
+    # of encode_h, make_hint, poly_challenge, poly_uniform, and poly_uniform_eta
+    # -- even though the logic does not depend on secret data, the information
+    # flow through DMEM cannot be constructed without knowing where the loads and
+    # stores are going. Luckily these routines don't handle secret data anyway
+    # (except for poly_unifom_eta).
+    #
+    # TODO: adding a capability to the information-flow analysis backend that can
+    # store the possible *range* of a GPR in a certain control-flow path, so that
+    # memory loads/stores can be conservatively mapped to the the whole range,
+    # would likely solve this.
+]
+
+[
+    acc_consttime_test(
+        name = params + "_" + subroutine + "_consttime",
+        subroutine = subroutine,
+        deps = [
+            ":" + params + "_sign_test0",
+        ],
+    )
+    for subroutine in SIGN_CONSTTIME_SUBROUTINES
+    for params in MLDSA_PARAMS
+]
+
+# keccak_send_message is special because the length argument affects control
+# flow, so we need to explicitly say the secrets are in dmem
+acc_consttime_test(
+    name = "keccak_send_message_consttime",
+    secret = ["dmem"],
+    subroutine = "keccak_send_message",
+    deps = [
+        ":mldsa44_sign_test0",
+    ],
+)
+
+# This list only contains subroutines that do not overlap with sign.
+KEYPAIR_CONSTTIME_SUBROUTINES = [
+    "poly_power2round",
+    "polyeta_pack",
+    "polyt0_pack",
+    "polyt1_pack",
+]
+
+[
+    acc_consttime_test(
+        name = params + "_" + subroutine + "_consttime",
+        subroutine = subroutine,
+        deps = [
+            ":" + params + "_keypair_test0",
+        ],
+    )
+    for subroutine in KEYPAIR_CONSTTIME_SUBROUTINES
+    for params in MLDSA_PARAMS
+]
