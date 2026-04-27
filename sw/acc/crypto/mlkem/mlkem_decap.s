@@ -365,6 +365,10 @@ crypto_kem_dec:
   bn.wsrr w8, 0xA /* KECCAK_DIGEST */
   bn.sid  t0, 0(a2++) /* Store into buffer */
 
+/* This label is an entrypoint for the consttime checker, to ensure that the
+ * ciphertext comparison timing does not depend on the provided ciphertext. */
+_decap_ciphertext_compare_label_for_consttime_check:
+
   /*** verify (constant-time): ct == cmp ? w4 = 0 : w4 = all-ones ***/
   li      t0, 0
   li      t1, 1

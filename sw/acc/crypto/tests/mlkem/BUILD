@@ -257,6 +257,15 @@ DECAP_CONSTTIME_SUBROUTINES = [
     for params in MODE_FOR_PARAMS
 ]
 
+# Special check to ensure the ciphertext comparison is constant-time.
+acc_consttime_test(
+    name = "decap_ciphertext_compare_consttime",
+    subroutine = "_decap_ciphertext_compare_label_for_consttime_check",
+    deps = [
+        ":mlkem512_decap_test0",
+    ],
+)
+
 # Includes only subroutines not shared with encap or decap.
 KEYPAIR_CONSTTIME_SUBROUTINES = [
     "pack_sk",
