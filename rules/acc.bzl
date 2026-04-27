@@ -581,6 +581,46 @@ acc_consttime_test = rule(
     },
 )
 
+def _acc_clobbered_regs_test_impl(ctx):
+    """Check that a subroutine's clobbered-register annotation is correct."""
+    elf = [f for t in ctx.attr.deps for f in t[OutputGroupInfo].elf.to_list()]
+    if len(elf) != 1:
+        fail("Expected only one .elf file in dependencies, got: " + str(elf))
+    elf = elf[0]
+
+    if len(ctx.files.srcs) != 1:
+        fail("Expected exactly one source file, got: " + str(ctx.files.srcs))
+    src = ctx.files.srcs[0]
+    script_content = "{checker} {elf} --subroutine {sub} --source {src}".format(
+        checker = ctx.executable._checker.short_path,
+        elf = elf.short_path,
+        sub = ctx.attr.subroutine,
+        src = src.short_path,
+    )
+    ctx.actions.write(
+        output = ctx.outputs.executable,
+        content = script_content,
+    )
+
+    runfiles = ctx.runfiles(files = [elf] + ctx.files.srcs)
+    runfiles = runfiles.merge(ctx.attr._checker[DefaultInfo].default_runfiles)
+    return [DefaultInfo(runfiles = runfiles)]
+
+acc_clobbered_regs_test = rule(
+    implementation = _acc_clobbered_regs_test_impl,
+    test = True,
+    attrs = {
+        "srcs": attr.label_list(allow_files = True),
+        "deps": attr.label_list(providers = [OutputGroupInfo]),
+        "subroutine": attr.string(mandatory = True),
+        "_checker": attr.label(
+            default = "//hw/ip/acc/util:check_clobbered_regs",
+            executable = True,
+            cfg = "exec",
+        ),
+    },
+)
+
 acc_insn_count_range = rule(
     implementation = _acc_insn_count_range,
     attrs = {

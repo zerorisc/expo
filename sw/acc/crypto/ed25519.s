@@ -71,7 +71,7 @@
  * @param[in]  dmem[ed25519_public_key]: encoded public key A_, 256 bits
  * @param[out] dmem[ed25519_verify_result]: SUCCESS or FAILURE
  *
- * clobbered registers: x2 to x4, x20 to x23, w1 to w30
+ * clobbered registers: x2 to x4, x20 to x23, w1 to w30, acc, mod
  * clobbered flag groups: FG0
  */
 .globl ed25519_verify_var
@@ -266,7 +266,7 @@ ed25519_verify_var:
  * @param[out] dmem[ed25519_sig_R]: R component of signature (256 bits)
  * @param[out] dmem[ed25519_sig_S]: S component of signature (256 bits)
  *
- * clobbered registers: x2 to x4, x20 to x23, w1 to w30
+ * clobbered registers: x2 to x5, x10 to x23, x28, w0 to w31, acc, mod
  * clobbered flag groups: FG0
  */
 .globl ed25519_sign_prehashed
@@ -518,7 +518,7 @@ ed25519_sign_prehashed:
  * @param[in]  w31: all-zero
  * @param[out] w16: output s
  *
- * clobbered registers: w16, w17
+ * clobbered registers: w16 to w17
  * clobbered flag groups: FG0
  */
 sc_clamp:
@@ -572,7 +572,7 @@ sc_clamp:
  * @param[out] w8: output Z (Z < p)
  * @param[out] w9: output T (T < p)
  *
- * clobbered registers: w6 to w9, w18, w20 to w23
+ * clobbered registers: w8 to w9, w18, w20, w22 to w23, acc
  * clobbered flag groups: FG0
  */
 affine_to_ext:
@@ -618,7 +618,7 @@ affine_to_ext:
  * @param[out] w10: output x (x < p)
  * @param[out] w11: output y (y < p)
  *
- * clobbered registers: w10, w11, w14 to w18, w20 to w23
+ * clobbered registers: w10 to w11, w14 to w18, w20 to w23, acc
  * clobbered flag groups: FG0
  */
 ext_to_affine:
@@ -666,7 +666,7 @@ ext_to_affine:
  * @param[in]  w31: all-zero
  * @param[out] w11: enc, resulting encoded point
  *
- * clobbered registers: w10, w11
+ * clobbered registers: w10 to w11
  * clobbered flag groups: FG0
  */
 .globl affine_encode
@@ -711,7 +711,7 @@ affine_encode:
  * @param[out] w10: output x (x < p) (only valid if x20=SUCCESS)
  * @param[out] w11: output y (y < p) (only valid if x20=SUCCESS)
  *
- * clobbered registers: w10, w11, w14 to w18, w20 to w28
+ * clobbered registers: x2 to x3, x20, w10 to w11, w14 to w18, w20 to w28, acc
  * clobbered flag groups: FG0
  */
 .globl affine_decode_var
@@ -1001,7 +1001,7 @@ affine_decode_var:
  * @param[out] w12: output Z2
  * @param[out] w13: output T2
  *
- * clobbered registers: w10 to w18, w20 to w28
+ * clobbered registers: w6 to w18, w20 to w28, acc
  * clobbered flag groups: FG0
  */
 .globl ext_scmul
@@ -1105,7 +1105,7 @@ ext_scmul:
  * @param[out] w12: output Z2
  * @param[out] w13: output T2
  *
- * clobbered registers: w10 to w18, w20 to w28
+ * clobbered registers: x2, w10 to w18, w20 to w28, acc
  * clobbered flag groups: FG0
  */
 .globl ext_scmul_var
@@ -1200,7 +1200,7 @@ ext_scmul_var:
  * @param[in,out] w12: input Z1 (Z1 < p), output Z3
  * @param[in,out] w13: input T1 (T1 < p), output T3
  *
- * clobbered registers: w10 to w18, w20 to w27
+ * clobbered registers: w10 to w13, w17 to w18, w20 to w25, w27, acc
  * clobbered flag groups: FG0
  */
 .globl ext_double
@@ -1303,7 +1303,7 @@ ext_double:
  * @param[in]     w16: input Z2 (Z2 < p)
  * @param[in]     w17: input T2 (T2 < p)
  *
- * clobbered registers: w10 to w13, w18, w20 to w23, w24 to w27
+ * clobbered registers: w10 to w13, w18, w20, w22 to w27, acc
  * clobbered flag groups: FG0
  */
 .globl ext_add
@@ -1430,7 +1430,7 @@ ext_add:
  * @param[in]  MOD: p, modulus = 2^255 - 19
  * @param[out] dmem[ed25519_verify_result]: result, SUCCESS or FAILURE
  *
- * clobbered registers: w14 to w17
+ * clobbered registers: x2 to x4, x22 to x23, w16, w18, w20, w22 to w23, acc
  * clobbered flag groups: FG0
  */
 ext_equal_var:
@@ -1546,7 +1546,7 @@ ext_equal_var:
  * @param[in]  w31: all-zero
  * @param[out] w22: c, result
  *
- * clobbered registers: w14, w15, w17, w18, w20 to w23
+ * clobbered registers: w14 to w15, w17 to w18, w20 to w23, acc
  * clobbered flag groups: FG0
  */
 fe_pow_2252m3:

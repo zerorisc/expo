@@ -47,8 +47,8 @@
  * @param[in]    w31: all-zero
  * @param[in]  FG0.Z: boolean indicating fault condition
  *
- * clobbered registers: x2
- * clobbered flag groups: none
+ * clobbered registers: x2 to x3, w31
+ * clobbered flag groups: FG0
  */
 trigger_fault_if_fg0_z:
   /* Read the FG0.Z flag (position 3).
@@ -88,8 +88,8 @@ trigger_fault_if_fg0_z:
  * @param[in]    w31: all-zero
  * @param[in]  FG0.Z: boolean indicating (complement of) fault condition
  *
- * clobbered registers: x2
- * clobbered flag groups: none
+ * clobbered registers: x2 to x3, w31
+ * clobbered flag groups: FG0
  */
 trigger_fault_if_fg0_not_z:
   /* Read the FG0.Z flag (position 3).
@@ -158,7 +158,7 @@ trigger_fault_if_fg0_not_z:
  * @param[in]  MOD: m, modulus
  * @param[out]  w19: c, result
  *
- * clobbered registers: w19, w20, w21, w22, w23, w24, w25
+ * clobbered registers: w19 to w25, w31, acc
  * clobbered flag groups: FG0
  */
 p256_reduce:
@@ -303,7 +303,7 @@ p256_reduce:
  * @param[in]  MOD: p, modulus of P-256 underlying finite field
  * @param[out]  w19: c, result
  *
- * clobbered registers: w19, w20, w21, w22, w23, w24, w25
+ * clobbered registers: w19 to w25, w31, acc
  * clobbered flag groups: FG0
  */
 mod_mul_256x256:
@@ -364,7 +364,7 @@ mod_mul_256x256:
  * @param[in]  MOD: p, modulus of P-256 underlying finite field
  * @param[out]  w19: c, result
  *
- * clobbered registers: w19, w20, w21, w22, w23, w24, w25
+ * clobbered registers: w19 to w25, w31, acc
  * clobbered flag groups: FG0
  */
 mod_mul_320x128:
@@ -425,7 +425,7 @@ mod_mul_320x128:
  * @param[in]  MOD: p, modulus of P-256 underlying finite field
  * @param[out]  w19: c, result
  *
- * clobbered registers: w19, w20, w21, w22, w23, w24, w25
+ * clobbered registers: w19 to w25, acc
  * clobbered flag groups: FG0
  */
 mul_modp:
@@ -586,7 +586,7 @@ mul_modp:
  * @param[out] w28: r256, constant, 2^256 mod p = 2^256 - p
  * @param[out] w29: r448, constant, 2^448 mod p
  *
- * clobbered registers: w28, w29
+ * clobbered registers: x2 to x3, w28 to w29, mod
  * clobbered flag groups: FG0
  */
 setup_modp:
@@ -648,7 +648,7 @@ setup_modp:
  *
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
- * clobbered registers: w11 to w25
+ * clobbered registers: w11 to w25, acc
  * clobbered flag groups: FG0
  */
 proj_add:
@@ -864,7 +864,7 @@ proj_add:
  * @param[out]  w12: y_a, y-coordinate of curve point (affine)
  * @param[out]  w14: z^-1, modular inverse of the projective z-coordinate
  *
- * clobbered registers: w10 to w19, w24, w25
+ * clobbered registers: w10 to w25, acc
  * clobbered flag groups: FG0
  */
 proj_to_affine:
@@ -1029,7 +1029,7 @@ proj_to_affine:
  *
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
- * clobbered registers: w1, w2, w3, w19, w24, w25
+ * clobbered registers: x2, w1 to w3, w19 to w25, w31, acc
  * clobbered flag groups: FG0
  */
 mod_inv:
@@ -1180,7 +1180,7 @@ fetch_proj_randomize:
  *
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
- * clobbered registers: w14 to w25
+ * clobbered registers: w8 to w10, w14 to w25, acc
  * clobbered flag groups: FG0
  */
 proj_double:
@@ -1299,7 +1299,7 @@ proj_double:
  * Flags: When leaving this subroutine, the M, L and Z flags of FG0 depend on
  *        the computed affine y-coordinate.
  *
- * clobbered registers: x2, x3, x10, w0 to w30
+ * clobbered registers: x2 to x3, x10, w0 to w29, w31, acc, mod
  * clobbered flag groups: FG0
  */
 scalar_mult_int:
@@ -1546,7 +1546,7 @@ scalar_mult_int:
  *
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
- * clobbered registers: x2, x3, x16, x17, x19, x20, x21, x22, w0 to w29
+ * clobbered registers: x2 to x3, x10, x16, x21 to x22, w0 to w29, w31, acc, mod
  * clobbered flag groups: FG0
  */
 p256_base_mult:
@@ -1641,7 +1641,7 @@ p256_base_mult:
  * @param[out] w15,w16:  first share of secret scalar t (320 bits)
  * @param[out] w17,w18:  second share of secret scalar t (320 bits)
  *
- * clobbered registers: x2, x3, x20, w12 to w29
+ * clobbered registers: x2 to x3, w12 to w26, w28 to w29, w31, acc, mod
  * clobbered flag groups: FG0
  */
 p256_random_scalar:
@@ -1729,7 +1729,7 @@ p256_random_scalar:
  * @param[out]  dmem[d0]:  first share of private key d
  * @param[out]  dmem[d1]:  second share of private key d
  *
- * clobbered registers: x2, x3, x20, w20, w21, w29
+ * clobbered registers: x2 to x3, x20, w12 to w26, w28 to w29, w31, acc, mod
  * clobbered flag groups: FG0
  */
 p256_generate_random_key:
@@ -1767,7 +1767,7 @@ p256_generate_random_key:
  * @param[out]  dmem[k0]:  first share of secret scalar k
  * @param[out]  dmem[k1]:  second share of secret scalar k
  *
- * clobbered registers: x2, x3, x20, w20, w21, w29
+ * clobbered registers: x2 to x3, x20, w12 to w26, w28 to w29, w31, acc, mod
  * clobbered flag groups: FG0
  */
 p256_generate_k:
@@ -1842,7 +1842,7 @@ p256_generate_k:
  * @param[out] [w21, w20]: result x0 (321 bits)
  * @param[out] [w11, w10]: result x1 (320 bits)
  *
- * clobbered registers: w1 to w5, w20 to w23
+ * clobbered registers: w1 to w4, w11, w20 to w21, w28 to w29, w31
  * clobbered flag groups: FG0
  */
 boolean_to_arithmetic:
@@ -1956,7 +1956,7 @@ boolean_to_arithmetic:
  * @param[out] [w21, w20]: d0, first share of private key d (320 bits)
  * @param[out] [w11, w10]: d1, second share of private key d (320 bits)
  *
- * clobbered registers: x2, x3, w1 to w4, w20 to w29
+ * clobbered registers: x2 to x3, w1 to w4, w10 to w11, w20 to w21, w23 to w29, w31
  * clobbered flag groups: FG0
  */
 p256_key_from_seed:
@@ -2073,8 +2073,8 @@ p256_key_from_seed:
  * @param[in,out] dmem[d0..d0+64]: share 0 of 320-bit masked scalar.
  * @param[in,out] dmem[d1..d1+64]: share 1 of 320-bit masked scalar.
  *
- * clobbered registers: x3-x4, x10-x11, w1-w11, w31
- * clobbered flag groups: none
+ * clobbered registers: x3, x10 to x11, w1 to w11, w31
+ * clobbered flag groups: FG0, FG1
  */
 p256_scalar_remask:
   /* Initialize all-zero register. */

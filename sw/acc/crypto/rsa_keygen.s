@@ -2271,7 +2271,7 @@ __relprime_small_primes_fail:
  * @param[in]  w31: all-zero
  * @param[out] x2: result, 8 if a mod m = 0 and otherwise 0
  *
- * clobbered registers: x2, w22, w25, w26
+ * clobbered registers: x2, w22, w25 to w26
  * clobbered flag groups: FG0
  */
 is_zero_mod_small_prime:

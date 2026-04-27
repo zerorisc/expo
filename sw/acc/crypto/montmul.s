@@ -41,7 +41,7 @@
  * @param[in]  w31: all-zero.
  * @param[out] w29: m0', negative of inverse of m0 in GF(2^256)
  *
- * clobbered registers: w0, w1, w29
+ * clobbered registers: w0 to w1, w29, acc
  * clobbered flag groups: FG0
  */
 m0inv:
@@ -268,8 +268,8 @@ compute_rr:
  * @param[in] w25: b, second operand
  * @param[out] [w26, w27]: c, result
  *
- * clobbered registers: w26, w27
- * clobbered flag groups: none
+ * clobbered registers: w26 to w27, acc
+ * clobbered flag groups: FG0
  */
 mul256_w30xw25:
   bn.mulqacc.z          w30.0, w25.0,  0
@@ -303,8 +303,8 @@ mul256_w30xw25:
  * @param[in] w2: b, second operand
  * @param[out] [w26, w27]: c, result
  *
- * clobbered registers: w26, w27
- * clobbered flag groups: none
+ * clobbered registers: w26 to w27, acc
+ * clobbered flag groups: FG0
  */
 mul256_w30xw2:
   bn.mulqacc.z          w30.0, w2.0,  0

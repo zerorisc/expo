@@ -71,6 +71,7 @@ rsa_decrypt:
  * Zero the contents of work_buf
  *
  * clobbered registers: x3, w0
+ * clobbered flag groups: FG0
  */
 zero_work_buf:
   la     x3, work_buf
@@ -83,7 +84,8 @@ zero_work_buf:
 /**
  * Copy the contents of work_buf onto inout
  *
- * clobbered registers: x2, x3, x4, w0
+ * clobbered registers: x2 to x4, x30, w0
+ * clobbered flag groups: none
  */
 cp_work_buf:
   la    x2, n_limbs

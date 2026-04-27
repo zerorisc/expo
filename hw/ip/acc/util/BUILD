@@ -40,6 +40,17 @@ py_binary(
 )
 
 py_binary(
+    name = "check_clobbered_regs",
+    srcs = ["check_clobbered_regs.py"],
+    deps = [
+        "//hw/ip/acc/util/shared:control_flow",
+        "//hw/ip/acc/util/shared:decode",
+        "//hw/ip/acc/util/shared:information_flow_analysis",
+        requirement("pyelftools"),
+    ],
+)
+
+py_binary(
     name = "check_const_time",
     srcs = ["check_const_time.py"],
     deps = [

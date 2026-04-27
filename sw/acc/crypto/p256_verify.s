@@ -52,7 +52,7 @@
  *
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
- * clobbered registers: x2, x3, x11, x12, x13, x14, x17 to x24, w0 to w25
+ * clobbered registers: x2 to x3, x11 to x14, x17 to x24, w0 to w25, w27 to w29, w31, acc, mod
  * clobbered flag groups: FG0
  */
 p256_verify:
@@ -314,7 +314,7 @@ p256_verify:
  * @param[in]  w31: all-zero
  * @param[out]  w1: result c
  *
- * clobbered registers: x2, w2, w3, w4, w7
+ * clobbered registers: x2, w1 to w7
  * clobbered flag groups: FG0
  */
 mod_inv_var:

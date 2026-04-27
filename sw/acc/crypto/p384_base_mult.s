@@ -31,9 +31,8 @@
  * Flags: When leaving this subroutine, the M, L and Z flags of FG0 correspond
  *        to the computed affine y-coordinate.
  *
- * clobbered registers: x2, x3, x9 to x13, x17 to x23, x26 to x30
- *                      w0 to w30
- * clobbered flag groups: FG0
+ * clobbered registers: x2 to x7, x10 to x13, x17 to x25, x27 to x28, w0 to w31, acc
+ * clobbered flag groups: FG0, FG1
  */
 .globl p384_base_mult_checked
 p384_base_mult_checked:
@@ -67,9 +66,8 @@ p384_base_mult_checked:
  * Flags: When leaving this subroutine, the M, L and Z flags of FG0 correspond
  *        to the computed affine y-coordinate.
  *
- * clobbered registers: x2, x3, x9 to x13, x17 to x21, x26 to x30
- *                      w0 to w30
- * clobbered flag groups: FG0
+ * clobbered registers: x2 to x7, x10 to x13, x17 to x25, x27 to x28, w0 to w31, acc
+ * clobbered flag groups: FG0, FG1
  */
 .globl p384_base_mult
 p384_base_mult:
