@@ -4,6 +4,7 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+import re
 from copy import deepcopy
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -12,7 +13,7 @@ from .constants import ConstantContext, get_op_val_str
 from .control_flow import (ControlLoc, ControlGraph, Cycle, Ecall, ImemEnd,
                            LoopStart, Ret)
 from .decode import ACCProgram
-from .information_flow import InformationFlowGraph
+from .information_flow import InformationFlowGraph, SPECIAL_REG_NAMES
 from .insn_yaml import Insn
 
 # Calls to _get_iflow return results in the form of a tuple with entries:
@@ -100,9 +101,10 @@ def _build_iflow_insn(
         if const not in constants:
             raise ValueError(
                 'Could not construct information flow because {} is '
-                'not a known constant at PC {:#x}: {}'
-                '\nKnown constants: {}'
-                '\nIf the register is in fact a constant, you may '
+                'not a known constant at PC {:#x}:'
+                '\n{}'
+                '\n\nKnown constants: {}'
+                '\n\nIf the register is in fact a constant, you may '
                 'need to add constant-tracking support for more '
                 'instructions.'.format(const, pc,
                                        insn.disassemble(pc, op_vals),
@@ -428,6 +430,29 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
 
         # Set the next edges to the instruction after the jump returns
         edges = [ControlLoc(section.end + 4)]
+    elif last_insn.mnemonic in ['bne', 'beq']:
+        grs1 = get_op_val_str(last_insn, last_op_vals, 'grs1')
+        grs2 = get_op_val_str(last_insn, last_op_vals, 'grs2')
+        if grs1 in constants and grs2 in constants:
+            # if both arguments are known constants, we can remove the other branch
+            ops_equal = constants.get(grs1) == constants.get(grs2)
+            if last_insn.mnemonic == 'beq':
+                branch_taken = ops_equal
+            else:
+                assert last_insn.mnemonic == 'bne'
+                branch_taken = not ops_equal
+
+            # filter for only the chosen branch (should always leave exactly 1 option)
+            dest = last_op_vals['offset']
+            if branch_taken:
+                edges = [e for e in edges if e.pc == dest]
+            else:
+                edges = [e for e in edges if e.pc != dest]
+            assert len(edges) == 1
+
+            # update used_constants to reflect that we read the branch constants
+            used_constant_nodes = iflow.sources_for_any([grs1, grs2])
+            used_constants.update(used_constant_nodes)
     else:
         # Update the constants to include the last instruction
         constants.update_insn(last_insn, last_op_vals)
@@ -661,3 +686,24 @@ def stringify_control_deps(program: ACCProgram,
             pc_strings.append('{} at PC {:#x}'.format(insn.mnemonic, pc))
         out.append('{} (via {})'.format(node, ', '.join(pc_strings)))
     return out
+
+
+def parse_information_flow_node(x: str) -> str:
+    '''Parse a named information-flow node.
+
+    Accepts:
+    - register names e.g. "x20", "w1"
+    - special strings like "dmem" and "mod"
+    '''
+    if x == 'dmem':
+        return x
+    if x in SPECIAL_REG_NAMES:
+        return x
+    # try to match as a register
+    m = re.match(r'[wx]([0-9]+)', x)
+    if m is None:
+        raise ValueError(f'Malformatted node: {x}')
+    idx = int(m.group(1))
+    if not 0 <= idx < 32:
+        raise ValueError(f'Invalid register index: {x}')
+    return x
