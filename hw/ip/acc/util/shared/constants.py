@@ -4,9 +4,11 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+import re
 from copy import deepcopy
 from typing import Any, Dict, Iterable, List, Optional
 
+from .information_flow import DmemInformationFlowNode
 from .insn_yaml import Insn
 from .operand import RegOperandType
 
@@ -19,10 +21,10 @@ def get_op_val_str(insn: Insn, op_vals: Dict[str, int], opname: str) -> str:
 
 
 class ConstantContext:
-    '''Represents known-constant GPRs.
+    '''Represents known-constant GPRs and memory words.
 
     This datatype is used to track and evaluate GPR pointers for indirect
-    references.
+    references and memory offsets.
     '''
 
     def __init__(self, values: Dict[str, int]):
@@ -35,16 +37,16 @@ class ConstantContext:
         '''Represents a context with no known constants.'''
         return ConstantContext({'x0': 0})
 
-    def set(self, gpr: str, value: int) -> None:
-        '''Set the value of a GPR in the context.'''
-        if gpr == 'x0':
+    def set(self, key: str, value: int) -> None:
+        '''Set the value of a GPR or memory address in the context.'''
+        if key == 'x0':
             # Ignore writes to x0; it's read-only.
             return
-        self.values[gpr] = value
+        self.values[key] = value
 
-    def get(self, gpr: str) -> Optional[int]:
-        '''Get the value of a GPR in the context.'''
-        return self.values.get(gpr, None)
+    def get(self, key: str) -> Optional[int]:
+        '''Get the value of a GPR or memory address in the context.'''
+        return self.values.get(key, None)
 
     def __contains__(self, gpr: str) -> bool:
         return gpr in self.values
@@ -82,7 +84,7 @@ class ConstantContext:
             if reg != 'x0':
                 self.values.pop(reg, None)
 
-    def update_insn(self, insn: Insn, op_vals: Dict[str, int]) -> None:
+    def update_insn(self, insn: Insn, op_vals: Dict[str, int], coarse_dmem: bool) -> None:
         '''Updates to new known constant values GPRs after the instruction.
 
         Currently, this procedure supports only a limited set of instructions.
@@ -132,6 +134,21 @@ class ConstantContext:
         elif insn.mnemonic == 'lui':
             grd_name = get_op_val_str(insn, op_vals, 'grd')
             new_values[grd_name] = op_vals['imm'] << 12
+        elif insn.mnemonic == 'lw' and not coarse_dmem:
+            grd_name = get_op_val_str(insn, op_vals, 'grd')
+            grs1_name = get_op_val_str(insn, op_vals, 'grs1')
+            if grs1_name in self.values:
+                addr = (self.values[grs1_name] + op_vals['offset']) % (1 << 32)
+                src_name = DmemInformationFlowNode(addr, addr + 4).name
+                if src_name in self.values:
+                    new_values[grd_name] = self.values[src_name]
+        elif insn.mnemonic == 'sw' and not coarse_dmem:
+            grs1_name = get_op_val_str(insn, op_vals, 'grs1')
+            grs2_name = get_op_val_str(insn, op_vals, 'grs2')
+            if grs1_name in self.values and grs2_name in self.values:
+                addr = (self.values[grs1_name] + op_vals['offset']) % (1 << 32)
+                dest_name = DmemInformationFlowNode(addr, addr + 4).name
+                new_values[dest_name] = self.values[grs2_name]
         elif insn.mnemonic in ['bn.lid', 'bn.sid', 'bn.movr']:
             # If the instruction has any op_vals ending in _inc,
             # assume we're incrementing the corresponding register
@@ -157,8 +174,37 @@ class ConstantContext:
         self.values.update(new_values)
 
 
-def is_gpr_name(name: str):
+def _parse_constant(value: str, dmem_symbols: Dict[str, int]) -> int:
+    '''Interprets a value from a literal (decimal or hex) or DMEM symbol.'''
+    try:
+        if value.startswith('0x'):
+            return int(value, 16)
+        elif value in dmem_symbols:
+            return dmem_symbols[value]
+        return int(value)
+    except ValueError:
+        raise ValueError(
+            f'Cannot parse required constant: {value} is not a '
+            'recognized numeric value or DMEM label.')
+
+
+def is_gpr_name(name: str) -> bool:
     return name in [f'x{i}' for i in range(32)]
+
+
+def parse_dmem_slot(token: str, dmem_symbols: str) -> Optional[int]:
+    m = re.match(r'dmem:(.*)\[:([0-9]+)\]:(.*)', token)
+    if m is None:
+        raise ValueError(f'Cannot interpret constant: {token}')
+    label = m.group(1)
+    length = int(m.group(2))
+    if length != 4:
+        raise ValueError(f'Cannot interpret {token} as a constant: constant '
+                         'DMEM slots must be exactly 4 bytes.')
+    value = m.group(3)
+    start = _parse_constant(label, dmem_symbols)
+    value = _parse_constant(value, dmem_symbols)
+    return DmemInformationFlowNode(start, start + length).name, value
 
 
 def parse_required_constants(constants: List[str],
@@ -174,6 +220,11 @@ def parse_required_constants(constants: List[str],
 
     out = {}
     for token in constants:
+        if token.startswith('dmem'):
+            name, value = parse_dmem_slot(token, dmem_symbols)
+            out[name] = value
+            continue
+
         reg_and_value = token.split(':')
         if len(reg_and_value) != 2:
             raise ValueError(
@@ -183,18 +234,8 @@ def parse_required_constants(constants: List[str],
         if not is_gpr_name(reg):
             raise ValueError(
                 f'Cannot parse required constant {token}: {reg} is not a '
-                'valid GPR name.')
-        try:
-            if value.startswith('0x'):
-                value = int(value, 16)
-            elif value in dmem_symbols:
-                value = dmem_symbols[value]
-            else:
-                value = int(value)
-        except ValueError:
-            raise ValueError(
-                f'Cannot parse required constant {token}: {value} is not a '
-                'recognized numeric value or DMEM label.')
+                'valid GPR name or 4-byte DMEM slot.')
+        value = _parse_constant(value, dmem_symbols)
         if value < 0 or value > GPR_MAX:
             raise ValueError(
                 f'Cannot parse required constant {token}: {value} is out of '

@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import re
+import sys
 from copy import deepcopy
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -102,8 +103,10 @@ def _build_iflow_insn(
     constant_deps = insn.iflow.required_constants(op_vals, coarse_dmem)
     for const in constant_deps:
         if const not in constants:
-            raise ValueError(
-                'Could not construct information flow because {} is '
+            # rather than raising an exception in this case, print and exit to
+            # avoid a messy stack trace that is not usually helpful
+            print(
+                'ERROR: Could not construct information flow because {} is '
                 'not a known constant at PC {:#x}:'
                 '\n{}'
                 '\n\nKnown constants: {}'
@@ -111,7 +114,8 @@ def _build_iflow_insn(
                 'need to add constant-tracking support for more '
                 'instructions.'.format(const, pc,
                                        insn.disassemble(pc, op_vals),
-                                       list(constants.values.keys())))
+                                       sorted(list(constants.values.keys()))))
+            sys.exit(1)
 
     return constant_deps, insn.iflow.evaluate(op_vals, constants.values, coarse_dmem)
 
@@ -178,7 +182,7 @@ def _build_iflow_straightline(
         iflow = iflow.seq(insn_iflow)
 
         # Update constants to their values after the instruction
-        constants.update_insn(insn, op_vals)
+        constants.update_insn(insn, op_vals, coarse_dmem)
 
     return constant_deps, iflow
 
@@ -411,7 +415,7 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
                                                    constants)
 
         # Update the constants to include the loop instruction
-        constants.update_insn(last_insn, last_op_vals)
+        constants.update_insn(last_insn, last_op_vals, coarse_dmem)
 
         if iterations is not None:
             # If the number of iterations is constant, perform recursive calls
@@ -440,7 +444,7 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
     elif last_insn.mnemonic == 'jal' and last_op_vals['grd'] == 1:
         # Special handling for jumps; recursive call for jump destination, then
         # continue at pc+4
-        constants.update_insn(last_insn, last_op_vals)
+        constants.update_insn(last_insn, last_op_vals, coarse_dmem)
 
         # Jumps should produce exactly one non-special edge; check that
         # assumption before we rely on it
@@ -485,7 +489,7 @@ def _get_iflow(program: ACCProgram, graph: ControlGraph, start_pc: int,
             used_constants.update([n.name for n in used_constant_nodes])
     else:
         # Update the constants to include the last instruction
-        constants.update_insn(last_insn, last_op_vals)
+        constants.update_insn(last_insn, last_op_vals, coarse_dmem)
 
     # We're only returning constants that are the same in all RET branches
     common_consts = None
@@ -667,8 +671,9 @@ def get_program_iflow(program: ACCProgram,
     2. The information-flow nodes whose values at the start of the subroutine
        influence its control flow.
     '''
+    start_constants = ConstantContext({'x0': 0})
     _, ret_iflow, end_iflow, _, cycles, control_deps, _ = _get_iflow(
-        program, graph, program.min_pc(), ConstantContext.empty(), None,
+        program, graph, program.min_pc(), start_constants, None,
         IFlowCache(), coarse_dmem)
     if cycles:
         raise RuntimeError('Unresolved cycles; start PCs: {}'.format(', '.join(
