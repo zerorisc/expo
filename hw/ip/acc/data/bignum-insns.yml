@@ -1020,7 +1020,7 @@
     - &data-addr A `BAD_DATA_ADDR` error if the computed address is not a valid DMEM address aligned to WLEN bits.
   iflow:
     - to: [wref-grd]
-      from: [dmem]
+      from: [dmem-grs1-32]
     - test:
         - grd_inc == 1
       to: [grd]
@@ -1093,7 +1093,7 @@
     target: [offset, grs1]
     bytes: 32
   iflow:
-    - to: [dmem]
+    - to: [dmem-grs1-32]
       from: [wref-grs2]
     - test:
         - grs1_inc == 1
@@ -1199,15 +1199,7 @@
     - &bad-wsr An `ILLEGAL_INSN` error if `wsr` doesn't name a valid WSR.
   iflow:
     - to: [wrd]
-      from: []
-    - test:
-        - wsr == 0x0
-      to: [wrd]
-      from: [mod]
-    - test:
-        - wsr == 0x3
-      to: [wrd]
-      from: [acc]
+      from: [wsr]
   encoding:
     scheme: wcsr
     mapping:
@@ -1233,16 +1225,16 @@
   errs:
     - *bad-wsr
   iflow:
-    - to: []
+    - to: [wsr]
+      from: [wrs]
+    - test:
+        - wsr == 0x8
+      to: [kmac_core]
       from: []
     - test:
-        - wsr == 0x0
-      to: [mod]
-      from: [wrs]
-    - test:
-        - wsr == 0x3
-      to: [acc]
-      from: [wrs]
+        - wsr == 0x9
+      to: [wsr]
+      from: [wsr]
   encoding:
     scheme: wcsr
     mapping:

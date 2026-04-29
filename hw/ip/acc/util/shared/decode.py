@@ -19,9 +19,10 @@ except RuntimeError as err:
 
 
 class ACCProgram:
-    def __init__(self, symbols: Dict[str, int], insns: Dict[int, int],
-                 data: Dict[int, int]):
+    def __init__(self, symbols: Dict[str, int], symbol_sections: Dict[int, str],
+                 insns: Dict[int, int], data: Dict[int, int]):
         self.symbols = symbols  # label -> PC
+        self.symbol_sections = symbol_sections  # label -> name of section (e.g. ".data")
         self.data = data  # addr -> data (32b word)
 
         self.insns = {}
@@ -74,9 +75,9 @@ def decode_elf(path: str) -> ACCProgram:
 
     Returns the ACCProgram instance representing the program in the ELF file.
     '''
-    (imem_bytes, dmem_bytes, symbols) = read_elf(path)
+    (imem_bytes, dmem_bytes, symbols, symbol_sections) = read_elf(path)
 
     insns = _decode_mem(0, imem_bytes)
     data = _decode_mem(0, dmem_bytes)
 
-    return ACCProgram(symbols, insns, data)
+    return ACCProgram(symbols, symbol_sections, insns, data)

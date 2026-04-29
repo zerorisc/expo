@@ -12,12 +12,158 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from serialize.parse_helpers import check_keys, check_list, check_str
 
-from .operand import Operand, RegOperandType
+from .isr import Isr
+from .operand import ImmOperandType, IsrOperandType, Operand, RegOperandType
 
 FLAG_NAMES = ['c', 'm', 'l', 'z']
 
+# Deliberately invalid CSR address used by unimp.
+UNIMP_CSR_ADDR = 3072
+
 # Registers that can be involved in information flow without being an operand
 SPECIAL_REG_NAMES = ['mod', 'acc', 'acch', 'kmac_core', 'rnd', 'urnd']
+
+# ISRs that should have different information-flow node(s) than their name
+ISR_REMAPPING = {
+    'fg0': ['fg0-' + x for x in FLAG_NAMES],
+    'fg1': ['fg1-' + x for x in FLAG_NAMES],
+    'flags': ['fg0-' + x for x in FLAG_NAMES] + ['fg1-' + x for x in FLAG_NAMES],
+    'mod0': ['mod'],
+    'mod1': ['mod'],
+    'mod2': ['mod'],
+    'mod3': ['mod'],
+    'mod4': ['mod'],
+    'mod5': ['mod'],
+    'mod6': ['mod'],
+    'mod7': ['mod'],
+    'kmac_msg': ['kmac_core'],
+    'kmac_digest': ['kmac_core'],
+}
+
+
+class InformationFlowNode:
+    '''Represents a node in the information flow graph.
+
+    A node is anything that can hold information; it can be a register, flag, or
+    memory location.
+    '''
+    def __init__(self, name: str):
+        self.name = name
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, InformationFlowNode):
+            return False
+        return self.name == other.name
+
+    def overlaps(self, other: 'InformationFlowNode') -> bool:
+        '''Returns true if self and other refer to the same underlying location.'''
+        return self == other
+
+    def intersection(self, other: 'InformationFlowNode') -> Optional['InformationFlowNode']:
+        '''Returns a new node which is the intersection of the two nodes.
+
+        Returns None if the nodes do not overlap.
+        '''
+        if not self.overlaps(other):
+            return None
+        return InformationFlowNode(self.name)
+
+    def subtract(self, other: 'InformationFlowNode') -> List['InformationFlowNode']:
+        '''Returns a new node with the intersection of self and other removed.
+
+        Returns self if self and other do not overlap and None if they are equal.
+        '''
+        if not self.overlaps(other):
+            return [self]
+        return []
+
+    def union(self, other: 'InformationFlowNode') -> Optional['InformationFlowNode']:
+        '''Try to merge self and other.'''
+        if self.overlaps(other):
+            return self
+        return None
+
+    def pretty(self, dmem_symbols: Dict[str, int]) -> List[str]:
+        '''Pretty-print the node. May return multiple names.'''
+        return [self.name]
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+class DmemInformationFlowNode(InformationFlowNode):
+    '''Represents a memory range.'''
+    def __init__(self, start: int, end: int):
+        super().__init__(f'dmem:{start:#06x}-{end:#06x}')
+        assert start < end
+        self.start = start
+        self.end = end
+
+    def overlaps(self, other: InformationFlowNode) -> bool:
+        if not isinstance(other, DmemInformationFlowNode):
+            return False
+        if self.start <= other.start and self.end > other.start:
+            return True
+        return other.start <= self.start and other.end > self.start
+
+    def intersection(self, other: InformationFlowNode) -> Optional[InformationFlowNode]:
+        if not isinstance(other, DmemInformationFlowNode) or not self.overlaps(other):
+            return None
+        start = max(self.start, other.start)
+        end = min(self.end, other.end)
+        return DmemInformationFlowNode(start, end)
+
+    def subtract(self, other: InformationFlowNode) -> List[InformationFlowNode]:
+        if not isinstance(other, DmemInformationFlowNode) or not self.overlaps(other):
+            return [self]
+        out: List[InformationFlowNode] = []
+        if self.start < other.start:
+            out.append(DmemInformationFlowNode(self.start, other.start))
+        if other.end < self.end:
+            out.append(DmemInformationFlowNode(other.end, self.end))
+        return out
+
+    def union(self, other: 'InformationFlowNode') -> Optional['InformationFlowNode']:
+        '''Try to merge self and other.'''
+        if not isinstance(other, DmemInformationFlowNode):
+            return None
+        if other.start <= self.start <= other.end:
+            return DmemInformationFlowNode(other.start, max(self.end, other.end))
+        elif self.start <= other.start <= self.end:
+            return DmemInformationFlowNode(self.start, max(other.end, self.end))
+        return None
+
+    def pretty(self, dmem_symbols: Dict[str, int] = {}) -> List[str]:
+        labels = [([k], v) for k, v in dmem_symbols.items() if self.start <= v < self.end]
+        if not labels:
+            return [self.name]
+        labels.sort(key=lambda x: x[1])
+        lengths = []
+        i = 0
+        while i < len(labels):
+            names, start = labels[i]
+            if i + 1 < len(labels):
+                end = labels[i + 1][1]
+                if end == start:
+                    names.extend(labels[i + 1][0])
+                    del labels[i + 1]
+                    continue
+            else:
+                end = self.end
+            lengths.append(end - start)
+            i += 1
+        result = []
+        for i in range(len(labels)):
+            names = labels[i][0]
+            assert len(names) > 0
+            if len(names) > 1:
+                label_str = '(' + ','.join(names) + ')'
+            else:
+                label_str = names[0]
+            result.append(f'{label_str}[:{lengths[i]}]')
+        if labels[0][1] != self.start:
+            result.insert(0, DmemInformationFlowNode(self.start, labels[0][1]).name)
+        return result
 
 
 class InformationFlowGraph:
@@ -33,12 +179,15 @@ class InformationFlowGraph:
     means the sink is overwritten with a constant value, and information is not
     flowing to it from any nodes (including its own previous value).
     '''
-    def __init__(self, flow: Dict[str, Set[str]], exists: bool = True):
+    def __init__(self, flow: Dict[InformationFlowNode, Set[InformationFlowNode]],
+                 exists: bool = True):
         self.flow = flow
 
         # Should not be modified directly. See the nonexistent() method
         # documentation for details of what this flag means.
         self.exists = exists
+
+        self.simplify()
 
     @staticmethod
     def empty() -> 'InformationFlowGraph':
@@ -72,41 +221,46 @@ class InformationFlowGraph:
         '''
         return InformationFlowGraph({}, False)
 
-    def sources(self, sink: str) -> Set[str]:
+    def sources(self, sink: InformationFlowNode) -> Set[InformationFlowNode]:
         '''Returns all sources for the given sink.'''
-        # if the sink does not appear, it is unmodified, meaning its only
-        # source is itself
-        return self.flow.get(sink, {sink})
+        overlapping = [s for s in self.flow if s.overlaps(sink)]
+        if len(overlapping) == 0:
+            # if the sink does not appear, it is unmodified, meaning its only
+            # source is itself
+            return {sink}
+        out = set()
+        for s in overlapping:
+            out |= self.flow[s]
+        return out
 
-    def sinks(self, source: str) -> Set[str]:
+    def sinks(self, source: str) -> Set[InformationFlowNode]:
         '''Returns all sinks for the given source.'''
         out = set()
         for sink in self.flow:
-            if source in self.flow[sink]:
+            if [s for s in self.flow[sink] if s.name == source]:
                 out.add(sink)
-        if source not in self.flow:
+        if [s for s in self.flow if s.name == source]:
             # Implicitly, the source is unmodified and depends on itself
-            out.add(source)
+            out.add(InformationFlowNode(source))
         return out
 
-    def all_sources(self) -> Set[str]:
+    def all_sources(self) -> Set[InformationFlowNode]:
         '''Returns all sources in the graph.'''
-        out: Set[str] = set()
+        out: Set[InformationFlowNode] = set()
         return out.union(*self.flow.values())
 
-    def all_sinks(self) -> Set[str]:
+    def all_sinks(self) -> Set[InformationFlowNode]:
         '''Returns all sinks in the graph.'''
         return set(self.flow.keys())
 
-    def sources_for_any(self, sinks: Iterable[str]) -> Set[str]:
-        '''Returns all nodes that are a source for any of the given sinks.'''
-        out: Set[str] = set()
-        return out.union(*(self.sources(s) for s in sinks))
+    def sources_for_any(self, sinks: Iterable[str]) -> Set[InformationFlowNode]:
+        '''Returns all nodes that are a source for any of the given sinks.
 
-    def sinks_for_any(self, sinks: Iterable[str]) -> Set[str]:
-        '''Returns all nodes that are a sink for any of the given sources.'''
-        out: Set[str] = set()
-        return out.union(*(self.sinks(s) for s in sinks))
+        Important: this does not handle partial overlap of e.g. DMEM ranges! It
+        only returns sources for the sinks exactly.
+        '''
+        out: Set[InformationFlowNode] = set()
+        return out.union(*(self.sources(InformationFlowNode(s)) for s in sinks))
 
     def remove_source(self, node: str) -> None:
         '''Removes the node from the graph anywhere it appears as a source.
@@ -114,14 +268,40 @@ class InformationFlowGraph:
         If the node is not a source in the graph, does nothing.
         '''
         for sources in self.flow.values():
-            sources.discard(node)
+            for src in sources:
+                if src.name == node:
+                    sources.discard(src)
+                    break
 
     def remove_sink(self, node: str) -> None:
         '''Removes the node from the graph anywhere it appears as a sink.
 
         If the node is not a sink in the graph, does nothing.
         '''
-        self.flow.pop(node, None)
+        sink_nodes = [n for n in self.flow if n.name == node]
+        assert len(sink_nodes) <= 1
+        if sink_nodes:
+            self.flow.pop(sink_nodes[0], None)
+
+    def simplify(self) -> None:
+        '''Merge adjacent nodes in the graph (e.g. DMEM ranges).'''
+        for sink in self.flow.keys():
+            sources = list(self.flow[sink])
+            i = 0
+            while i < len(sources):
+                node1 = sources[i]
+                j = i + 1
+                while j < len(sources):
+                    node2 = sources[j]
+                    node12 = node1.union(node2)
+                    if node12 is not None:
+                        node1 = node12
+                        del sources[j]
+                    else:
+                        j += 1
+                sources[i] = node1
+                i += 1
+            self.flow[sink] = set(sources)
 
     def update(self, other: 'InformationFlowGraph') -> None:
         '''Updates self to include the information flow from other.
@@ -132,6 +312,12 @@ class InformationFlowGraph:
         union of their sources in the graph in which they appear and themselves
         (because a sink not appearing in a graph implicitly means the value is
         unchanged).
+
+        Sinks that overlap but are not equal will be split into up to 3 entries:
+        the overlapping portion and the portions covered by only one of the
+        sinks. The overlapping portion will depend on the union of the two
+        sources, while the non-overlapping portions will depend on the same
+        sources they did in self/other.
 
         Important note: updating with an empty graph will not be a no-op. An
         empty graph implies everything remains unmodified, so combining an
@@ -154,14 +340,56 @@ class InformationFlowGraph:
             self.exists = other.exists
             return
 
-        for sink, sources in other.flow.items():
-            if sink not in self.flow:
+        for sink1, sources1 in other.flow.items():
+            overlapping = [s for s in self.flow if s.overlaps(sink1)]
+            if not overlapping:
                 # implicitly, a non-updated value depends only on itself (NOT
                 # an empty set, which would indicate a value that is
                 # overwritten with a constant)
-                self.flow[sink] = {sink}
-            self.flow[sink].update(sources)
+                self.flow[sink1] = {sink1} | sources1
 
+            for sink2 in overlapping:
+                if sink1 == sink2:
+                    self.flow[sink1].update(sources1)
+                    continue
+                sources2 = self.flow[sink2]
+                self.flow.pop(sink2, None)
+                rem1 = sink1.subtract(sink2)
+                rem2 = sink2.subtract(sink1)
+                inter = sink1.intersection(sink2)
+                for node in rem1:
+                    self.flow[node] = deepcopy(sources1)
+                for node in rem2:
+                    self.flow[node] = deepcopy(sources2)
+                if inter is not None:
+                    self.flow[inter] = sources1 | sources2
+
+        self.simplify()
+
+        return
+
+    def combine(self, other: 'InformationFlowGraph') -> None:
+        '''Updates self to incorporate information flow from other.
+
+        The difference between combine() and update() is subtle and only
+        affects nodes that are sinks in one graph but not the other. In update(),
+        these nodes depend implicitly on themselves. In combine(), the graph
+        that mentions them takes precedence and if it indicates an overwrite,
+        then an overwrite will be present in the result.
+
+        In practical terms, the idea of update() is that self and other
+        represent two possible paths with different information flows that need
+        to be merged. The idea of combine() is that self and other are parts of
+        the same information flow dictionary.
+
+        Does not modify other.
+        '''
+        for sink1, sources1 in other.flow.items():
+            overlapping = [s for s in self.flow if s.overlaps(sink1)]
+            if not overlapping:
+                self.flow[sink1] = set()
+
+        self.update(other)
         return
 
     def seq(self, other: 'InformationFlowGraph') -> 'InformationFlowGraph':
@@ -193,8 +421,11 @@ class InformationFlowGraph:
         for sink, sources in other.flow.items():
             new_sources = set()
             for source in sources:
-                if source in self.flow:
-                    new_sources.update(self.flow[source])
+                overlapping = [s for s in self.flow if s.overlaps(source)]
+                if overlapping:
+                    for node in overlapping:
+                        # connect sink and source even for partial overlap
+                        new_sources.update(self.flow[node])
                 else:
                     # source is not a sink in self's flow; assume it stays
                     # constant
@@ -202,7 +433,16 @@ class InformationFlowGraph:
             flow[sink] = new_sources
 
         for sink, sources in self.flow.items():
-            if sink not in flow:
+            overlapping = [s for s in flow if s.overlaps(sink)]
+            if overlapping:
+                # if one of our original sinks partly overlaps with a new sink
+                # (partial overwrite), we should propagate only the
+                # non-overlapping part.
+                for node in overlapping:
+                    rem = sink.subtract(node)
+                    for n in rem:
+                        flow[n] = sources.copy()
+            else:
                 # sink is not updated in other's flow
                 flow[sink] = sources.copy()
 
@@ -297,20 +537,20 @@ class InformationFlowGraph:
         flag_groups = set()
         wregs = []
         xregs = []
-        for sink in sorted(self.flow.keys()):
-            if sink == 'dmem' or sink == 'x1':
+        for sink in self.flow:
+            if sink.name == 'x1':
                 # Not real registers or flags, ignore
                 continue
-            elif sink.startswith('w') and sink[1:].isdigit():
-                wregs.append(int(sink[1:]))
-            elif sink.startswith('x') and sink[1:].isdigit():
-                xregs.append(int(sink[1:]))
-            elif sink.startswith('fg0'):
+            elif sink.name.startswith('w') and sink.name[1:].isdigit():
+                wregs.append(int(sink.name[1:]))
+            elif sink.name.startswith('x') and sink.name[1:].isdigit():
+                xregs.append(int(sink.name[1:]))
+            elif sink.name.startswith('fg0'):
                 flag_groups.add('FG0')
-            elif sink.startswith('fg1'):
+            elif sink.name.startswith('fg1'):
                 flag_groups.add('FG1')
             else:
-                special.append(sink)
+                special.append(sink.name)
 
         # Combine the ranges.
         w_ranges = _combine_ranges(sorted(wregs))
@@ -325,24 +565,24 @@ class InformationFlowGraph:
         flags_line = '* clobbered flag groups: ' + flags_str
         return regs_line + '\n' + flags_line
 
-    def pretty(self, indent: int = 0) -> str:
+    def pretty(self, indent: int = 0, dmem_symbols: Dict[str, int] = {}) -> str:
         '''Return a human-readable representation of the graph.'''
-        if not self.exists:
-            return 'Nonexistent information-flow graph (no possible paths).'
-
         prefix = ' ' * indent
-        flow_strings = {
-            sink: ','.join(sorted(sources))
-            for sink, sources in self.flow.items()
-        }
-        max_source_chars = max([len(s) for s in flow_strings.values()],
-                               default=0)
+        if not self.exists:
+            return prefix + 'Nonexistent information-flow graph (no possible paths).'
+
+        flow_strings = {}
+        for sink in self.flow:
+            for sink_name in sink.pretty(dmem_symbols):
+                assert sink_name not in flow_strings
+                flow_strings[sink_name] = [x for s in self.flow[sink]
+                                           for x in s.pretty(dmem_symbols)]
+        max_sink_chars = max([len(s) for s in flow_strings.keys()], default=0)
         lines = []
-        for sink in sorted(self.flow.keys()):
-            sources_str = flow_strings[sink]
-            padding = ' ' * (max_source_chars - len(sources_str))
-            lines.append('{}{}{} -> {}'.format(prefix, sources_str, padding,
-                                               sink))
+        for sink_str in sorted(flow_strings.keys()):
+            sources_str = ', '.join(sorted(flow_strings[sink_str]))
+            padding = ' ' * (max_sink_chars - len(sink_str))
+            lines.append('{}{}{} <- {}'.format(prefix, sink_str, padding, sources_str))
         return '\n'.join(lines)
 
     def __eq__(self, other: object) -> bool:
@@ -359,17 +599,26 @@ class InformationFlowGraph:
 class InsnInformationFlowNode:
     '''Represents an information flow node whose value may depend on operands.
     '''
-    def required_constants(self, op_vals: Dict[str, int]) -> Set[str]:
+    def required_constants(self, op_vals: Dict[str, int],
+                           coarse_dmem: bool) -> Set[str]:
         '''Returns the names of regs that must be constant for `evaluate()`.
 
         For instance, for an indirect reference of a WDR via a GPR, the GPR's
         value must be constant for the node to be evaluated. Subclasses that
         require constants override this method.
+
+        When `coarse_dmem` is true, treat DMEM as a single information-flow
+        node rather than tracking values more precisely; in this case, for
+        example, addresses of DMEM loads would not be required constants.
         '''
         return set()
 
+    def is_read_only(self, op_vals: Dict[str, int]) -> bool:
+        return False
+
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> str:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> List[InformationFlowNode]:
         '''Determines information flow graph for the instruction.
 
         Evaluates the information-flow node according to the given operand
@@ -391,23 +640,121 @@ class InsnRegOperandNode(InsnInformationFlowNode):
         self.op = op
         self.is_wide = op.op_type.reg_type == 'wdr'
 
+    def _get_reg_name(self, op_vals: Dict[str, int]) -> str:
+        return self.op.op_type.op_val_to_str(op_vals[self.op.name], None)
+
+    def is_read_only(self, op_vals: Dict[str, int]) -> bool:
+        # x0 is the only read-only register
+        return self._get_reg_name(op_vals) == 'x0'
+
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> str:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> List[InformationFlowNode]:
         if self.op.name not in op_vals:
             raise ValueError(
                 'Operand {} not found in provided operand values: {}'.format(
                     self.op.name, op_vals.keys()))
-        return self.op.op_type.op_val_to_str(op_vals[self.op.name], None)
+        return [InformationFlowNode(self._get_reg_name(op_vals))]
 
 
-def _eval_indirect_wdr(gpr: str, constant_regs: Dict[str, int]) -> str:
+class InsnIsrOperandNode(InsnInformationFlowNode):
+    '''Represents an ISR operand for an instruction.'''
+    def __init__(self, op: Operand):
+        if not isinstance(op.op_type, IsrOperandType):
+            raise ValueError(
+                'Attempt to construct a register-operand information flow '
+                'node from a non-register operand {} of type {}'.format(
+                    op.name, op.op_type))
+        self.op = op
+
+    def _get_isr(self, op_vals: Dict[str, int]) -> Optional[Isr]:
+        addr = op_vals[self.op.name]
+        if addr == UNIMP_CSR_ADDR:
+            return None
+        return self.op.op_type.isrs.addr_to_isr[addr]  # type: ignore
+
+    def is_read_only(self, op_vals: Dict[str, int]) -> bool:
+        isr = self._get_isr(op_vals)
+        if isr is None:
+            return True
+        return isr.read_only
+
+    def evaluate(self, op_vals: Dict[str, int],
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> List[InformationFlowNode]:
+        if self.op.name not in op_vals:
+            raise ValueError(
+                'Operand {} not found in provided operand values: {}'.format(
+                    self.op.name, op_vals.keys()))
+        isr = self._get_isr(op_vals)
+        if isr is None:
+            return []
+        if isr.name in ISR_REMAPPING:
+            return [InformationFlowNode(name) for name in ISR_REMAPPING[isr.name]]
+        return [InformationFlowNode(isr.name)]
+
+
+class InsnDmemOperandNode(InsnInformationFlowNode):
+    '''Represents a specific dmem range for an instruction.
+
+    The dmem location consists of a GPR operand and an offset.
+    '''
+    def __init__(self, addr_op: Operand, offset_op: Operand, width: int):
+        if not isinstance(addr_op.op_type, RegOperandType):
+            raise ValueError(
+                'Attempt to construct a dmem information flow node from a '
+                'non-register address operand {} of type {}'.format(
+                    addr_op.name, addr_op.op_type))
+        if not isinstance(offset_op.op_type, ImmOperandType):
+            raise ValueError(
+                'Attempt to construct a dmem information flow node from a '
+                'non-immediate offset operand {} of type {}'.format(
+                    offset_op.name, offset_op.op_type))
+        self.addr_op = addr_op
+        self.offset_op = offset_op
+        self.width = width
+
+    def required_constants(self, op_vals: Dict[str, int], coarse_dmem: bool) -> Set[str]:
+        if coarse_dmem:
+            return set()
+        addr_reg_val = op_vals[self.addr_op.name]
+        addr_reg_name = self.addr_op.op_type.op_val_to_str(addr_reg_val, None)
+        return set([addr_reg_name])
+
+    def evaluate(self, op_vals: Dict[str, int],
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> List[InformationFlowNode]:
+        if coarse_dmem:
+            return [InformationFlowNode('dmem')]
+        if self.addr_op.name not in op_vals:
+            raise ValueError(
+                'Operand {} not found in provided operand values: {}'.format(
+                    self.addr_op.name, op_vals.keys()))
+        if self.offset_op.name not in op_vals:
+            raise ValueError(
+                'Operand {} not found in provided operand values: {}'.format(
+                    self.offset_op.name, op_vals.keys()))
+        addr_reg_val = op_vals[self.addr_op.name]
+        addr_reg_name = self.addr_op.op_type.op_val_to_str(addr_reg_val, None)
+        if addr_reg_name not in constant_regs:
+            raise RuntimeError(
+                'Cannot analyze information flow; cannot determine which '
+                'DMEM region is referenced by non-constant GPR {} (constant '
+                'regs are: {})'.format(addr_reg_name, constant_regs.keys()))
+        addr = constant_regs[addr_reg_name]
+        offset = op_vals[self.offset_op.name]
+        return [DmemInformationFlowNode(addr + offset, addr + offset + self.width)]
+
+
+def _eval_indirect_wdr(gpr: str, constant_regs: Dict[str, int]) -> InformationFlowNode:
     if gpr not in constant_regs:
         raise RuntimeError(
             'Cannot analyze information flow; cannot determine which '
             'WDR is referenced by non-constant GPR {} (constant regs '
             'are: {})'.format(gpr, constant_regs.keys()))
     wdr_idx = constant_regs[gpr]
-    return 'w{}'.format(wdr_idx)
+    wdr_name = 'w{}'.format(wdr_idx)
+    return InformationFlowNode(wdr_name)
 
 
 class InsnIndirectWDRNode(InsnInformationFlowNode):
@@ -432,13 +779,14 @@ class InsnIndirectWDRNode(InsnInformationFlowNode):
                     self.op.name, op_vals.keys()))
         return self.op.op_type.op_val_to_str(op_vals[self.op.name], None)
 
-    def required_constants(self, op_vals: Dict[str, int]) -> Set[str]:
+    def required_constants(self, op_vals: Dict[str, int], coarse_dmem: bool) -> Set[str]:
         return {self._get_gpr_name(op_vals)}
 
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> str:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> List[InformationFlowNode]:
         gpr = self._get_gpr_name(op_vals)
-        return _eval_indirect_wdr(gpr, constant_regs)
+        return [_eval_indirect_wdr(gpr, constant_regs)]
 
 
 class InsnGroupFlagNode(InsnInformationFlowNode):
@@ -453,23 +801,26 @@ class InsnGroupFlagNode(InsnInformationFlowNode):
         self.constant_dependent = False
 
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> str:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> List[InformationFlowNode]:
         if 'flag_group' not in op_vals:
             raise ValueError(
                 'Operand flag_group not found in provided operand values: {}'.
                 format(op_vals.keys()))
-        return 'fg{}-{}'.format(op_vals['flag_group'], self.flag)
+        flag_name = 'fg{}-{}'.format(op_vals['flag_group'], self.flag)
+        return [InformationFlowNode(flag_name)]
 
 
 class InsnConstantNode(InsnInformationFlowNode):
     '''Represents instruction node whose value does not depend on operands.'''
-    def __init__(self, node: str):
-        self.node = node
+    def __init__(self, name: str):
+        self.name = name
         self.constant_dependent = False
 
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> str:
-        return self.node
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> List[InformationFlowNode]:
+        return [InformationFlowNode(self.name)]
 
 
 def _parse_iflow_nodes(
@@ -482,7 +833,10 @@ def _parse_iflow_nodes(
     - "wref-<reg operand name>" for instructions where a WDR is indirectly
       accessed via a GPR; in this case <reg operand name> is the GPR and must
       be in the operands list
-    - one of the special strings "dmem", "acc", or "mod"
+    - "dmem-<reg operand name>-<width>" for instructions where memory is
+      accessed via a GPR; in this case there must also be an immediate operand
+      called "offset" and <width> is the size of the access in bytes.
+    - one of the special strings "acch", "acc", or "mod"
     - a flag (represented as "<flag group>-<flag>", where <flag group> can
       be either "fg0", "fg1", or (if the instruction has a flag_group
       operand) simply "flags" to select the current flag group, and <flag>
@@ -495,6 +849,8 @@ def _parse_iflow_nodes(
     # Check if node is a register operand
     for op in operands:
         if node == op.name:
+            if isinstance(op.op_type, IsrOperandType):
+                return [InsnIsrOperandNode(op)]
             if not isinstance(op.op_type, RegOperandType):
                 raise RuntimeError(
                     'Information-flow node {} matches operand name, but '
@@ -520,8 +876,40 @@ def _parse_iflow_nodes(
             'indirect reference {}. Operand names: {}'.format(
                 gpr, node, ', '.join([op.name for op in operands])))
 
-    # Check if node is a special string
-    if node == 'dmem' or node in SPECIAL_REG_NAMES:
+    # Check if node is a DMEM reference.
+    if node.startswith('dmem-'):
+        fields = node.split('-')
+        if len(fields) != 3:
+            raise RuntimeError(
+                'Invalid dmem information-flow reference format: {}'.format(node))
+        _, gpr, width = fields
+        if not width.isnumeric():
+            raise RuntimeError(
+                'Invalid dmem write width {} in information-flow reference: {}'
+                .format(width, node))
+        width = int(width)  # type: ignore
+        offset = None
+        for op in operands:
+            if op.name == 'offset' and isinstance(op.op_type, ImmOperandType):
+                offset = op
+        if offset is None:
+            raise RuntimeError(
+                'No offset operand found for DMEM reference: {}'
+                .format(node))
+        for op in operands:
+            if gpr == op.name:
+                if not (isinstance(op.op_type, RegOperandType) and
+                        op.op_type.reg_type == 'gpr'):
+                    raise RuntimeError(
+                        'Operand {} in memory reference {} is not a GPR '
+                        '(type {}). Only GPRs can be memory references.'.
+                        format(gpr, node, type(op.op_type)))
+                return [InsnDmemOperandNode(op, offset, width)]  # type: ignore
+
+    # Check if node is a special string, indicating a special register that can
+    # be involved in an instruction's information flow *without* being one of
+    # the operands.
+    if node in SPECIAL_REG_NAMES:
         return [InsnConstantNode(node)]
 
     # Try to interpret node as a flag or set of flags
@@ -661,34 +1049,39 @@ class InsnInformationFlowRule:
         self.flows_from = flows_from
         self.test = test
 
-    def required_constants(self, op_vals: Dict[str, int]) -> Set[str]:
+    def required_constants(self, op_vals: Dict[str, int], coarse_dmem: bool) -> Set[str]:
         '''Returns the names of regs that must be constant for `evaluate()`.'''
         if not self.test.check(op_vals):
             # Rule is not triggered
             return set()
         out = set()
         for node in self.flows_to:
-            out.update(node.required_constants(op_vals))
+            out.update(node.required_constants(op_vals, coarse_dmem))
         for node in self.flows_from:
-            out.update(node.required_constants(op_vals))
+            out.update(node.required_constants(op_vals, coarse_dmem))
         return out
 
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> InformationFlowGraph:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> InformationFlowGraph:
         if not self.test.check(op_vals):
             # Rule is not triggered
             return InformationFlowGraph.nonexistent()
         sources = set()
-        for node in self.flows_from:
-            sources.add(node.evaluate(op_vals, constant_regs))
+        for insn_node in self.flows_from:
+            for node in insn_node.evaluate(op_vals, constant_regs, coarse_dmem):
+                sources.add(node)
         flow = {}
-        for node in self.flows_to:
-            dest = node.evaluate(op_vals, constant_regs)
-            if dest in ['x0']:
-                # No information will actually flow to this node, because it is
-                # not writeable; skip.
-                continue
-            flow[dest] = sources.copy()
+        for insn_node in self.flows_to:
+            for node in insn_node.evaluate(op_vals, constant_regs, coarse_dmem):
+                if not insn_node.is_read_only(op_vals):
+                    assert node not in flow
+                    flow[node] = sources.copy()
+            if coarse_dmem and isinstance(insn_node, InsnDmemOperandNode):
+                # if we are doing coarse dmem tracking, then the single "dmem"
+                # node should not get overwritten by writes; it should always
+                # inherit its own previous value as well.
+                flow[node].add(node)
         return InformationFlowGraph(flow)
 
     @staticmethod
@@ -729,20 +1122,21 @@ class InsnInformationFlow:
     def __init__(self, rules: List[InsnInformationFlowRule]) -> None:
         self.rules = rules
 
-    def required_constants(self, op_vals: Dict[str, int]) -> Set[str]:
+    def required_constants(self, op_vals: Dict[str, int], coarse_dmem: bool) -> Set[str]:
         '''Returns the names of regs that must be constant for `evaluate()`.'''
         return {
             const
             for rule in self.rules
-            for const in rule.required_constants(op_vals)
+            for const in rule.required_constants(op_vals, coarse_dmem)
         }
 
     def evaluate(self, op_vals: Dict[str, int],
-                 constant_regs: Dict[str, int]) -> InformationFlowGraph:
+                 constant_regs: Dict[str, int],
+                 coarse_dmem: bool) -> InformationFlowGraph:
         graph = InformationFlowGraph.nonexistent()
         for rule in self.rules:
-            rule_graph = rule.evaluate(op_vals, constant_regs)
-            graph.update(rule_graph)
+            rule_graph = rule.evaluate(op_vals, constant_regs, coarse_dmem)
+            graph.combine(rule_graph)
 
         return graph
 
