@@ -1,3 +1,5 @@
+This repository is deprecated. Please visit the [Pavona project](https://github.com/pavona/pavona).
+
 # About this Repository
 
 This codebase is an open silicon distribution built in part from [OpenTitan](https://github.com/lowRISC/opentitan) technical collateral.
