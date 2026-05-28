@@ -26,7 +26,6 @@
 
 .equ x12, a2
 .equ x13, a3
-.equ x14, a4
 .equ x15, a5
 .equ x16, a6
 .equ x17, a7
@@ -101,7 +100,7 @@ poly_gen_matrix_init:
  * @param[in]  a0: pointer to seed (KYBER_SYMBYTES = 32)
  * @param[out] a1: dmem pointer to polynomial
  *
- * clobbered registers: x5 to x7, x11, x14, x16, x18, x20 to x21, w8, w10 to w14, w17, w31
+ * clobbered registers: x5 to x7, x11, x16, x18, x20 to x21, x31, w8, w10 to w14, w17, w31
  * clobbered flag groups: FG0
  */
 
@@ -165,11 +164,11 @@ _rej_sample_loop:
   /* mask candidate */
   bn.and     wtmp, coeff_mask, cand
   bn.cmp     wtmp, mod
-  csrrs      a4, 0x7C0, zero       /* Read flags */
-  andi       a4, a4, 1             /* Mask carry flag to detect underflow */
+  csrrs      x31, 0x7C0, zero       /* Read flags */
+  andi       x31, x31, 1             /* Mask carry flag to detect underflow */
   bn.rshi    accumulator_new, wtmp, accumulator >> 16
   bn.sel     accumulator, accumulator_new, accumulator, FG0.C
-  sub        accumulator_count, accumulator_count, a4 /* Move to next slot iff not rejected */
+  sub        accumulator_count, accumulator_count, x31 /* Move to next slot iff not rejected */
   bne        accumulator_count, zero, _skip_store2a
   bn.sid     s4, 0(a1++)           /* Store to memory */
   li         accumulator_count, 16 /* Set all slots to available */
@@ -179,11 +178,11 @@ _skip_store2a:
   bn.rshi    cand, bn0, cand >> 12
   bn.and     cand, coeff_mask, cand
   bn.cmp     cand, mod
-  csrrs      a4, 0x7C0, zero      /* Read flags */
-  andi       a4, a4, 1            /* Mask carry flag to detect underflow */
+  csrrs      x31, 0x7C0, zero      /* Read flags */
+  andi       x31, x31, 1            /* Mask carry flag to detect underflow */
   bn.rshi    accumulator_new, cand, accumulator >> 16
   bn.sel     accumulator, accumulator_new, accumulator, FG0.C
-  sub        accumulator_count, accumulator_count, a4 /* Move to next slot iff not rejected */
+  sub        accumulator_count, accumulator_count, x31 /* Move to next slot iff not rejected */
   bne        accumulator_count, zero, _skip_store2
   bn.sid     s4, 0(a1++)           /* Store to memory */
   li         accumulator_count, 16 /* Set all slots to available */
@@ -203,11 +202,11 @@ _skip_store2:
   /* mask candidate */
   bn.and     wtmp, coeff_mask, cand
   bn.cmp     wtmp, mod
-  csrrs      a4, 0x7C0, zero       /* Read flags */
-  andi       a4, a4, 1             /* Mask carry flag to detect underflow */
+  csrrs      x31, 0x7C0, zero       /* Read flags */
+  andi       x31, x31, 1             /* Mask carry flag to detect underflow */
   bn.rshi    accumulator_new, wtmp, accumulator >> 16
   bn.sel     accumulator, accumulator_new, accumulator, FG0.C
-  sub        accumulator_count, accumulator_count, a4 /* Move to next slot iff not rejected */
+  sub        accumulator_count, accumulator_count, x31 /* Move to next slot iff not rejected */
   bne        accumulator_count, zero, _skip_store4a
   bn.sid     s4, 0(a1++)           /* Store to memory */
   li         accumulator_count, 16 /* Set all slots to available */
@@ -218,11 +217,11 @@ _skip_store4a:
   bn.rshi    cand, bn0, cand >> 12
   bn.and     cand, coeff_mask, cand
   bn.cmp     cand, mod
-  csrrs      a4, 0x7C0, zero       /* Read flags */
-  andi       a4, a4, 1             /* Mask carry flag to detect underflow */
+  csrrs      x31, 0x7C0, zero       /* Read flags */
+  andi       x31, x31, 1             /* Mask carry flag to detect underflow */
   bn.rshi    accumulator_new, cand, accumulator >> 16
   bn.sel     accumulator, accumulator_new, accumulator, FG0.C
-  sub        accumulator_count, accumulator_count, a4 /* Move to next slot iff not rejected */
+  sub        accumulator_count, accumulator_count, x31 /* Move to next slot iff not rejected */
   bne        accumulator_count, zero, _skip_store4
   bn.sid     s4, 0(a1++)           /* Store to memory */
   li         accumulator_count, 16 /* Set all slots to available */
@@ -252,13 +251,13 @@ _poly_uniform_inner_loop:
     /* Get the candidate coefficient */
     bn.and     cand, coeff_mask, shake_reg
     bn.cmp     cand, mod
-    csrrs      a4, 0x7C0, zero /* Read flags */
+    csrrs      x31, 0x7C0, zero /* Read flags */
 
     /* Add it to the accumulator if not rejected */
-    andi a4, a4, 1 /* Mask carry flag to detect underflow */
+    andi x31, x31, 1 /* Mask carry flag to detect underflow */
     bn.rshi    accumulator_new, cand, accumulator >> 16
     bn.sel     accumulator, accumulator_new, accumulator, FG0.C
-    sub        accumulator_count, accumulator_count, a4 /* Move to next slot iff not rejected */
+    sub        accumulator_count, accumulator_count, x31 /* Move to next slot iff not rejected */
     bne        accumulator_count, zero, _skip_store1    /* Accumulator not full yet */
     bn.sid     s4, 0(a1++)                              /* Store to memory */
     li         accumulator_count, 16                    /* Set all slots to available */
@@ -278,13 +277,13 @@ _fast_inner_loop:
     /* Get the candidate coefficient */
     bn.and     cand, coeff_mask, shake_reg
     bn.cmp     cand, mod
-    csrrs      a4, 0x7C0, zero /* Read flags */
+    csrrs      x31, 0x7C0, zero /* Read flags */
 
     /* Add it to the accumulator if not rejected */
-    andi       a4, a4, 1 /* Mask carry flag to detect underflow */
+    andi       x31, x31, 1 /* Mask carry flag to detect underflow */
     bn.rshi    accumulator_new, cand, accumulator >> 16
     bn.sel     accumulator, accumulator_new, accumulator, FG0.C
-    sub        accumulator_count, accumulator_count, a4 /* Move to next slot iff not rejected */
+    sub        accumulator_count, accumulator_count, x31 /* Move to next slot iff not rejected */
     /* Shift out the 12 bits we have read for the next potential coefficient */
     bn.rshi    shake_reg, bn0, shake_reg >> 12
 
@@ -298,13 +297,13 @@ _handle_rest:
     /* Get the candidate coefficient */
     bn.and     cand, coeff_mask, shake_reg
     bn.cmp     cand, mod
-    csrrs      a4, 0x7C0, zero /* Read flags */
+    csrrs      x31, 0x7C0, zero /* Read flags */
 
     /* Add it to the accumulator if not rejected */
-    andi a4, a4, 1 /* Mask carry flag to detect underflow */
+    andi x31, x31, 1 /* Mask carry flag to detect underflow */
     bn.rshi    accumulator_new, cand, accumulator >> 16
     bn.sel     accumulator, accumulator_new, accumulator, FG0.C
-    sub        accumulator_count, accumulator_count, a4   /* Move to next slot iff not rejected */
+    sub        accumulator_count, accumulator_count, x31   /* Move to next slot iff not rejected */
     bne        accumulator_count, zero, _skip_store1_fast /* Accumulator not full yet */
     bn.sid     s4, 0(a1++)                                /* Store to memory */
     li         accumulator_count, 16                      /* Set all slots to available */
