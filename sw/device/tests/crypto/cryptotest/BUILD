@@ -365,6 +365,7 @@ SHAKE128_TESTVECTOR_ARGS = " ".join([
 
 cryptotest(
     name = "shake128_kat",
+    fpga_timeout = "eternal",
     slow_test = True,
     test_args = SHAKE128_TESTVECTOR_ARGS,
     test_harness = "//sw/host/tests/crypto/hash_kat:harness",
@@ -389,6 +390,7 @@ SHAKE256_TESTVECTOR_ARGS = " ".join([
 
 cryptotest(
     name = "shake256_kat",
+    fpga_timeout = "eternal",
     slow_test = True,
     test_args = SHAKE256_TESTVECTOR_ARGS,
     test_harness = "//sw/host/tests/crypto/hash_kat:harness",
