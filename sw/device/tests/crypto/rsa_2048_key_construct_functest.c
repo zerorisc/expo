@@ -88,6 +88,24 @@ static uint32_t kTestInvalidPrivateExponentComponentP[kRsa2048NumWords / 2] = {
     0x7b1d095d, 0xacc9ede5,
 };
 
+static uint32_t kTestInvalidPrivateExponentComponentQ[kRsa2048NumWords / 2] = {
+    0x1294bbf7, 0x8b2919b9, 0x19e6e6bb, 0x5bac57cf, 0x94878d05, 0xdd0297c9,
+    0xc2fa4a31, 0x250dbc5d, 0xa6e04af3, 0xc4f6deb7, 0x5d21fd5f, 0x6e02cdea,
+    0xb967b151, 0x1324bb70, 0xe7c7e19a, 0x93faa85b, 0xcea179ee, 0xda7b268f,
+    0xb4953e88, 0x5da887cf, 0xf3475b09, 0xf0f59bd2, 0xd783b40b, 0x871df1f6,
+    0x7781156f, 0x2d8a9b67, 0xf1555281, 0xdf14b659, 0x85d12616, 0x28f80092,
+    0x50663f6f, 0xb2191d7f,
+};
+
+static uint32_t kTestInvalidCrtCoefficient[kRsa2048NumWords / 2] = {
+    0x8678e23f, 0x208181a5, 0x4c846651, 0xd7015b89, 0x75c82ec3, 0x9ab976a8,
+    0xdc502277, 0xe354d4f1, 0x57b4eedb, 0x347c059,  0xf98ab29f, 0x38b694ec,
+    0x8ef8acf0, 0xd530b8a6, 0x36cf279f, 0xacdb1beb, 0xc89e371d, 0xe9080f0f,
+    0x05f32291, 0x4c4cc843, 0x4f7bd2e4, 0xa158cc81, 0x2b3fdadf, 0x20b88f37,
+    0x5e424f2a, 0x41794ace, 0x86297642, 0x1472ceaa, 0xeedce93a, 0xad62154d,
+    0xae949fc6, 0x267d8cbc,
+};
+
 static uint32_t kTestPublicExponent = 65537;
 
 // Key mode for testing.
@@ -326,7 +344,9 @@ status_t private_key_check_valid_roundtrip_test(void) {
   return OK_STATUS();
 }
 
-status_t private_key_check_invalid(void) {
+status_t private_key_check_invalid_inner(const uint32_t *d_p_data,
+                                         const uint32_t *d_q_data,
+                                         const uint32_t *i_q_data) {
   // Construct the public key.
   otcrypto_const_word32_buf_t modulus = {
       .data = kTestModulus,
@@ -342,8 +362,6 @@ status_t private_key_check_invalid(void) {
   TRY(otcrypto_rsa_public_key_construct(kOtcryptoRsaSize2048, modulus,
                                         kTestPublicExponent, &public_key));
 
-  // Attempt to construct the private key, providing an invalid value for d_p
-  // with a single bit changed.
   otcrypto_const_word32_buf_t p = {
       .data = kTestCofactorP,
       .len = ARRAYSIZE(kTestCofactorP),
@@ -353,15 +371,15 @@ status_t private_key_check_invalid(void) {
       .len = ARRAYSIZE(kTestCofactorQ),
   };
   otcrypto_const_word32_buf_t d_p = {
-      .data = kTestInvalidPrivateExponentComponentP,
+      .data = d_p_data,
       .len = ARRAYSIZE(kTestPrivateExponentComponentP),
   };
   otcrypto_const_word32_buf_t d_q = {
-      .data = kTestPrivateExponentComponentQ,
+      .data = d_q_data,
       .len = ARRAYSIZE(kTestPrivateExponentComponentQ),
   };
   otcrypto_const_word32_buf_t i_q = {
-      .data = kTestCrtCoefficient,
+      .data = i_q_data,
       .len = ARRAYSIZE(kTestCrtCoefficient),
   };
   otcrypto_key_config_t private_key_config = {
@@ -388,6 +406,24 @@ status_t private_key_check_invalid(void) {
   return OK_STATUS();
 }
 
+status_t private_key_check_invalid_dp(void) {
+  return private_key_check_invalid_inner(kTestInvalidPrivateExponentComponentP,
+                                         kTestPrivateExponentComponentQ,
+                                         kTestCrtCoefficient);
+}
+
+status_t private_key_check_invalid_dq(void) {
+  return private_key_check_invalid_inner(kTestPrivateExponentComponentP,
+                                         kTestInvalidPrivateExponentComponentQ,
+                                         kTestCrtCoefficient);
+}
+
+status_t private_key_check_invalid_iq(void) {
+  return private_key_check_invalid_inner(kTestPrivateExponentComponentP,
+                                         kTestPrivateExponentComponentQ,
+                                         kTestInvalidCrtCoefficient);
+}
+
 OTTF_DEFINE_TEST_CONFIG();
 
 bool test_main(void) {
@@ -396,6 +432,8 @@ bool test_main(void) {
   EXECUTE_TEST(test_result, public_key_roundtrip_test);
   EXECUTE_TEST(test_result, private_key_roundtrip_test);
   EXECUTE_TEST(test_result, private_key_check_valid_roundtrip_test);
-  EXECUTE_TEST(test_result, private_key_check_invalid);
+  EXECUTE_TEST(test_result, private_key_check_invalid_dp);
+  EXECUTE_TEST(test_result, private_key_check_invalid_dq);
+  EXECUTE_TEST(test_result, private_key_check_invalid_iq);
   return status_ok(test_result);
 }

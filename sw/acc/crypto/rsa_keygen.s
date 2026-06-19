@@ -144,17 +144,21 @@ rsa_keygen:
  *  (d) the CRT coefficient in the private key is the inverse of the second
  *      modulus cofactor modulo the first.
  *
+ * A random mask r is generated and multiplied into the d_p, d_q, and i_q
+ * checks to avoid having the multi-limb value 1 as an intermediate or
+ * comparison target (hardening against fault injection).
+ *
  * After this function executes, the processor can verify validity of the
  * private key by checking the following values:
  *
  *   - The n check value (in rsa_n) will be computed as p * q and should equal
  *     the public modulus (n).
- *   - The d_p check value (in rsa_d_p) will be computed as e * d_p mod (p - 1)
- *     and should equal 1.
- *   - The d_q check value (in rsa_d_q) will be computed as e * d_q mod (q - 1)
- *     and should equal 1.
- *   - The i_q check value (in rsa_i_q) will be computed as q * i_q mod p and
- *     should equal 1.
+ *   - The d_p check value (in rsa_d_p) will be computed as
+ *     r * e * d_p mod (p - 1) and should equal r (in rsa_check_mask).
+ *   - The d_q check value (in rsa_d_q) will be computed as
+ *     r * e * d_q mod (q - 1) and should equal r (in rsa_check_mask).
+ *   - The i_q check value (in rsa_i_q) will be computed as
+ *     r * q * i_q mod p and should equal r (in rsa_check_mask).
  *   - The d check value (in rsa_e) will be equal to (1 << 256) - 1 if at least
  *     one of the upper `plen` bits of the reconstructed private exponent (d) is
  *     nonzero, otherwise 0. It should equal (1 << 256) - 1.
@@ -176,6 +180,7 @@ rsa_keygen:
  * @param[in]  dmem[rsa_e..rsa_e+4] RSA public exponent (e)
  * @param[in]  x30: plen, number of 256-bit limbs for p and q
  * @param[in]  w31: all-zero
+ * @param[out] dmem[rsa_check_mask..rsa_check_mask+32] random mask r
  * @param[out] dmem[rsa_n..rsa_n+(plen*2*32)] RSA public key modulus (n)
        check value
  * @param[out]  dmem[rsa_d_p..rsa_d_p+(plen*32)] first RSA private key private
@@ -214,17 +219,25 @@ rsa_check_key:
   /* Recompute p - 1 and q - 1 for later use in several steps. */
   jal      x1, prepare_pm1qm1
 
-  /* Compute e * d_p mod (p - 1) to check validity of d_p. */
+  /* Generate a random masking parameter for hardening CRT checks.
+       w20 <= URND(255) + 1 */
+  bn.wsrr  w20, URND
+  bn.rshi  w20, w31, w20 >> 1
+  bn.addi  w20, w20, 1
+  la       x15, rsa_check_mask
+  bn.sid   x20, 0(x15)
+
+  /* Compute r * e * d_p mod (p - 1) to check validity of d_p. */
   la       x13, rsa_d_p
   la       x14, rsa_pm1
   jal      x1, check_crt_component
 
-  /* Compute e * d_q mod (q - 1) to check validity of d_q. */
+  /* Compute r * e * d_q mod (q - 1) to check validity of d_q. */
   la       x13, rsa_d_q
   la       x14, rsa_qm1
   jal      x1, check_crt_component
 
-  /* Compute q * i_q mod p to check validity of i_q. */
+  /* Compute r * q * i_q mod p to check validity of i_q. */
   jal      x1, check_crt_coeff
 
   /* Compute the OR of the upper limbs of the reocvere d. */
@@ -242,26 +255,62 @@ rsa_check_key:
 /**
  * Perform a check of the validity of a single private key exponent CRT component.
  *
- * Given a public exponent e and a private exponent CRT component d_p, computes
- * the value e * d_p mod (p - 1).
+ * Given a public exponent e, a private exponent CRT component d_p, and a
+ * random mask r, computes e * (r * d_p mod (p - 1)) mod (p - 1).
  *
- * If the provided value of d_p is consistent with the provided cofactor and
- * public exponent, this computed value should be 1.
+ * If d_p is valid (e * d_p == 1 mod (p - 1)), this equals r.
+ * The caller provides the mask and compares the result against it.
  *
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
  * @param[in]  x13: dptr_d_p, pointer to buffer to store result in DMEM
  * @param[in]  x14: dptr_pm1, pointer to (p - 1) to reduce modulo in DMEM
+ * @param[in]  x15: dptr_mask, pointer to 256-bit mask in DMEM
  * @param[in]  x20: 20, constant
  * @param[in]  x30: plen, number of 256-bit limbs for p and q
  * @param[in]  w31: all-zero
- * @param[out] dmem[dptr_d_p..dptr_d_p+(plen*32)]: result, equal to 1 when valid
+ * @param[out] dmem[dptr_d_p..dptr_d_p+(plen*32)]: r * e * d_p mod (p - 1)
  *
  * clobbered registers: x2 to x5, x8, x10 to x12, x21 to x23, w20 to w25, w27
  * clobbered flag groups: FG0
  */
 check_crt_component:
-  /* Multiply e * d_p, storing result in tmp_scratchpad. */
+  /* Multiply mask * d_p, storing result in tmp_scratchpad. */
+  addi     x10, x13, 0
+  addi     x11, x15, 0
+  la       x12, tmp_scratchpad
+  jal      x1, bignum_mul256
+
+  /* Copy p - 1, using rsa_n as a temporary buffer. */
+  addi     x10, x14, 0
+  la       x11, rsa_n
+  loop     x30, 2
+    bn.lid   x20, 0(x10++)
+    bn.sid   x20, 0(x11++)
+
+  /* Zero out one additional word to zero-extend. */
+  li       x2, 31
+  bn.sid   x2, 0(x11)
+
+  /* Add one to the limb count. */
+  addi     x30, x30, 1
+
+  /* Perform a modular reduction: (mask * d_p) mod (p - 1). */
+  la       x10, tmp_scratchpad
+  la       x11, rsa_n
+  jal      x1, mod
+
+  /* Subtract one back from the limb count. */
+  addi     x30, x30, -1
+
+  /* Copy reduced (mask * d_p) back to d_p. */
+  la       x10, tmp_scratchpad
+  addi     x11, x13, 0
+  loop     x30, 2
+    bn.lid   x20, 0(x10++)
+    bn.sid   x20, 0(x11++)
+
+  /* Multiply e * (mask * d_p mod (p-1)), storing in tmp_scratchpad. */
   addi     x10, x13, 0
   la       x11, rsa_e
   la       x12, tmp_scratchpad
@@ -281,7 +330,7 @@ check_crt_component:
   /* Add one to the limb count. */
   addi     x30, x30, 1
 
-  /* Perform a modular reduction. */
+  /* Perform a modular reduction: (e * mask * d_p) mod (p - 1). */
   la       x10, tmp_scratchpad
   la       x11, rsa_n
   jal      x1, mod
@@ -301,28 +350,63 @@ check_crt_component:
 /**
  * Perform a check of the validity of a CRT coefficient.
  *
- * Computes i_q * q modulo p, storing the result over i_q. This value will be 1
- * exactly when the provided i_q is valid.
+ * Given a CRT coefficient i_q and a random mask r, computes
+ * q * (r * i_q mod p) mod p.
+ *
+ * If i_q is valid (q * i_q == 1 mod p), this equals r.
+ * The caller provides the mask and compares the result against it.
  *
  * Flags: Flags have no meaning beyond the scope of this subroutine.
  *
  * @param[in]  dmem[rsa_i_q..rsa_i_q+(plen*32)] CRT coefficient (i_q)
  * @param[in]  dmem[rsa_p..rsa_p+(plen*32)] first RSA prime (p)
  * @param[in]  dmem[rsa_q..rsa_q+(plen*32)] second RSA prime (q)
- * @param[in]  dmem[rsa_d_p..rsa_d_p+(plen*32)] first RSA private key
-       private exponent CRT component (d_p)
- * @param[in]  dmem[rsa_d_q..rsa_d_q+(plen*32)] second RSA private key
-       private exponent CRT component (d_q)
+ * @param[in]  x15: dptr_mask, pointer to 256-bit mask in DMEM
  * @param[in]  x20: 20, constant
  * @param[in]  x30: plen, number of 256-bit limbs for p and q
  * @param[in]  w31: all-zero
- * @param[out] dmem[rsa_i_q..rsa_i_q+(plen*32)]: result, equal to 1 when valid
+ * @param[out] dmem[rsa_i_q..rsa_i_q+(plen*32)]: r * q * i_q mod p
  *
  * clobbered registers: x2 to x8, x10 to x12, x21 to x23, w20 to w25, w27
  * clobbered flag groups: FG0
  */
 check_crt_coeff:
-  /* Multiply q * i_q, storing result in tmp_scratchpad. */
+  /* Multiply mask * i_q, storing result in tmp_scratchpad. */
+  la       x10, rsa_i_q
+  addi     x11, x15, 0
+  la       x12, tmp_scratchpad
+  jal      x1, bignum_mul256
+
+  /* Copy p, using rsa_n as a temporary buffer. */
+  la       x10, rsa_p
+  la       x11, rsa_n
+  loop     x30, 2
+    bn.lid   x20, 0(x10++)
+    bn.sid   x20, 0(x11++)
+
+  /* Zero out one additional word to zero-extend. */
+  li       x2, 31
+  bn.sid   x2, 0(x11)
+
+  /* Add one to the limb count. */
+  addi     x30, x30, 1
+
+  /* Perform a modular reduction: (mask * i_q) mod p. */
+  la       x10, tmp_scratchpad
+  la       x11, rsa_n
+  jal      x1, mod
+
+  /* Subtract one back from the limb count. */
+  addi     x30, x30, -1
+
+  /* Copy reduced (mask * i_q mod p) back to i_q. */
+  la       x10, tmp_scratchpad
+  la       x11, rsa_i_q
+  loop     x30, 2
+    bn.lid   x20, 0(x10++)
+    bn.sid   x20, 0(x11++)
+
+  /* Multiply q * (mask * i_q mod p), storing result in tmp_scratchpad. */
   la       x10, rsa_q
   la       x11, rsa_i_q
   la       x12, tmp_scratchpad
@@ -2372,6 +2456,12 @@ rsa_d_q:
 .globl rsa_i_q
 rsa_i_q:
 .zero 256
+
+/* Random mask for hardening key import checks (256 bits). */
+.balign 32
+.globl rsa_check_mask
+rsa_check_mask:
+.zero 32
 
 /* Prime cofactor for n for `rsa_key_from_cofactor`; also used as a temporary
    work buffer containing `rsa_pm1` and `rsa_pm2`. */
